@@ -6,13 +6,16 @@ import { AgentMark } from "./agent-mark";
 export function EntryRow({
   entry,
   showSlug = true,
+  isNew = false,
 }: {
   entry: LogEntry;
   /** 详情页活动流已是单项目语境，省略 slug */
   showSlug?: boolean;
+  /** 落账印压（180ms ease-out；reduced-motion 全局降级）——仅快速添加成功的那一行 */
+  isNew?: boolean;
 }) {
   return (
-    <div className="row entry">
+    <div className={`row entry${isNew ? " is-new" : ""}`}>
       <span className="margin">{entry.time}</span>
       <span className="body">
         {showSlug && (

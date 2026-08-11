@@ -19,13 +19,12 @@ import {
   toDateStr,
 } from "../components/ledger/lib";
 import { DateStamp } from "../components/ledger/primitives/date-stamp";
-import { EntryRow } from "../components/ledger/primitives/entry-row";
 import { ProjectRow } from "../components/ledger/primitives/project-row";
 import { ProofBanner } from "../components/ledger/primitives/proof-banner";
-import { QuickAddRow } from "../components/ledger/primitives/quick-add-row";
 import { SectionHead } from "../components/ledger/primitives/section-head";
 import { Sheet } from "../components/ledger/primitives/sheet";
 import { Stamp } from "../components/ledger/primitives/stamp";
+import { TodaySheet } from "../components/ledger/primitives/today-sheet";
 
 const PRIORITIES = ["P0", "P1", "P2"] as const;
 
@@ -109,20 +108,7 @@ export function OverviewView({ data, now }: { data: LedgerData; now: Date }) {
                 </span>
               </div>
               <h2 className="sr-only">今日</h2>
-              <Sheet className="sheet--today">
-                {todayEntries.length === 0 && (
-                  <div className="row entry">
-                    <span className="margin" aria-hidden="true" />
-                    <span className="body body--muted">
-                      今天还没落过账。写下第一笔，或让手头的 agent 记上一行。
-                    </span>
-                  </div>
-                )}
-                {todayEntries.map((e) => (
-                  <EntryRow key={`${e.date}-${e.line}`} entry={e} />
-                ))}
-                <QuickAddRow slugs={writable} />
-              </Sheet>
+              <TodaySheet entries={todayEntries} slugs={writable} />
 
               {doneProjects.length > 0 && (
                 <>

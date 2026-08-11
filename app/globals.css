@@ -591,9 +591,17 @@
   border-color: var(--paper-edge);
   cursor: default;
 }
-/* T2 占位行：行为待 T3 接线，禁用控件不假装可用 */
+/* 提交中控件禁用：不假装可用 */
 .quickadd [disabled] {
   opacity: 0.55;
+}
+/* 校验失败（样张 04）：红下划线 + 行内错误文案（aria-describedby 关联输入） */
+.quickadd input[type="text"][aria-invalid="true"] {
+  border-bottom: 1px solid var(--red-ink);
+}
+.err-inline {
+  color: var(--red-ink);
+  font-size: 0.75rem;
 }
 
 /* 落账动效：唯一 authored moment */
