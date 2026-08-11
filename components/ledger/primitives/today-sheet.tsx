@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useReducer, useRef, useState } from "react";
+import { useActionState, useEffect, useReducer, useRef, useState } from "react";
 import { quickAdd, type QuickAddState } from "../../../app/actions/quickadd";
 import type { LogEntry } from "../../../lib/data/types";
 import { EntryRow } from "./entry-row";
@@ -24,13 +24,28 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
   const [slug, setSlug] = useState("");
   const [agent, setAgent] = useState("joey");
   const [lastAdded, setLastAdded] = useState<string | null>(null);
-  // React 19 的 form action 提交完成后会隐式 reset 表单，把受控 select 的 DOM 值打回默认；
-  // 而 slug/agent 的 state 没变、不触发重渲染去重新施加受控值——显示与 state 脱节，
+  // React 19 的 form action 提交完成后会对 <form> 隐式调用原生 reset()（commit 的
+  // layout 阶段，fiber.stateNode.reset()），把受控 select 的 DOM 值打回默认；
+  // 而 slug/agent 的 state 没变、之后不再有重渲染去重新施加受控值——显示与 state 脱节，
   // 下一笔回车会按 state 落账，与用户看到的「未选项目 / joey」不一致。
-  // reset 排在微任务里、晚于 action 内的 setState 渲染；成功后下一帧强制一次重渲染，
-  // 让受控值重新施加到 DOM（界面显示 == 内部 state == 下一笔实际落账）。
+  // 一路排掉的假解（均实测）：action 里 rAF——回调跑在隐式 reset 之前；
+  // form 的 onReset prop——React 对 action 表单的隐式 reset 不派发合成 onReset
+  // （原生 reset 事件有，合成事件没有），handler 根本不执行。
+  // 正解：在 form 上挂原生 reset 监听（真实触发点），回调里排一个微任务——
+  // 原生 reset() 先派事件、后还原控件，微任务必然在 reset() 整步与当前 commit
+  // 结束后才跑，那次强制重渲染把受控值重新施加到 DOM
+  // （界面显示 == 内部 state == 下一笔实际落账）。
   const [, resyncSelects] = useReducer((n: number) => n + 1, 0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const resync = () => queueMicrotask(() => resyncSelects());
+    form.addEventListener("reset", resync);
+    return () => form.removeEventListener("reset", resync);
+  }, []);
 
   const [state, formAction, isPending] = useActionState<QuickAddState, FormData>(
     async (prev, formData) => {
@@ -38,7 +53,6 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
       if (result.status === "success") {
         setLastAdded(entryKey(result.entry));
         setText(""); // 表单清空（项目/记录者保留，方便连续记同一项目）
-        requestAnimationFrame(() => resyncSelects());
         // 焦点回输入框：isPending=false 的提交可能晚一帧，输入框还 disabled 时 focus 静默失败——逐帧重试到解禁
         const refocus = (tries: number) => {
           const el = inputRef.current;
@@ -72,7 +86,12 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
           isNew={lastAdded !== null && i === entries.length - 1 && entryKey(e) === lastAdded}
         />
       ))}
-      <form className="row quickadd" aria-label="快速添加日志" action={formAction}>
+      <form
+        ref={formRef}
+        className="row quickadd"
+        aria-label="快速添加日志"
+        action={formAction}
+      >
         <span className="margin" aria-hidden="true">
           —:—
         </span>

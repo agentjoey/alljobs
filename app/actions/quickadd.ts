@@ -20,6 +20,8 @@ export async function quickAdd(
 ): Promise<QuickAddState> {
   // 数据目录是服务端配置，不是客户端输入：server action 是公开 POST 端点，
   // 参数由请求体反序列化，绝不能把文件系统路径暴露成参数。测试经 env 注入。
+  // ALLJOBS_DATA_DIR 仅测试用：只被本写侧读取，读侧 readLedger() 恒用 "data"，
+  // 生产环境不要设置（否则会写进 X、页面读自 data/，落账永不出现）。
   const dataDir = process.env.ALLJOBS_DATA_DIR ?? "data";
   const result = appendLogEntry(
     {
