@@ -28,7 +28,7 @@ features:
         deps: [data-layer]
       - id: quickadd
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T3-quickadd.md
         evidence: null
