@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<!-- 方向契约见 overview.html 首注释 · The Working Ledger · seed cda17d0d -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日志 · alljobs 工作底账</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="folio">
+      <a class="wordmark" href="overview.html">ALLJOBS</a>
+      <span class="folio-sub">AgentJoey 工作底账</span>
+      <span class="folio-date">2026-08-11 周二 · W33</span>
+      <span class="folio-counts">活跃 <strong>7</strong> · <span class="is-blocked">卡住 1</span> · 今日 <strong>3</strong> 笔</span>
+    </div>
+    <nav class="tabs" aria-label="主导航">
+      <a class="tab" href="overview.html">总览</a>
+      <a class="tab" href="projects.html">项目</a>
+      <a class="tab" href="log.html" aria-current="page">日志</a>
+    </nav>
+  </div>
+</header>
+
+<main class="ledger">
+
+  <div class="filters" role="group" aria-label="过滤">
+    <button class="chip" aria-pressed="true">全部项目</button>
+    <button class="chip" aria-pressed="false">pactify-apps</button>
+    <button class="chip" aria-pressed="false">alljobs</button>
+    <button class="chip" aria-pressed="false">tradelinks</button>
+    <button class="chip" aria-pressed="false">更多 <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-1px"><path d="M2 3.5L5 6.5L8 3.5"/></svg></button>
+    <span style="width:10px"></span>
+    <button class="chip" aria-pressed="false">claude</button>
+    <button class="chip" aria-pressed="false">codex</button>
+    <button class="chip" aria-pressed="false">kimi</button>
+    <button class="chip" aria-pressed="false">joey</button>
+  </div>
+
+  <div class="section-head dayhead">
+    <span class="d">2026-08-11 周二 · 今日</span>
+    <span class="count">3 笔</span>
+  </div>
+  <div class="sheet">
+    <div class="row entry">
+      <span class="margin">09:42</span>
+      <span class="body">
+        <a class="slug" href="project.html">pactify-apps</a>
+        <span class="agent codex"><i></i>codex</span>
+        <span class="text">TestFlight #42 上传成功；修复 iOS 构建签名问题</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">08:35</span>
+      <span class="body">
+        <a class="slug" href="project.html">alljobs</a>
+        <span class="agent claude"><i></i>claude</span>
+        <span class="text">T3 Brief 定稿，账本 mockup 待 Mockup Gate 批准</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">08:12</span>
+      <span class="body">
+        <a class="slug" href="project.html">tradelinks</a>
+        <span class="agent joey"><i></i>joey</span>
+        <span class="text">供应商邮件再跟进，改约周三电话</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="section-head dayhead">
+    <span class="d">2026-08-10 周一</span>
+    <span class="count">4 笔</span>
+  </div>
+  <div class="sheet">
+    <div class="row entry">
+      <span class="margin">21:20</span>
+      <span class="body">
+        <a class="slug" href="project.html">codesk</a>
+        <span class="agent joey"><i></i>joey</span>
+        <span class="text">review 窗口管理 RFC，留了 3 条意见</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">15:47</span>
+      <span class="body">
+        <a class="slug" href="project.html">pactify-apps</a>
+        <span class="agent claude"><i></i>claude</span>
+        <span class="text">提审文案初稿完成</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">11:30</span>
+      <span class="body">
+        <a class="slug" href="project.html">agent-pact</a>
+        <span class="agent claude"><i></i>claude</span>
+        <span class="text">MCP 鉴权 token 刷新逻辑完成，补了过期重试</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">10:05</span>
+      <span class="body">
+        <a class="slug" href="project.html">eastern-astrology-mvp</a>
+        <span class="agent kimi"><i></i>kimi</span>
+        <span class="text">完成 12/20 例命盘验证，2 例时辰偏差待查</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="section-head dayhead">
+    <span class="d">2026-08-08 周六</span>
+    <span class="count">2 笔</span>
+  </div>
+  <div class="sheet">
+    <div class="row entry">
+      <span class="margin">14:02</span>
+      <span class="body">
+        <a class="slug" href="project.html">tradelinks</a>
+        <span class="agent joey"><i></i>joey</span>
+        <span class="text">发出报价催询邮件（第二次）</span>
+      </span>
+    </div>
+    <div class="row entry">
+      <span class="margin">09:15</span>
+      <span class="body">
+        <a class="slug" href="project.html">diskwatch</a>
+        <span class="agent claude"><i></i>claude</span>
+        <span class="text">v0.3 阈值配置 schema 定稿</span>
+      </span>
+    </div>
+  </div>
+
+  <p class="empty-note" style="padding-left:0;">空日不占页。<a href="#">更早 · 2026-07 ›</a></p>
+
+</main>
+
+<footer class="footer">
+  <span>alljobs 工作底账 · data/log/*.md</span>
+  <span>行文法：- HH:MM slug @agent 内容</span>
+</footer>
+
+</body>
+</html>

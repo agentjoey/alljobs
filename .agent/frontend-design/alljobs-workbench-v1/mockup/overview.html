@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<!--
+THESIS: 多项目进度是一本按日记账的工作底账——每行一笔、每天一页、状态一枚戳；
+拒绝品类默认的卡片网格 + 大数字统计 + 侧栏 SaaS 壳。
+OWN-WORLD: eye-ease 绿账页纸（#ECF1E6）上的墨字（#1D211C）；红纵栏线分隔 mono 边距列与正文列；
+蓝格线承行；状态=平印墨戳；agent=色标+墨字（色不载文字）；导航=页首索引标签；
+无纹理、无做旧、全部平印；唯一倾斜与双圈属于今日日期戳。
+STORY: Joey 晨检 30 秒——先看「需要注意」的红戳，再扫今日已记与各活跃项目的 NEXT，
+随手在下一条空行落一笔账；任何 agent 改 data/ 的 md 文件即完成写入。
+FIRST VIEWPORT: 页首 folio（ALLJOBS 戳 · 日期 · 活跃/卡住/今日计数 · 索引标签）；
+其下对开双页：左页=需要注意 + 今日（快速添加空行为主操作），右页=活跃项目底账（P0 最上）。
+FORM: 工作底账 The Working Ledger · 自有 grounded 列表第 6 位（assigned）· seed cda17d0d
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>总览 · alljobs 工作底账</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="folio">
+      <a class="wordmark" href="overview.html">ALLJOBS</a>
+      <span class="folio-sub">AgentJoey 工作底账</span>
+      <span class="folio-date">2026-08-11 周二 · W33</span>
+      <span class="folio-counts">活跃 <strong>7</strong> · <span class="is-blocked">卡住 1</span> · 今日 <strong>3</strong> 笔</span>
+    </div>
+    <nav class="tabs" aria-label="主导航">
+      <a class="tab" href="overview.html" aria-current="page">总览</a>
+      <a class="tab" href="projects.html">项目</a>
+      <a class="tab" href="log.html">日志</a>
+    </nav>
+  </div>
+</header>
+
+<main class="ledger">
+  <div class="spread">
+
+    <!-- ============ 左页：注意 + 今日 ============ -->
+    <section class="page" aria-label="今日与注意">
+
+      <div class="section-head">
+        <h2>需要注意</h2>
+        <span class="count">3 项</span>
+      </div>
+      <div class="sheet">
+        <a class="row attn" href="project.html">
+          <span class="margin"><span class="stamp blocked">卡住 5 天</span></span>
+          <span class="body">
+            <span class="title">TradeLinks</span>
+            <span class="why">等海外供应商报价答复——收到后更新选品测算</span>
+          </span>
+        </a>
+        <a class="row attn" href="project.html">
+          <span class="margin"><span class="stamp stale">停滞 8 天</span></span>
+          <span class="body">
+            <span class="title">PetCare App</span>
+            <span class="why">上次记录 08-03；宠物档案页原型未动</span>
+          </span>
+        </a>
+        <a class="row attn" href="project.html">
+          <span class="margin"><span class="stamp due">4 天到期</span></span>
+          <span class="body">
+            <span class="title">东方星理 MVP</span>
+            <span class="why">due 08-15：命盘算法 20 例验证还差 8 例</span>
+          </span>
+        </a>
+      </div>
+
+      <div class="section-head" style="margin-top:34px; border-bottom:none; padding-bottom:0;">
+        <div class="datestamp" aria-hidden="true">2026·08·11<small>今日</small></div>
+        <span class="aside">08-11 周二 · 已记 3 笔</span>
+      </div>
+      <h2 class="mono" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">今日</h2>
+      <div class="sheet" style="margin-top:14px;">
+        <div class="row entry">
+          <span class="margin">08:12</span>
+          <span class="body">
+            <a class="slug" href="project.html">tradelinks</a>
+            <span class="agent joey"><i></i>joey</span>
+            <span class="text">供应商邮件再跟进，改约周三电话</span>
+          </span>
+        </div>
+        <div class="row entry">
+          <span class="margin">08:35</span>
+          <span class="body">
+            <a class="slug" href="project.html">alljobs</a>
+            <span class="agent claude"><i></i>claude</span>
+            <span class="text">T3 Brief 定稿，账本 mockup 待 Mockup Gate 批准</span>
+          </span>
+        </div>
+        <div class="row entry">
+          <span class="margin">09:42</span>
+          <span class="body">
+            <a class="slug" href="project.html">pactify-apps</a>
+            <span class="agent codex"><i></i>codex</span>
+            <span class="text">TestFlight #42 上传成功；修复 iOS 构建签名问题</span>
+          </span>
+        </div>
+        <form class="row quickadd" aria-label="快速添加日志">
+          <span class="margin" aria-hidden="true">—:—</span>
+          <span class="body">
+            <input type="text" placeholder="记一笔…（回车落账）" aria-label="日志内容">
+            <select aria-label="项目"><option>pactify-apps</option><option>alljobs</option><option>tradelinks</option></select>
+            <select aria-label="记录者"><option>joey</option><option>claude</option><option>codex</option><option>kimi</option></select>
+            <button class="btn-stamp" type="button">落账</button>
+          </span>
+        </form>
+      </div>
+
+      <div class="section-head" style="margin-top:34px;">
+        <h2>最近完成</h2>
+      </div>
+      <div class="sheet">
+        <div class="row entry">
+          <span class="margin">07-30</span>
+          <span class="body">
+            <span class="slug" style="color:var(--ink-3)">design</span>
+            <span class="stamp done">DONE</span>
+            <span class="text" style="color:var(--ink-2)">设计资产库整理归档，移交各项目引用</span>
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============ 右页：活跃项目底账 ============ -->
+    <section class="page" aria-label="活跃项目">
+
+      <div class="section-head group-head">
+        <h2>P0 · 现在最重要</h2>
+        <span class="aside">近 14 天活动 →</span>
+      </div>
+      <div class="sheet">
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="Pactify Apps 详情"></a>
+              <span class="name">Pactify Apps</span>
+              <span class="slug">pactify-apps</span>
+              <span class="type">[code]</span>
+            </span>
+            <span class="next"><b>NEXT</b> App Store 提审材料与截图</span>
+            <span class="meta">
+              <span class="due-soon">due 08-20</span>
+              <span class="agent claude"><i></i>claude</span>
+              <span class="agent codex"><i></i>codex</span>
+            </span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 22 条记录，最近三天 2/3/2 条">
+                <i data-v="1"></i><i data-v="2"></i><i></i><i data-v="1"></i><i data-v="3"></i><i data-v="2"></i><i data-v="1"></i><i></i><i data-v="2"></i><i data-v="1"></i><i data-v="2"></i><i data-v="2"></i><i data-v="3"></i><i data-v="2"></i>
+              </span>
+              <span class="last">2 小时前</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="AllJobs 工作台详情"></a>
+              <span class="name">AllJobs 工作台</span>
+              <span class="slug">alljobs</span>
+              <span class="type">[code]</span>
+            </span>
+            <span class="next"><b>NEXT</b> Mockup Gate 批准后开始 v1 实现</span>
+            <span class="meta">
+              <span class="agent claude"><i></i>claude</span>
+            </span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 10 条记录，集中在最近四天">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i data-v="1"></i><i data-v="2"></i><i data-v="3"></i><i data-v="4"></i>
+              </span>
+              <span class="last">刚刚</span>
+            </span>
+          </span>
+        </div>
+
+      </div>
+
+      <div class="section-head group-head">
+        <h2>P1</h2>
+      </div>
+      <div class="sheet">
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="Agent Pact 详情"></a>
+              <span class="name">Agent Pact</span>
+              <span class="slug">agent-pact</span>
+              <span class="type">[code]</span>
+            </span>
+            <span class="next"><b>NEXT</b> MCP server 鉴权流程收尾</span>
+            <span class="meta"><span class="agent claude"><i></i>claude</span></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 12 条记录">
+                <i data-v="2"></i><i data-v="1"></i><i data-v="1"></i><i></i><i data-v="2"></i><i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i data-v="1"></i><i></i>
+              </span>
+              <span class="last">昨天</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp blocked">BLOCKED</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="TradeLinks 详情"></a>
+              <span class="name">TradeLinks</span>
+              <span class="slug">tradelinks</span>
+              <span class="type">[biz]</span>
+            </span>
+            <span class="next is-blocked"><b style="color:var(--red-ink)">卡在</b> 等海外供应商报价答复（第 5 天）</span>
+            <span class="meta"><span class="agent joey"><i></i>joey</span></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 7 条记录，今日 1 条">
+                <i data-v="1"></i><i data-v="2"></i><i></i><i data-v="1"></i><i></i><i data-v="1"></i><i></i><i></i><i></i><i data-v="1"></i><i></i><i></i><i></i><i data-v="1"></i>
+              </span>
+              <span class="last">4 小时前</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="东方星理 MVP 详情"></a>
+              <span class="name">东方星理 MVP</span>
+              <span class="slug">eastern-astrology-mvp</span>
+              <span class="type">[product]</span>
+            </span>
+            <span class="next"><b>NEXT</b> 命盘算法 20 例准确性验证（12/20）</span>
+            <span class="meta">
+              <span class="due-soon">due 08-15</span>
+              <span class="agent kimi"><i></i>kimi</span>
+            </span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 10 条记录">
+                <i></i><i data-v="1"></i><i data-v="1"></i><i data-v="2"></i><i></i><i data-v="1"></i><i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i data-v="1"></i><i></i><i data-v="1"></i><i></i>
+              </span>
+              <span class="last">昨天</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="Codesk 详情"></a>
+              <span class="name">Codesk</span>
+              <span class="slug">codesk</span>
+              <span class="type">[code]</span>
+            </span>
+            <span class="next"><b>NEXT</b> 桌面端窗口管理重构（RFC 已评审）</span>
+            <span class="meta"><span class="agent codex"><i></i>codex</span></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 7 条记录">
+                <i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i></i><i></i><i data-v="1"></i><i></i><i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i></i><i></i>
+              </span>
+              <span class="last">3 天前</span>
+            </span>
+          </span>
+        </div>
+
+      </div>
+
+      <div class="section-head group-head">
+        <h2>P2</h2>
+      </div>
+      <div class="sheet">
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp stale">停滞</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="PetCare App 详情"></a>
+              <span class="name">PetCare App</span>
+              <span class="slug">petcare-app</span>
+              <span class="type">[code]</span>
+            </span>
+            <span class="next"><b>NEXT</b> 宠物档案页原型</span>
+            <span class="meta"><span class="agent codex"><i></i>codex</span></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 2 条记录，最近 8 天无">
+                <i data-v="1"></i><i></i><i data-v="1"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </span>
+              <span class="last">8 天前</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj">
+          <span class="margin"><span class="stamp active">ACTIVE</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="DiskWatch 详情"></a>
+              <span class="name">DiskWatch</span>
+              <span class="slug">diskwatch</span>
+              <span class="type">[ops]</span>
+            </span>
+            <span class="next"><b>NEXT</b> v0.3 告警阈值配置界面</span>
+            <span class="meta"><span class="agent claude"><i></i>claude</span></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天 6 条记录">
+                <i></i><i data-v="1"></i><i></i><i data-v="1"></i><i data-v="1"></i><i></i><i></i><i data-v="1"></i><i></i><i data-v="1"></i><i></i><i></i><i data-v="1"></i><i></i>
+              </span>
+              <span class="last">4 天前</span>
+            </span>
+          </span>
+        </div>
+
+        <div class="row proj is-quiet">
+          <span class="margin"><span class="stamp paused">PAUSED</span></span>
+          <span class="body">
+            <span class="l1">
+              <a class="name cover" href="project.html" aria-label="MathMagics MVP 详情"></a>
+              <span class="name">MathMagics MVP</span>
+              <span class="slug">mathmagics-mvp</span>
+              <span class="type">[product]</span>
+            </span>
+            <span class="next">等 Pactify 发布后恢复</span>
+            <span class="meta"></span>
+            <span class="side">
+              <span class="tally" role="img" aria-label="近 14 天无记录">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </span>
+              <span class="last">07-22</span>
+            </span>
+          </span>
+        </div>
+
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <span>alljobs 工作底账 · data/ 即真相</span>
+  <span>LOCAL · 10 个项目 · 最后写入 09:42</span>
+</footer>
+
+</body>
+</html>

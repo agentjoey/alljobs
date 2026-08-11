@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<!-- 方向契约见 overview.html 首注释 · The Working Ledger · seed cda17d0d -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pactify Apps · alljobs 工作底账</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="folio">
+      <a class="wordmark" href="overview.html">ALLJOBS</a>
+      <span class="folio-sub">AgentJoey 工作底账</span>
+      <span class="folio-date">2026-08-11 周二 · W33</span>
+      <span class="folio-counts">活跃 <strong>7</strong> · <span class="is-blocked">卡住 1</span> · 今日 <strong>3</strong> 笔</span>
+    </div>
+    <nav class="tabs" aria-label="主导航">
+      <a class="tab" href="overview.html">总览</a>
+      <a class="tab" href="projects.html" aria-current="page">项目</a>
+      <a class="tab" href="log.html">日志</a>
+    </nav>
+  </div>
+</header>
+
+<main class="ledger">
+
+  <div class="detail-head">
+    <p class="crumb"><a href="projects.html">项目</a> / pactify-apps</p>
+    <div class="detail-title">
+      <span class="stamp active">ACTIVE</span>
+      <span class="stamp" style="color:var(--ink-2)">P0</span>
+      <h1>Pactify Apps</h1>
+      <span class="slug">pactify-apps · [code]</span>
+    </div>
+    <div class="linkrow">
+      <a href="#">[repo] ~/AgentWorks/CodeSpace/pactify-apps <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 8L8 2M3.5 2H8v4.5"/></svg></a>
+      <a href="#">[vault] Projects/Pactify <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 8L8 2M3.5 2H8v4.5"/></svg></a>
+      <a href="#">[url] pactify.app <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 8L8 2M3.5 2H8v4.5"/></svg></a>
+    </div>
+    <div class="kv">
+      <span>started <b>2026-06-02</b></span>
+      <span style="color:var(--st-due)">due <b style="color:var(--st-due)">2026-08-20（9 天）</b></span>
+      <span>tags <b>ios · app-store</b></span>
+      <span class="agent claude"><i></i>claude</span>
+      <span class="agent codex"><i></i>codex</span>
+      <span>近 14 天 <b>21 笔</b></span>
+    </div>
+  </div>
+
+  <div class="spread" style="margin-top:10px;">
+
+    <!-- 左页：Now / Next -->
+    <section class="page" aria-label="当前与下一步">
+      <div class="section-head">
+        <h2>当前 NOW</h2>
+      </div>
+      <div class="prose" style="padding:12px 0 4px;">
+        <p>App Store 提审准备：截图、隐私清单、审核备注；TestFlight #42 灰度中，等两天崩溃率数据。</p>
+      </div>
+
+      <div class="section-head">
+        <h2>下一步 NEXT</h2>
+        <span class="count">4 项</span>
+      </div>
+      <div class="prose">
+        <ul>
+          <li><span class="idx">01</span>App Store 提审材料与截图（今日）</li>
+          <li><span class="idx">02</span>隐私营养标签逐项核对</li>
+          <li><span class="idx">03</span>提交审核，盯初审结果</li>
+          <li><span class="idx">04</span>整理 v1.1 修复清单（键盘遮挡、iPad 布局）</li>
+        </ul>
+      </div>
+
+      <div class="section-head">
+        <h2>笔记 NOTES</h2>
+      </div>
+      <div class="prose" style="padding:12px 0 4px;">
+        <p>审核备注要写清 Pact 分账逻辑，上次 4.3 被问询过；截图用 6.7" 和 5.5" 两套。</p>
+      </div>
+    </section>
+
+    <!-- 右页：活动流 -->
+    <section class="page" aria-label="活动记录">
+      <div class="section-head dayhead">
+        <span class="d">2026-08-11 周二</span>
+        <span class="count">2 笔</span>
+      </div>
+      <div class="sheet">
+        <div class="row entry">
+          <span class="margin">09:42</span>
+          <span class="body">
+            <span class="agent codex"><i></i>codex</span>
+            <span class="text">TestFlight #42 上传成功；修复 iOS 构建签名问题</span>
+          </span>
+        </div>
+        <div class="row entry">
+          <span class="margin">07:58</span>
+          <span class="body">
+            <span class="agent claude"><i></i>claude</span>
+            <span class="text">提审文案二稿：补分账逻辑说明与演示账号</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="section-head dayhead">
+        <span class="d">2026-08-10 周一</span>
+        <span class="count">3 笔</span>
+      </div>
+      <div class="sheet">
+        <div class="row entry">
+          <span class="margin">21:14</span>
+          <span class="body">
+            <span class="agent joey"><i></i>joey</span>
+            <span class="text">过了一遍截图草稿，6.7" 首屏改用分账场景</span>
+          </span>
+        </div>
+        <div class="row entry">
+          <span class="margin">15:47</span>
+          <span class="body">
+            <span class="agent claude"><i></i>claude</span>
+            <span class="text">提审文案初稿完成</span>
+          </span>
+        </div>
+        <div class="row entry">
+          <span class="margin">10:30</span>
+          <span class="body">
+            <span class="agent codex"><i></i>codex</span>
+            <span class="text">修复 iPad 分屏下的支付弹层布局</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="section-head dayhead">
+        <span class="d">2026-08-07 周五</span>
+        <span class="count">1 笔</span>
+      </div>
+      <div class="sheet">
+        <div class="row entry">
+          <span class="margin">16:05</span>
+          <span class="body">
+            <span class="agent codex"><i></i>codex</span>
+            <span class="text">TestFlight #41：崩溃率 0.3%，键盘遮挡问题两例反馈</span>
+          </span>
+        </div>
+      </div>
+
+      <p class="empty-note">更早记录见 <a href="log.html">日志</a> 按月归档 →</p>
+    </section>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <span>alljobs 工作底账 · data/projects/pactify-apps.md</span>
+  <span>在编辑器或 Obsidian 中修改此页数据</span>
+</footer>
+
+</body>
+</html>
