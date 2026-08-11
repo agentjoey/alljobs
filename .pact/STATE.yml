@@ -35,7 +35,7 @@ features:
         deps: [data-layer, pages]
       - id: deploy-docs
         owner: kimi
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T4-deploy-docs.md
-        evidence: null
+        evidence: 交付物（全部限 spec 列出的文件）： - docs/deploy.md（新增）：本地运行（npm run build && npm run start:prod，端口 3456）→ launchd 常驻（plist 加载/卸载命令、KeepAlive、~/Library/Logs/alljobs/ 日志）→ cloudflared（brew 安装、tunnel login/create、config 模板、route dns、sudo brew services 常驻）→ Zero Trust Access（dashboard 建 Self-hosted Application、Allow 策略仅 theagentjoey@gmail.com、OTP、会话 24h 建议）→ 安全注记（cert.pem/<TUNNEL_ID>.json 位置、chmod 600、deploy/*.json 已入 .gitignore、日志无敏感数据）→ 回滚/故障（停 tunnel 数据无损、git revert + launchctl 重载、curl 健康检查、排障路径）。全文每节标注【Agent 可代办】/【Human 必做】：tunnel login 授权点击 + 第 4 节全部 dashboard 步骤为 Human 必做，其余 agent 可代办。 - deploy/com.agentjoey.alljobs.plist（新增）：WorkingDirectory/KeepAlive/RunAtLoad/日志路径 ~/Library/Logs/alljobs/ 齐全；占位符 <NODE_BIN_DIR>/<REPO_ABS_PATH>/<USERNAME> 以 XML 转义形态 &lt;…&gt; 标注（注释中说明替换方式）。 - deploy/cloudflared-config.example.yml（新增）：tunnel/credentials-file + ingress（alljobs.agentjoey.ai → http://localhost:3456，兜底 http_status:404）。 - README.md（重写）：产品定位一句、数据层指向 data/README.md、命令 dev/build/start:prod/test、部署指向 docs/deploy.md、.agent/ 记录说明。 - package.json：仅加 "start:prod": "next start -p 3456" 一条。 - .gitignore：补 deploy/*.json（凭证类绝不入 git）。  模板 lint： - plutil -lint deploy/com.agentjoey.alljobs.plist → OK；sed 替换占位符后再 lint → OK - cloudflared tunnel --config …example.yml ingress validate → OK；替换占位符后 → OK  验收命令（全部跑在最终文件之后）： - npm run lint：0 errors，1 warning（scripts/shot.mjs:49 既有，非本任务文件） - npm run build：Next.js 16.3.0 Turbopack ✓ Compiled / ✓ TypeScript / ✓ 静态生成，路由 /、/log、/projects、/projects/[slug] - npm test：Test Files 10 passed (10)，Tests 102 passed (102)  git status 仅含：M .gitignore / M README.md / M package.json / ?? deploy/ / ?? docs/。未碰 app/、lib/、components/ 及其他 task 文件。
