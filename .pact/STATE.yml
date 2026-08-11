@@ -34,7 +34,7 @@ features:
         deps: [data-layer, pages]
       - id: deploy-docs
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T4-deploy-docs.md
         evidence: null
