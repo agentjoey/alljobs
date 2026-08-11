@@ -30,7 +30,7 @@ export interface DerivedProject extends Project {
   lastEntry: LogEntry | null;
   /** active 且（无记录或 lastEntry ≥7 天前） */
   stale: boolean;
-  /** due 存在且距今 ≤5 天（含当天；已过期不算） */
+  /** due 存在且距今 ≤5 天（含已过期，无下界：逾期比临近到期更该被看见） */
   dueSoon: boolean;
   /** blocked_since 存在时距今天数，否则 null */
   blockedDays: number | null;
@@ -53,7 +53,9 @@ export function deriveProjects(
       p.status === "active" &&
       (lastEntry === null || dayDiff(today, parseDate(lastEntry.date)) >= STALE_DAYS);
     const daysToDue = p.due !== undefined ? dayDiff(parseDate(p.due), today) : null;
-    const dueSoon = daysToDue !== null && daysToDue >= 0 && daysToDue <= DUE_SOON_DAYS;
+    // 定案（review 返工）：dueSoon 含已过期——只卡上界 5 天，不设下界。
+    // 逾期项目若从注意清单消失，与「30 秒内看清什么卡住了」直接冲突。
+    const dueSoon = daysToDue !== null && daysToDue <= DUE_SOON_DAYS;
     const blockedDays = p.blocked_since ? dayDiff(today, parseDate(p.blocked_since)) : null;
 
     const countByDate = new Map<string, number>();

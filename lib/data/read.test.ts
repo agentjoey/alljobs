@@ -107,6 +107,20 @@ describe("readLedger", () => {
     expect(r.issues[0].message).toContain("ghost-project");
   });
 
+  it("日志文件可带 frontmatter（brief 允许）：剥离后解析，行号按原文件计", () => {
+    write("projects/alljobs.md", GOOD_PROJECT);
+    write(
+      "log/2026-08-11.md",
+      "---\nmood: tired\n---\n\n- 08:35 alljobs @claude 正常行\n这一行不是日志\n",
+    );
+    const r = readLedger(dir);
+    expect(r.entries).toHaveLength(1);
+    expect(r.entries[0]).toMatchObject({ time: "08:35", line: 5 });
+    // 只有第 6 行坏行进 ProofIssue；frontmatter 三行与空行不得误报
+    expect(r.issues).toHaveLength(1);
+    expect(r.issues[0]).toMatchObject({ line: 6 });
+  });
+
   it("日志文件名非法（非 YYYY-MM-DD）进 ProofIssue", () => {
     write("projects/alljobs.md", GOOD_PROJECT);
     write("log/notes.md", "- 08:35 alljobs @claude x\n");

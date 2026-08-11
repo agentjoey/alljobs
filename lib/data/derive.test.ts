@@ -70,13 +70,25 @@ describe("deriveProjects", () => {
     ).toBe(false);
   });
 
-  it("dueSoon 边界：5 天内到期为 true，6 天为 false，已过期/无 due 为 false", () => {
+  it("dueSoon 边界：5 天内到期为 true，6 天为 false，已过期也算（逾期更该被看见），无 due 为 false", () => {
     const withDue = (due?: string) => makeProject({ due });
     expect(deriveProjects([withDue("2026-08-16")], [], TODAY)[0].dueSoon).toBe(true);
     expect(deriveProjects([withDue("2026-08-11")], [], TODAY)[0].dueSoon).toBe(true);
+    expect(deriveProjects([withDue("2026-08-10")], [], TODAY)[0].dueSoon).toBe(true); // 逾期 1 天
     expect(deriveProjects([withDue("2026-08-17")], [], TODAY)[0].dueSoon).toBe(false);
-    expect(deriveProjects([withDue("2026-08-10")], [], TODAY)[0].dueSoon).toBe(false);
     expect(deriveProjects([withDue(undefined)], [], TODAY)[0].dueSoon).toBe(false);
+  });
+
+  it("逾期项目（不 stale 不 blocked）仍进注意清单，kind=dueSoon", () => {
+    // due 已过期 3 天，但今天有日志 → 不停滞、不卡住；若 dueSoon 漏掉逾期，它会从总览无声消失
+    const overdue = makeProject({ slug: "overdue", due: "2026-08-08" });
+    const entries = [makeEntry({ slug: "overdue", date: "2026-08-11", time: "08:00" })];
+    const derived = deriveProjects([overdue], entries, TODAY);
+    expect(derived[0].stale).toBe(false);
+    expect(derived[0].dueSoon).toBe(true);
+    expect(attentionList(derived).map((i) => [i.project.slug, i.kind])).toEqual([
+      ["overdue", "dueSoon"],
+    ]);
   });
 
   it("blockedDays = 距今天数；无 blocked_since 为 null", () => {

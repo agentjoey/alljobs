@@ -1,3 +1,4 @@
+import "server-only";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import matter from "gray-matter";
@@ -82,13 +83,25 @@ function readLogs(dir: string, knownSlugs: Set<string>, issues: ProofIssue[]): L
       issues.push({ file, message: "日志文件名须为 YYYY-MM-DD.md，已跳过" });
       continue;
     }
-    const lines = readFileSync(file, "utf8").split("\n");
-    lines.forEach((raw, i) => {
-      const line = raw.trim();
+    const raw = readFileSync(file, "utf8");
+    // brief：日志 frontmatter 可省、也可存在——先剥离再逐行解析。
+    // 行号必须按原文件真实行号计（校对清单要指对行），故记录被剥离的行数作偏移。
+    let body = raw;
+    let lineOffset = 0;
+    try {
+      const parsed = matter(raw);
+      body = parsed.content;
+      lineOffset = raw.split("\n").length - body.split("\n").length;
+    } catch {
+      // frontmatter 损坏：按原文逐行解析，坏行自然会进 ProofIssue
+    }
+    body.split("\n").forEach((rawLine, i) => {
+      const lineNo = lineOffset + i + 1;
+      const line = rawLine.trim();
       if (!line) return;
       const m = LOG_LINE.exec(line);
       if (!m) {
-        issues.push({ file, line: i + 1, message: `无法解析的日志行：${line}` });
+        issues.push({ file, line: lineNo, message: `无法解析的日志行：${line}` });
         return;
       }
       const r = logLineSchema.safeParse({ time: m[1], slug: m[2], agent: m[3], text: m[4] });
@@ -96,16 +109,16 @@ function readLogs(dir: string, knownSlugs: Set<string>, issues: ProofIssue[]): L
         const first = r.error.issues[0];
         issues.push({
           file,
-          line: i + 1,
+          line: lineNo,
           field: first?.path.join(".") || undefined,
           message: first?.message ?? "日志行校验失败",
         });
         return;
       }
       if (!knownSlugs.has(r.data.slug)) {
-        issues.push({ file, line: i + 1, field: "slug", message: `未知项目 slug：${r.data.slug}` });
+        issues.push({ file, line: lineNo, field: "slug", message: `未知项目 slug：${r.data.slug}` });
       }
-      entries.push({ ...r.data, date, file, line: i + 1 });
+      entries.push({ ...r.data, date, file, line: lineNo });
     });
   }
   return entries;
