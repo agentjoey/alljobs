@@ -189,14 +189,16 @@ describe("总览 /", () => {
 });
 
 describe("项目列表 /projects", () => {
-  test("默认全部：chip aria-pressed + 全量底账行", () => {
+  test("默认全部：chip aria-current + 全量底账行", () => {
     const html = renderToStaticMarkup(<ProjectsView data={seedLedger()} filters={{}} now={NOW} />);
     expect(html).toContain("项目底账");
     for (const slug of ["pactify-apps", "tradelinks", "petcare-app", "design", "mathmagics-mvp"]) {
       expect(html).toContain(`href="/projects/${slug}"`);
     }
-    const chip = html.match(/<a[^>]*aria-pressed="true"[^>]*>全部[\s\S]*?<\/a>/);
+    // chips 是链接（role=link），选中态用 aria-current（aria-pressed 对 link 无效，axe critical）
+    const chip = html.match(/<a[^>]*aria-current="true"[^>]*>全部[\s\S]*?<\/a>/);
     expect(chip).toBeTruthy();
+    expect(html).not.toContain("aria-pressed");
   });
 
   test("过滤：status=done 只留 done；URL searchParams 驱动", () => {
@@ -283,6 +285,13 @@ describe("项目详情 /projects/[slug]", () => {
     expect(html).toContain("[url]");
   });
 
+  test("「更早记录见日志」整句为独立链接（axe link-in-text-block）", () => {
+    const html = renderToStaticMarkup(<DetailView data={seedLedger()} slug="pactify-apps" now={NOW} />);
+    // 整句做成链接，而非在文本块中嵌入只靠颜色区分的小链接
+    expect(html).toMatch(/<a[^>]*href="\/log\?slug=pactify-apps"[^>]*>更早记录见日志/);
+    expect(html).not.toMatch(/更早记录见 <a/);
+  });
+
   test("done：整页减淡 + DONE 戳", () => {
     const html = renderToStaticMarkup(<DetailView data={seedLedger()} slug="design" now={NOW} />);
     expect(html).toContain("DONE");
@@ -319,6 +328,9 @@ describe("日志 /log", () => {
     const html = renderToStaticMarkup(<LogView data={seedLedger()} filters={{ slug: "alljobs" }} now={NOW} />);
     expect(html).toContain("T3 Brief 定稿");
     expect(html).not.toContain("TestFlight #42 上传");
+    // chips 是链接：选中态 aria-current，不得出现 aria-pressed（axe aria-allowed-attr）
+    expect(html).toContain('aria-current="true"');
+    expect(html).not.toContain("aria-pressed");
   });
 
   test("agent 过滤生效", () => {
@@ -351,6 +363,24 @@ describe("日志 /log", () => {
     const html = renderToStaticMarkup(<LogView data={data} filters={{}} now={NOW} />);
     expect(html).not.toContain("2026-08-09");
     const empty = renderToStaticMarkup(<LogView data={ledger({})} filters={{}} now={NOW} />);
+    expect(empty).toContain("还没有日志");
+  });
+
+  test("过滤无结果：说明 + 清除过滤（账上有日志时不得谎称空账）", () => {
+    // alljobs + joey 组合为空，但账上有日志
+    const html = renderToStaticMarkup(
+      <LogView data={seedLedger()} filters={{ slug: "alljobs", agent: "joey" }} now={NOW} />,
+    );
+    expect(html).toContain("没有同时满足");
+    expect(html).toContain("alljobs");
+    expect(html).toContain("joey");
+    expect(html).toContain("清除过滤");
+    expect(html).toContain('href="/log"');
+    expect(html).not.toContain("还没有日志");
+    // 真·空账（一条日志都没有）才教 schema，即使带着过滤参数
+    const empty = renderToStaticMarkup(
+      <LogView data={ledger({})} filters={{ slug: "x" }} now={NOW} />,
+    );
     expect(empty).toContain("还没有日志");
   });
 });

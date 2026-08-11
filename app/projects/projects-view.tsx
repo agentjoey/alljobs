@@ -59,7 +59,8 @@ export function ProjectsView({
         <ProofBanner issues={data.issues} />
 
         <div className="filters" role="group" aria-label="过滤">
-          <Link className="chip" href="/projects" aria-pressed={!hasFilter}>
+          {/* chips 是链接（role=link）：选中态用 aria-current，aria-pressed 仅对 button 有效 */}
+          <Link className="chip" href="/projects" aria-current={!hasFilter ? "true" : undefined}>
             全部<span className="n">{derived.length}</span>
           </Link>
           {STATUSES.map((s) => (
@@ -67,7 +68,7 @@ export function ProjectsView({
               key={s}
               className="chip"
               href={toggleHref("/projects", current, "status", s)}
-              aria-pressed={filters.status === s}
+              aria-current={filters.status === s ? "true" : undefined}
             >
               {s}
               <span className="n">{derived.filter((p) => p.status === s).length}</span>
@@ -79,7 +80,7 @@ export function ProjectsView({
               key={t}
               className="chip"
               href={toggleHref("/projects", current, "type", t)}
-              aria-pressed={filters.type === t}
+              aria-current={filters.type === t ? "true" : undefined}
             >
               [{t}]<span className="n">{derived.filter((p) => p.type === t).length}</span>
             </Link>
@@ -90,7 +91,7 @@ export function ProjectsView({
               key={a}
               className="chip"
               href={toggleHref("/projects", current, "agent", a)}
-              aria-pressed={filters.agent === a}
+              aria-current={filters.agent === a ? "true" : undefined}
             >
               {a}
             </Link>

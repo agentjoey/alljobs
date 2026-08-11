@@ -198,7 +198,9 @@ export function DetailView({
               ))
             )}
             <p className="empty-note">
-              更早记录见 <Link href={`/log?slug=${slug}`}>日志</Link> 按月归档 →
+              <Link className="empty-note-link" href={`/log?slug=${slug}`}>
+                更早记录见日志 · 按月归档 →
+              </Link>
             </p>
           </section>
         </div>

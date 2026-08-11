@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { readLedger } from "../../lib/data/read";
-import { ProjectsView } from "./projects-view";
+import { readLedger } from "../../../lib/data/read";
+import { ProjectsView } from "../projects-view";
 
 export const metadata: Metadata = { title: "项目" };
 

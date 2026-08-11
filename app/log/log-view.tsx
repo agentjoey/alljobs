@@ -75,7 +75,8 @@ export function LogView({
         <ProofBanner issues={data.issues} />
 
         <div className="filters" role="group" aria-label="过滤">
-          <Link className="chip" href={clearSlug} aria-pressed={!filters.slug}>
+          {/* chips 是链接（role=link）：选中态用 aria-current，aria-pressed 仅对 button 有效 */}
+          <Link className="chip" href={clearSlug} aria-current={!filters.slug ? "true" : undefined}>
             全部项目
           </Link>
           {visibleSlugs.map(([slug]) => (
@@ -83,17 +84,13 @@ export function LogView({
               key={slug}
               className="chip"
               href={toggleHref("/log", current, "slug", slug)}
-              aria-pressed={filters.slug === slug}
+              aria-current={filters.slug === slug ? "true" : undefined}
             >
               {slug}
             </Link>
           ))}
           {slugs.length > TOP_SLUGS && (
-            <Link
-              className="chip"
-              href={toggleHref("/log", current, "more", "1")}
-              aria-pressed={expanded}
-            >
+            <Link className="chip" href={toggleHref("/log", current, "more", "1")}>
               {expanded ? "收起" : "更多 ›"}
             </Link>
           )}
@@ -103,7 +100,7 @@ export function LogView({
               key={a}
               className="chip"
               href={toggleHref("/log", current, "agent", a)}
-              aria-pressed={filters.agent === a}
+              aria-current={filters.agent === a ? "true" : undefined}
             >
               {a}
             </Link>
@@ -117,8 +114,26 @@ export function LogView({
                 —
               </span>
               <span className="body body--muted">
-                还没有日志。在 <span className="mono mono--sm">data/log/{todayStr}.md</span>{" "}
-                写下第一行：<span className="mono mono--sm">- HH:MM slug @agent 内容</span>
+                {data.entries.length === 0 ? (
+                  <>
+                    还没有日志。在 <span className="mono mono--sm">data/log/{todayStr}.md</span>{" "}
+                    写下第一行：
+                    <span className="mono mono--sm">- HH:MM slug @agent 内容</span>
+                  </>
+                ) : (
+                  <>
+                    没有同时满足{" "}
+                    <span className="mono mono--sm">
+                      {[filters.slug, filters.agent && `@${filters.agent}`]
+                        .filter(Boolean)
+                        .join(" + ")}
+                    </span>{" "}
+                    的日志。
+                    <Link className="chip chip--inline" href="/log">
+                      清除过滤
+                    </Link>
+                  </>
+                )}
               </span>
             </div>
           </Sheet>

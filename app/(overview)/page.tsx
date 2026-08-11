@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { readLedger } from "../lib/data/read";
-import { OverviewView } from "./overview-view";
+import { readLedger } from "../../lib/data/read";
+import { OverviewView } from "../overview-view";
 
 export const metadata: Metadata = { title: "总览" };
 

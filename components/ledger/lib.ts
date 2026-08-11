@@ -52,7 +52,8 @@ export function attentionStamp(item: AttentionItem, today: Date): StampSpec {
 export function attentionWhy(item: AttentionItem): string {
   const p = item.project;
   if (item.kind === "blocked") {
-    return p.now ?? p.blocked_reason ?? "status=blocked";
+    // now 可能是多句多行，why 只取首句以对齐 mockup 单行密度
+    return p.now ? firstSentence(p.now) : (p.blocked_reason ?? "status=blocked");
   }
   if (item.kind === "stale") {
     const last = p.lastEntry ? `上次记录 ${formatMmDd(p.lastEntry.date)}` : "尚无记录";
@@ -60,6 +61,12 @@ export function attentionWhy(item: AttentionItem): string {
   }
   const head = `due ${formatMmDd(p.due!)}`;
   return p.next[0] ? `${head}：${p.next[0]}` : head;
+}
+
+/** 首句：到第一个句读（。！？!?）为止并含句读；无句读退到首个换行 */
+function firstSentence(s: string): string {
+  const m = s.match(/^[^。！？!?\n]*[。！？!?]?/);
+  return m?.[0] || s;
 }
 
 /** 底账行边距戳：blocked 优先于停滞（与注意清单同序），其余直取状态 */

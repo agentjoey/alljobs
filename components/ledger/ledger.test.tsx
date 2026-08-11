@@ -78,6 +78,32 @@ describe("lib · 戳文案与原因", () => {
     expect(attentionWhy(item)).toContain("等海外供应商报价答复");
   });
 
+  test("blocked：why 只取 now 首句（对齐 mockup 单行密度）", () => {
+    const item = attentionOf(
+      makeProject({
+        slug: "wordy",
+        status: "blocked",
+        blocked_reason: "r",
+        blocked_since: "2026-08-06",
+        now: "第一句说到这里。第二句不该出现在 why 里。\n换行后的也不该。",
+      }),
+      [],
+    );
+    expect(attentionWhy(item)).toBe("第一句说到这里。");
+    // 无句读时退到首个换行；单句则原样
+    const nonStop = attentionOf(
+      makeProject({
+        slug: "wordy2",
+        status: "blocked",
+        blocked_reason: "r",
+        blocked_since: "2026-08-06",
+        now: "没有句读的一行\n后面还有",
+      }),
+      [],
+    );
+    expect(attentionWhy(nonStop)).toBe("没有句读的一行");
+  });
+
   test("stale：停滞 N 天；从未记录时给明确文案", () => {
     const stale = attentionOf(
       makeProject({ slug: "petcare-app", next: ["宠物档案页原型"] }),
