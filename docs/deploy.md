@@ -23,7 +23,7 @@ mkdir -p ~/Library/Logs/alljobs
 npm run build && npm run start:prod
 ```
 
-`start:prod` = `next start -p 3456`（3456 为本项目约定端口）。验证：
+`start:prod` = `next start -p 3456 -H 127.0.0.1`（3456 为本项目约定端口；**`-H 127.0.0.1` 必须保留**：Next 的 `--hostname` 默认是 `0.0.0.0`，不显式绑回环地址会把应用对整个局域网零鉴权敞开，见 §5）。验证：
 
 ```bash
 curl -fsS http://localhost:3456/ >/dev/null && echo ok
@@ -77,29 +77,35 @@ cloudflared tunnel create alljobs
 
 此命令生成凭证文件 `~/.cloudflared/<TUNNEL_ID>.json`。
 
-写配置：以 `deploy/cloudflared-config.example.yml` 为模板，替换 `<TUNNEL_ID>` 与 `<USERNAME>` 后放到 cloudflared 的服务配置位置：
+写配置：以 `deploy/cloudflared-config.example.yml` 为模板，替换 `<TUNNEL_ID>` 与 `<USERNAME>` 后放到 `~/.cloudflared/config.yml`（与 cert.pem、凭证 json 同目录）：
 
 ```bash
-sudo mkdir -p /opt/homebrew/etc/cloudflared
 # 替换占位符后：
-sudo cp <替换好的config.yml> /opt/homebrew/etc/cloudflared/config.yml
+cp <替换好的config.yml> ~/.cloudflared/config.yml
 ```
 
 ingress 含义：`alljobs.agentjoey.ai` → `http://localhost:3456`；末行 `http_status:404` 是兜底，必须保留。
+
+cloudflared 常驻（launchd，登录即起、崩溃自愈）【Agent】：
+
+模板：`deploy/com.agentjoey.cloudflared.plist`。把 `<CLOUDFLARED_BIN>`（`which cloudflared`，如 `/opt/homebrew/bin/cloudflared`）与 `<USERNAME>` 替换为真实值后：
+
+```bash
+cp deploy/com.agentjoey.cloudflared.plist ~/Library/LaunchAgents/   # 替换占位符后的文件
+launchctl load ~/Library/LaunchAgents/com.agentjoey.cloudflared.plist
+```
+
+（卸载用 `launchctl unload ~/Library/LaunchAgents/com.agentjoey.cloudflared.plist`。）
+
+> **为什么不用 `brew services` 或 `cloudflared service install`**：cloudflared 2026.x 裸跑（不带参数）不会启动 tunnel，只打印 "Use `cloudflared tunnel run` to start tunnel" 并退出；而 Homebrew 的 service 定义与 `cloudflared service install` 生成的 plist 都是裸跑形态，两者实测均空转（exit 1 崩溃循环）。必须用本模板这样显式带 `tunnel --config … run` 参数的 LaunchAgent。日志在 `~/.cloudflared/logs/alljobs.{log,err}`。
+
+> **⚠️ 暴露窗口警告**：从此刻起到 §4 Access 策略建好之前，`route dns` 一执行应用就对**整个互联网零鉴权敞开**（没有 Access 拦截时公网访问直接拿到 200）。因此**推荐顺序：先做完 §4 建好 Access 策略，再回来执行下面的 DNS 路由**；若先跑本节，请在 §4 完成前先别执行 `route dns`。
 
 DNS 路由（自动在 Cloudflare DNS 建 CNAME）【Agent】：
 
 ```bash
 cloudflared tunnel route dns alljobs alljobs.agentjoey.ai
 ```
-
-cloudflared 常驻（launchd，登录即起、崩溃自愈）【Agent】：
-
-```bash
-sudo brew services start cloudflared
-```
-
-（卸载用 `sudo brew services stop cloudflared`。Homebrew 服务读取 `/opt/homebrew/etc/cloudflared/config.yml`。）
 
 验证 tunnel：
 
@@ -108,7 +114,7 @@ cloudflared tunnel list                      # 应看到 alljobs = <TUNNEL_ID>
 curl -s -o /dev/null -w "%{http_code}\n" https://alljobs.agentjoey.ai/
 ```
 
-Access 配好之前，最后一条应返回 **302**（Cloudflare Access 登录跳转）；配好后未登录同样是 302，通过 Access 后是 200。
+Access 配好之前，最后一条返回 **200**——这正是上面的暴露窗口：没有 Access 拦截，公网直接拿到应用。§4 配好后未登录访问应变为 **302**（Access 登录跳转），通过 Access 后是 200。
 
 ## 4. Zero Trust Access【Human 必做，全程 dashboard】
 
@@ -130,14 +136,14 @@ chmod 600 ~/.cloudflared/cert.pem ~/.cloudflared/*.json
 
 - **绝不入 git**：tunnel 凭证若导出/复制到 repo，一律放 `deploy/*.json`——`.gitignore` 已忽略该模式，勿提交。
 - **日志**：`~/Library/Logs/alljobs/` 与 cloudflared 日志只含请求/运行信息，不含 Access 验证码或用户数据；应用数据（`data/`）只在本机文件系统与 git 历史中。
-- **访问控制边界**：应用本身零鉴权——安全完全依赖 ① tunnel 是唯一入口（本机 3456 不对局域网暴露，Next 默认只绑 localhost 语义下请勿加 `-H 0.0.0.0`）② Access 策略仅放行一个邮箱。
+- **访问控制边界**：应用本身零鉴权——安全完全依赖 ① tunnel 是唯一入口 ② Access 策略仅放行一个邮箱。边界①的成立条件：**Next 的 `--hostname` 默认是 `0.0.0.0`**（见 `node_modules/next/dist/docs/01-app/03-api-reference/06-cli/next.md`），即 `next start` 默认对整个局域网敞开，任何同网设备可绕过 Access 直接读写工作台。因此 `start:prod` 与 launchd plist（经 `npm run start:prod`）都显式加了 `-H 127.0.0.1` 绑死回环地址，tunnel 才是唯一入口——**改脚本时请勿去掉这个参数**。
 
 ## 6. 回滚与故障
 
 - **停 tunnel（服务下线，数据无损）**：
 
 ```bash
-sudo brew services stop cloudflared
+launchctl unload ~/Library/LaunchAgents/com.agentjoey.cloudflared.plist
 ```
 
 数据层是纯文件（`data/`），应用/tunnel 全停也不影响读写；本地 3456 仍可直接访问。
@@ -157,4 +163,4 @@ launchctl load   ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
 curl -fsS http://localhost:3456/ >/dev/null && echo ok
 ```
 
-- **排障**：应用日志 `~/Library/Logs/alljobs/stderr.log`；cloudflared 日志 `sudo brew services info cloudflared` 看路径（或 `cloudflared tunnel list` 确认 tunnel 存活）；页面 502 先查 launchd 应用是否在跑（`launchctl list | grep alljobs`）。
+- **排障**：应用日志 `~/Library/Logs/alljobs/stderr.log`；cloudflared 日志 `~/.cloudflared/logs/alljobs.err`（或 `cloudflared tunnel list` 确认 tunnel 存活、`launchctl list | grep cloudflared` 确认 agent 在跑）；页面 502 先查 launchd 应用是否在跑（`launchctl list | grep alljobs`）。

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTD/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.agentjoey.cloudflared</string>
+
+    <!-- 占位符（XML 转义形态，替换时连同 &lt; &gt; 一起替换；显示即 <NAME>）：
+           <CLOUDFLARED_BIN> = cloudflared 二进制绝对路径（which cloudflared，如 /opt/homebrew/bin/cloudflared）
+           <USERNAME>        = macOS 用户名（whoami）
+         注意：cloudflared 2026.x 裸跑（不带参数）不会启动 tunnel，只会打印
+         "Use `cloudflared tunnel run` to start tunnel" 并退出——brew services 与
+         `cloudflared service install` 生成的都是裸跑形态，均不可用，因此必须像
+         本模板一样显式给出 tunnel --config ... run 参数。 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>&lt;CLOUDFLARED_BIN&gt;</string>
+        <string>tunnel</string>
+        <string>--config</string>
+        <string>/Users/&lt;USERNAME&gt;/.cloudflared/config.yml</string>
+        <string>run</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/&lt;USERNAME&gt;</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/&lt;USERNAME&gt;/.cloudflared/logs/alljobs.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/&lt;USERNAME&gt;/.cloudflared/logs/alljobs.err</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
