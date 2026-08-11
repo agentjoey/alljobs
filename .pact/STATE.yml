@@ -20,7 +20,7 @@ features:
         evidence: 返工两处 + 小项均已解决，验收命令全绿：  【1】日志 frontmatter 剥离（read.ts:85-115）：readLogs 先 matter(raw) 取 .content 再逐行解析；行号按原文件真实行号计（lineOffset = 原文件行数 - content 行数）。frontmatter 损坏时 matter 抛错则回退按原文解析（坏行自然进 ProofIssue）。新增测试「日志文件可带 frontmatter：剥离后解析，行号按原文件计」——注入 ---/mood: tired/--- 后零误报，仅第 6 行坏行进 ProofIssue 且行号正确（修复前会产生 3 条假 issue）。data/README.md 日志一节已补「frontmatter 可选（存在则被忽略）」。  【2】dueSoon 定案为方案 (a)（derive.ts:56-59）：去掉 daysToDue >= 0 下界，逾期（daysToDue 为负）也算 dueSoon，只卡上界 5 天。代码注释与 data/README.md 派生规则均写明「含已过期，无下界：逾期比临近到期更该被看见」。新增逾期单测：active 项目 due=2026-08-08、今天有日志（不 stale 不 blocked）→ dueSoon=true 且注意清单返回 [overdue, dueSoon]（修复前返回 []）；既有边界测试更新（逾期 1 天=true）。种子 e2e 不受影响（种子 due 均在未来）：tradelinks→petcare-app→eastern-astrology-mvp 断言仍通过。  【小项】read.ts 顶部加 import "server-only"（已装依赖）。该包在纯 node 下 import 即抛错，故新增 vitest.config.mts 用 resolve.alias 将 server-only 映射到 lib/data/empty-stub.ts（空模块），Next 构建期语义不受影响（build 已验证通过）。  验收输出： - npm run lint：0 errors，1 warning（scripts/shot.mjs:49 既有，非本任务文件） - npm run build：Next.js Turbopack ✓ Compiled / ✓ TypeScript / ✓ 静态页生成 - npm test：Test Files 4 passed (4)，Tests 35 passed (35)（较上轮 +2：frontmatter 用例 + 逾期用例）  变更文件：lib/data/read.ts、lib/data/derive.ts、lib/data/read.test.ts、lib/data/derive.test.ts、data/README.md、vitest.config.mts（新增）、lib/data/empty-stub.ts（新增）、package.json / package-lock.json（server-only 依赖）。未碰 UI 与 app/ 页面，未碰其他 task 文件。
       - id: pages
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T2-pages.md
         evidence: null
