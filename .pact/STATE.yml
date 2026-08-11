@@ -18,3 +18,10 @@ features:
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T1-data-layer.md
         evidence: null
+      - id: pages
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T2-pages.md
+        evidence: null
+        deps: [data-layer]
