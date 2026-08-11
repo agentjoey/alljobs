@@ -132,7 +132,7 @@ export function DetailView({
 
         <div className="spread spread--detail">
           <section className="page" aria-label="当前与下一步">
-            <SectionHead title="当前 NOW" />
+            <SectionHead title="当前" />
             {project.now ? (
               <div className="prose prose--section">
                 <p>{project.now}</p>
@@ -141,7 +141,7 @@ export function DetailView({
               <MissingSection section="## Now" margin="NOW" />
             )}
 
-            <SectionHead title="下一步 NEXT" count={project.next.length > 0 ? `${project.next.length} 项` : undefined} />
+            <SectionHead title="下一步" count={project.next.length > 0 ? `${project.next.length} 项` : undefined} />
             {project.next.length > 0 ? (
               <div className="prose">
                 <ul>
@@ -159,7 +159,7 @@ export function DetailView({
 
             {project.notes && (
               <>
-                <SectionHead title="笔记 NOTES" />
+                <SectionHead title="笔记" />
                 <div className="prose prose--section">
                   <p>{project.notes}</p>
                 </div>

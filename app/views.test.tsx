@@ -141,7 +141,7 @@ describe("总览 /", () => {
   test("右页：P0→P2 分组、NEXT、tally、last；done 进最近完成且不进右页", () => {
     const html = renderToStaticMarkup(<OverviewView data={seedLedger()} now={NOW} />);
     expect(html).toContain("P0 · 现在最重要");
-    expect(html).toContain("NEXT");
+    expect(html).toContain("下一步");
     expect(html).toContain("App Store 提审材料与截图");
     expect(html.indexOf("P0 · 现在最重要")).toBeLessThan(html.indexOf(">P2<"));
     expect(html).toContain("近 14 天活动 →");
@@ -237,8 +237,8 @@ describe("项目详情 /projects/[slug]", () => {
     expect(html).toContain("Pactify Apps");
     expect(html).toContain("started");
     expect(html).toContain("2026-08-20");
-    expect(html).toContain("当前 NOW");
-    expect(html).toContain("下一步 NEXT");
+    expect(html).toContain("当前");
+    expect(html).toContain("下一步");
     expect(html).toContain("App Store 提审材料与截图");
     // 活动流：今日在上，日内倒序
     const actStart = html.indexOf("活动");
@@ -250,7 +250,7 @@ describe("项目详情 /projects/[slug]", () => {
     expect(html).toContain("blockbar");
     expect(html).toContain("卡住 5 天");
     expect(html).toContain("等海外供应商报价答复");
-    expect(html).toContain("BLOCKED");
+    expect(html).toContain("卡住");
   });
 
   test("缺 Now：占位提示", () => {
@@ -296,7 +296,7 @@ describe("项目详情 /projects/[slug]", () => {
 
   test("done：整页减淡 + DONE 戳", () => {
     const html = renderToStaticMarkup(<DetailView data={seedLedger()} slug="design" now={NOW} />);
-    expect(html).toContain("DONE");
+    expect(html).toContain("已完成");
     expect(html).toContain("is-done");
   });
 

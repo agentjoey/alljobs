@@ -69,13 +69,22 @@ function firstSentence(s: string): string {
   return m?.[0] || s;
 }
 
+/** 状态词典：胶囊与过滤 chip 共用一份，避免同屏出现英文全大写/中文/小写英文三种写法 */
+export const STATUS_LABEL: Record<string, string> = {
+  active: "进行中",
+  blocked: "卡住",
+  paused: "暂停",
+  done: "已完成",
+  stale: "停滞",
+};
+
 /** 底账行边距戳：blocked 优先于停滞（与注意清单同序），其余直取状态 */
 export function rowStamp(p: DerivedProject): StampSpec {
-  if (p.status === "blocked") return { cls: "blocked", text: "BLOCKED" };
-  if (p.stale) return { cls: "stale", text: "停滞" };
-  if (p.status === "active") return { cls: "active", text: "ACTIVE" };
-  if (p.status === "paused") return { cls: "paused", text: "PAUSED" };
-  return { cls: "done", text: "DONE" };
+  if (p.status === "blocked") return { cls: "blocked", text: STATUS_LABEL.blocked };
+  if (p.stale) return { cls: "stale", text: STATUS_LABEL.stale };
+  if (p.status === "active") return { cls: "active", text: STATUS_LABEL.active };
+  if (p.status === "paused") return { cls: "paused", text: STATUS_LABEL.paused };
+  return { cls: "done", text: STATUS_LABEL.done };
 }
 
 export interface ProjectFilters {

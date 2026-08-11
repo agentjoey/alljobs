@@ -83,11 +83,12 @@
   --ag-joey: #2E7D32;
 
   /* —— 活动强度 sequential 单色梯（单色相，明度单调） —— */
-  --t0: rgba(120, 120, 128, 0.12);
-  --t1: rgba(0, 102, 204, 0.28);
-  --t2: rgba(0, 102, 204, 0.48);
-  --t3: rgba(0, 102, 204, 0.70);
-  --t4: #0066CC;
+  /* 活动强度：中性石墨梯——数据不可点，不能借用「可点=蓝」的强调色 */
+  --t0: rgba(60, 60, 67, 0.13);
+  --t1: rgba(60, 60, 67, 0.56);
+  --t2: rgba(60, 60, 67, 0.72);
+  --t3: rgba(60, 60, 67, 0.87);
+  --t4: rgba(60, 60, 67, 1);
 
   /* —— 玻璃（功能层） —— */
   --glass: rgba(249, 249, 251, 0.72);
@@ -146,22 +147,55 @@
     --tint-gray: rgba(152, 152, 157, 0.16);
     --tint-blue: rgba(10, 132, 255, 0.18);
 
-    /* 深色 agent 色标：平台原生亮度变体；identity 恒由色标 + 文字双编码承载
-       （严格 all-pairs CVD 下蓝/紫处 floor band——Apple 系统色本身亦然，见 DESIGN 记录） */
-    --ag-claude: #FF9F0A;
-    --ag-codex: #64A9FF;
-    --ag-kimi: #DA8FFF;
-    --ag-joey: #30DB5B;
+    /* 深色 agent 色标：色相拉开后 codex↔kimi 的红绿色盲重合已消除（ΔE 0.6 → 21.6 正常视力）。
+       残留最差配对 claude↔joey（橙/绿）deutan ΔE 6.7，处 6–8 floor band——合法前提是二次编码，
+       本项目每个色标后恒跟 agent 名文字（色标本身 aria-hidden），故 identity 从不由颜色单独承载。
+       深色档明度高于校验器的暗色带，是近黑底上可辨识度的取舍。 */
+    --ag-claude: #FFA726;
+    --ag-codex: #5CA8FF;
+    --ag-kimi: #FF6FB5;
+    --ag-joey: #3DDC6B;
 
-    --t0: rgba(118, 118, 128, 0.24);
-    --t1: rgba(10, 132, 255, 0.35);
-    --t2: rgba(10, 132, 255, 0.55);
-    --t3: rgba(10, 132, 255, 0.78);
-    --t4: #0A84FF;
+    --t0: rgba(235, 235, 245, 0.16);
+    --t1: rgba(235, 235, 245, 0.42);
+    --t2: rgba(235, 235, 245, 0.60);
+    --t3: rgba(235, 235, 245, 0.80);
+    --t4: rgba(235, 235, 245, 0.98);
 
     --glass: rgba(28, 28, 30, 0.72);
     --glass-border: rgba(84, 84, 88, 0.6);
-    --shadow-card: none;
+    /* 深色下卡面/分组底仅 1.23:1，用极淡描边补回可感知深度（dark-mode.md 分层目的） */
+    --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  }
+}
+
+/* 系统「增强对比度」档（color.md 要求自定义色须同时提供 increased contrast 变体） */
+@media (prefers-contrast: more) {
+  :root {
+    --label-2: rgba(60, 60, 67, 0.96);
+    --label-3: rgba(60, 60, 67, 0.9);
+    --placeholder: rgba(60, 60, 67, 0.88);
+    --separator: rgba(60, 60, 67, 0.5);
+    --separator-opaque: #9E9EA4;
+    --t0: rgba(60, 60, 67, 0.22);
+    --t1: rgba(60, 60, 67, 0.55);
+    --shadow-card: 0 0 0 1px rgba(60, 60, 67, 0.28);
+  }
+  .masthead {
+    background: var(--bg-grouped-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --label-2: rgba(235, 235, 245, 0.94);
+    --label-3: rgba(235, 235, 245, 0.84);
+    --placeholder: rgba(235, 235, 245, 0.8);
+    --separator: rgba(120, 120, 128, 0.9);
+    --t0: rgba(235, 235, 245, 0.26);
+    --t1: rgba(235, 235, 245, 0.55);
+    --shadow-card: 0 0 0 1px rgba(235, 235, 245, 0.24);
   }
 }
 
@@ -203,10 +237,11 @@
     color: inherit;
   }
 
+  /* 焦点环用实色：color-mix 到 transparent 只是降 alpha，实测仅 2.3:1，低于非文字 3:1 门槛。
+     不设 border-radius——那改的是元素自身圆角而非描边，组件分层后会让胶囊弹形。 */
   :focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--accent-blue) 55%, transparent);
+    outline: 2px solid var(--accent-blue);
     outline-offset: 2px;
-    border-radius: 6px;
   }
 
   h1,
@@ -590,7 +625,7 @@
   align-items: center;
 }
 .tally i {
-  width: 6px;
+  width: 8px;
   height: 14px;
   border-radius: 2px;
   background: var(--t0);
@@ -676,9 +711,12 @@
 .quickadd input[type="text"]::placeholder {
   color: var(--placeholder);
 }
+.quickadd input[type="text"]:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
 .quickadd input[type="text"]:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 22%, transparent);
 }
 .quickadd input[type="text"][aria-invalid="true"] {
   box-shadow: 0 0 0 2px var(--sys-red);
@@ -929,7 +967,7 @@ a.row:hover,
 }
 .chip[aria-pressed="true"] .n,
 .chip[aria-current="true"] .n {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.92);
 }
 .chip .n {
   color: var(--label-3);
@@ -1241,7 +1279,7 @@ a.row:hover,
   .tab {
     flex: 1;
     text-align: center;
-    min-height: 32px;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1282,9 +1320,18 @@ a.row:hover,
   .quickadd .body {
     gap: 6px;
   }
+  /* 移动端控件回到平台默认 44pt（accessibility.md > Mobility） */
   .btn-stamp,
-  .chip {
-    min-height: 34px;
+  .chip,
+  .quickadd input[type="text"],
+  .quickadd select {
+    min-height: 44px;
+  }
+  .tab {
+    min-height: 40px;
+  }
+  .filters {
+    gap: 10px;
   }
   .footer {
     padding: 16px 16px 32px;

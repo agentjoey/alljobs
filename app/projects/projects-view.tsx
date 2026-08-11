@@ -6,6 +6,7 @@ import { Masthead } from "../../components/ledger/masthead";
 import {
   filterProjects,
   sortForIndex,
+  STATUS_LABEL,
   toggleHref,
   type ProjectFilters,
 } from "../../components/ledger/lib";
@@ -70,7 +71,7 @@ export function ProjectsView({
               href={toggleHref("/projects", current, "status", s)}
               aria-current={filters.status === s ? "true" : undefined}
             >
-              {s}
+              {STATUS_LABEL[s] ?? s}
               <span className="n">{derived.filter((p) => p.status === s).length}</span>
             </Link>
           ))}
@@ -132,7 +133,7 @@ export function ProjectsView({
       <Footer
         left="alljobs 工作底账 · data/projects/*.md"
         right={`${derived.length} 个项目 · ${STATUSES.map(
-          (s) => `${derived.filter((p) => p.status === s).length} ${s}`,
+          (s) => `${derived.filter((p) => p.status === s).length} ${STATUS_LABEL[s] ?? s}`,
         ).join(" · ")}`}
       />
     </>

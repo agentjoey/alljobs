@@ -50,7 +50,7 @@ export function ProjectRow({
           </span>
         ) : (
           <span className="next">
-            {!quiet && nextText && <b>NEXT</b>} {nextText ?? "—"}
+            {!quiet && nextText && <b>下一步</b>} {nextText ?? "—"}
           </span>
         )}
         <span className="meta">

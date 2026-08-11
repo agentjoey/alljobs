@@ -143,7 +143,7 @@ describe("lib · 戳文案与原因", () => {
       [],
       TODAY,
     );
-    expect(rowStamp(blocked!)).toEqual({ cls: "blocked", text: "BLOCKED" });
+    expect(rowStamp(blocked!)).toEqual({ cls: "blocked", text: "卡住" });
 
     const [stale] = deriveProjects([makeProject({ slug: "b" })], [], TODAY);
     expect(rowStamp(stale!)).toEqual({ cls: "stale", text: "停滞" });
@@ -153,17 +153,17 @@ describe("lib · 戳文案与原因", () => {
       [makeEntry({ slug: "c" })],
       TODAY,
     );
-    expect(rowStamp(active!)).toEqual({ cls: "active", text: "ACTIVE" });
+    expect(rowStamp(active!)).toEqual({ cls: "active", text: "进行中" });
 
     const [paused] = deriveProjects(
       [makeProject({ slug: "d", status: "paused" })],
       [],
       TODAY,
     );
-    expect(rowStamp(paused!)).toEqual({ cls: "paused", text: "PAUSED" });
+    expect(rowStamp(paused!)).toEqual({ cls: "paused", text: "暂停" });
 
     const [done] = deriveProjects([makeProject({ slug: "e", status: "done" })], [], TODAY);
-    expect(rowStamp(done!)).toEqual({ cls: "done", text: "DONE" });
+    expect(rowStamp(done!)).toEqual({ cls: "done", text: "已完成" });
   });
 });
 
