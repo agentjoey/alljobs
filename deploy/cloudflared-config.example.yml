@@ -1,0 +1,14 @@
+# cloudflared tunnel 配置模板（alljobs → alljobs.agentjoey.ai）
+# 用法：替换 <> 占位符后复制到 ~/.cloudflared/config.yml
+# 占位符：
+#   <TUNNEL_ID>  = cloudflared tunnel create alljobs 输出的 UUID
+#   <USERNAME>   = macOS 用户名
+
+tunnel: <TUNNEL_ID>
+credentials-file: /Users/<USERNAME>/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: alljobs.agentjoey.ai
+    service: http://localhost:3456
+  # 兜底规则必须保留：未匹配 host 的请求一律 404
+  - service: http_status:404

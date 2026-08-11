@@ -1,34 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# alljobs
 
-## Getting Started
+Joey 的个人工作台：对所有并行项目的进度做日常追踪与管理。数据层是 repo 内 Markdown——任何 agent 改一个文件即完成写入，git 即历史。
 
-First, run the development server:
+## 数据层
+
+`data/` 是单一真相源：`data/projects/<slug>.md`（项目卡）+ `data/log/<YYYY-MM-DD>.md`（每日日志）。格式与派生规则见 [data/README.md](data/README.md)。
+
+## 常用命令
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev          # 开发服务器（默认 3000）
+npm run build        # 生产构建
+npm run start:prod   # 生产运行，端口 3456（本项目约定）
+npm test             # vitest
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 部署
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+本地常驻 server + cloudflared tunnel → `alljobs.agentjoey.ai`，登录由 Cloudflare Access 邮件验证码承担。一步步照做见 [docs/deploy.md](docs/deploy.md)；launchd 与 tunnel 配置模板在 `deploy/`。
 
-## Learn More
+## 记录
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`.agent/` 保存本产品的设计/实施记录（`frontend-design/alljobs-workbench-v1/`：brief、mockup、verification、handoff），供后续 agent 会话恢复上下文。

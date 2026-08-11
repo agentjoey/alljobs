@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.agentjoey.alljobs</string>
+
+    <!-- 占位符（XML 转义形态，替换时连同 &lt; &gt; 一起替换；显示即 <NAME>）：
+           <NODE_BIN_DIR> = node/npm 所在目录（dirname "$(which npm)"，如 /opt/homebrew/bin）
+           <REPO_ABS_PATH> = 本 repo 的绝对路径（如 /Users/joey/AgentWorks/CodeSpace/alljobs）
+           <USERNAME> = macOS 用户名（whoami） -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>&lt;NODE_BIN_DIR&gt;/npm</string>
+        <string>run</string>
+        <string>start:prod</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>&lt;REPO_ABS_PATH&gt;</string>
+
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/&lt;USERNAME&gt;/Library/Logs/alljobs/stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/&lt;USERNAME&gt;/Library/Logs/alljobs/stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>&lt;NODE_BIN_DIR&gt;:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

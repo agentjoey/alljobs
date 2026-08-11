@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# deploy credentials（cloudflared tunnel 凭证 json 等，绝不入 git）
+deploy/*.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
