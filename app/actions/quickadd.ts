@@ -17,8 +17,10 @@ export type QuickAddState =
 export async function quickAdd(
   _prev: QuickAddState,
   formData: FormData,
-  dataDir = "data",
 ): Promise<QuickAddState> {
+  // 数据目录是服务端配置，不是客户端输入：server action 是公开 POST 端点，
+  // 参数由请求体反序列化，绝不能把文件系统路径暴露成参数。测试经 env 注入。
+  const dataDir = process.env.ALLJOBS_DATA_DIR ?? "data";
   const result = appendLogEntry(
     {
       text: String(formData.get("text") ?? ""),

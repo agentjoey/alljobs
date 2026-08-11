@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useReducer, useRef, useState } from "react";
 import { quickAdd, type QuickAddState } from "../../../app/actions/quickadd";
 import type { LogEntry } from "../../../lib/data/types";
 import { EntryRow } from "./entry-row";
@@ -24,6 +24,12 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
   const [slug, setSlug] = useState("");
   const [agent, setAgent] = useState("joey");
   const [lastAdded, setLastAdded] = useState<string | null>(null);
+  // React 19 的 form action 提交完成后会隐式 reset 表单，把受控 select 的 DOM 值打回默认；
+  // 而 slug/agent 的 state 没变、不触发重渲染去重新施加受控值——显示与 state 脱节，
+  // 下一笔回车会按 state 落账，与用户看到的「未选项目 / joey」不一致。
+  // reset 排在微任务里、晚于 action 内的 setState 渲染；成功后下一帧强制一次重渲染，
+  // 让受控值重新施加到 DOM（界面显示 == 内部 state == 下一笔实际落账）。
+  const [, resyncSelects] = useReducer((n: number) => n + 1, 0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [state, formAction, isPending] = useActionState<QuickAddState, FormData>(
@@ -32,6 +38,7 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
       if (result.status === "success") {
         setLastAdded(entryKey(result.entry));
         setText(""); // 表单清空（项目/记录者保留，方便连续记同一项目）
+        requestAnimationFrame(() => resyncSelects());
         // 焦点回输入框：isPending=false 的提交可能晚一帧，输入框还 disabled 时 focus 静默失败——逐帧重试到解禁
         const refocus = (tries: number) => {
           const el = inputRef.current;

@@ -28,16 +28,19 @@ beforeEach(() => {
   mkdirSync(join(dir, "projects"));
   mkdirSync(join(dir, "log"));
   writeFileSync(join(dir, "projects/alljobs.md"), "---\ntitle: t\n---\n", "utf8");
+  // 数据目录经 env 注入（action 签名只有 prev/formData，不吃第三个参数）
+  process.env.ALLJOBS_DATA_DIR = dir;
   vi.mocked(refresh).mockClear();
 });
 
 afterEach(() => {
+  delete process.env.ALLJOBS_DATA_DIR;
   rmSync(dir, { recursive: true, force: true });
 });
 
 describe("quickAdd server action", () => {
   it("合法提交：落账成功 + refresh 触发同响应重渲染", async () => {
-    const r = await quickAdd(IDLE, fd({ text: "催一下审核进度", slug: "alljobs", agent: "joey" }), dir);
+    const r = await quickAdd(IDLE, fd({ text: "催一下审核进度", slug: "alljobs", agent: "joey" }));
     expect(r.status).toBe("success");
     if (r.status === "success") {
       expect(r.entry.slug).toBe("alljobs");
@@ -53,21 +56,21 @@ describe("quickAdd server action", () => {
   });
 
   it("空文本：validation，不 refresh、不落账", async () => {
-    const r = await quickAdd(IDLE, fd({ text: "  ", slug: "alljobs", agent: "joey" }), dir);
+    const r = await quickAdd(IDLE, fd({ text: "  ", slug: "alljobs", agent: "joey" }));
     expect(r).toEqual({ status: "validation" });
     expect(vi.mocked(refresh)).not.toHaveBeenCalled();
     expect(existsSync(join(dir, "log", `${todayStr()}.md`))).toBe(false);
   });
 
   it("未知 slug：validation，不落账", async () => {
-    const r = await quickAdd(IDLE, fd({ text: "x", slug: "ghost", agent: "joey" }), dir);
+    const r = await quickAdd(IDLE, fd({ text: "x", slug: "ghost", agent: "joey" }));
     expect(r).toEqual({ status: "validation" });
     expect(vi.mocked(refresh)).not.toHaveBeenCalled();
   });
 
   it("fs 失败：结构化 fs 状态（文件路径给手动补记提示），不抛 500", async () => {
     mkdirSync(join(dir, "log", `${todayStr()}.md`)); // 同名目录 → 写入必失败
-    const r = await quickAdd(IDLE, fd({ text: "x", slug: "alljobs", agent: "joey" }), dir);
+    const r = await quickAdd(IDLE, fd({ text: "x", slug: "alljobs", agent: "joey" }));
     expect(r.status).toBe("fs");
     if (r.status === "fs") {
       expect(r.file).toContain(`${todayStr()}.md`);
@@ -77,7 +80,7 @@ describe("quickAdd server action", () => {
   });
 
   it("FormData 缺字段按空串处理：不会抛 TypeError", async () => {
-    const r = await quickAdd(IDLE, new FormData(), dir);
+    const r = await quickAdd(IDLE, new FormData());
     expect(r).toEqual({ status: "validation" });
   });
 });
