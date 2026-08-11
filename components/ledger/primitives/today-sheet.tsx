@@ -100,8 +100,8 @@ export function TodaySheet({ entries, slugs }: { entries: LogEntry[]; slugs: str
             ref={inputRef}
             type="text"
             name="text"
-            placeholder="记一笔…（回车落账）"
-            aria-label="日志内容"
+            placeholder="记一笔…"
+            aria-label="日志内容（回车落账）"
             aria-invalid={invalid || undefined}
             aria-describedby={invalid ? "quickadd-err" : undefined}
             disabled={isPending}

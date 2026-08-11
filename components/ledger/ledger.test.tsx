@@ -283,7 +283,8 @@ describe("primitives · 渲染", () => {
 
   test("DateStamp：签名元素，日期 + 今日", () => {
     const html = renderToStaticMarkup(<DateStamp date="2026-08-11" />);
-    expect(html).toContain("2026·08·11");
+    // large title 直出 ISO 日期（账本世界的 2026·08·11 分隔符已随改版移除）
+    expect(html).toContain("2026-08-11");
     expect(html).toContain("今日");
     expect(html).toContain("datestamp");
   });

@@ -124,7 +124,7 @@ describe("总览 /", () => {
 
   test("今日：日期戳 + 条目按时间升序 + 快速添加占位行", () => {
     const html = renderToStaticMarkup(<OverviewView data={seedLedger()} now={NOW} />);
-    expect(html).toContain("2026·08·11");
+    expect(html).toContain("2026-08-11");
     expect(html).toContain("已记 4 笔");
     const i0812 = html.indexOf("08:12");
     const i0835 = html.indexOf("08:35");
@@ -132,7 +132,9 @@ describe("总览 /", () => {
     expect(i0812).toBeGreaterThan(-1);
     expect(i0812).toBeLessThan(i0835);
     expect(i0835).toBeLessThan(i0942);
-    expect(html).toContain("记一笔…（回车落账）");
+    // 占位文案精简为「记一笔…」（单行控件排布）；回车落账的承诺移入 aria-label
+    expect(html).toContain("记一笔…");
+    expect(html).toContain("日志内容（回车落账）");
     expect(html).toContain("落账");
   });
 

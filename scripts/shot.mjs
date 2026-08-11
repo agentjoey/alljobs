@@ -3,7 +3,7 @@
 // usage: node shot.mjs <url> <out.png> <width> <scale> <mobile:0|1>
 import { spawn } from 'node:child_process';
 
-const [url, out, widthArg, scaleArg, mobileArg] = process.argv.slice(2);
+const [url, out, widthArg, scaleArg, mobileArg, schemeArg] = process.argv.slice(2);
 const width = Number(widthArg || 1440);
 const scale = Number(scaleArg || 1);
 const mobile = mobileArg === '1';
@@ -63,6 +63,12 @@ try {
   await rpc(ws, 'Emulation.setDeviceMetricsOverride', {
     width, height: 900, deviceScaleFactor: scale, mobile,
   });
+  // 第 6 参数 light|dark：强制外观，避免继承宿主系统设置（截图证据必须可复现）
+  if (schemeArg === 'light' || schemeArg === 'dark') {
+    await rpc(ws, 'Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-color-scheme', value: schemeArg }],
+    });
+  }
   await rpc(ws, 'Page.enable');
   const loaded = new Promise((r) => {
     ws.addEventListener('message', function h(ev) {

@@ -18,7 +18,8 @@ function makeEntry(e: Partial<LogEntry> & { slug: string }): LogEntry {
 describe("TodaySheet（快速添加接线）", () => {
   test("idle：控件可用、name 齐备、submit 钮、占位文案（回车落账）", () => {
     const html = renderToStaticMarkup(<TodaySheet entries={[makeEntry({ slug: "alljobs" })]} slugs={["alljobs"]} />);
-    expect(html).toContain("记一笔…（回车落账）");
+    expect(html).toContain("记一笔…");
+    expect(html).toContain("日志内容（回车落账）");
     expect(html).toContain('name="text"');
     expect(html).toContain('name="slug"');
     expect(html).toContain('name="agent"');
