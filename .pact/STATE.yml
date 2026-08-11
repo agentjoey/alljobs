@@ -8,3 +8,13 @@ agents:
   - { id: kimi, roles: [worker] }
   - { id: opencode, roles: [worker] }
 features:
+  - id: workbench-v1
+    branch: 
+    status: in_progress
+    tasks:
+      - id: data-layer
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T1-data-layer.md
+        evidence: null
