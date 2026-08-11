@@ -32,3 +32,9 @@ features:
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T3-quickadd.md
         evidence: null
         deps: [data-layer, pages]
+      - id: deploy-docs
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T4-deploy-docs.md
+        evidence: null
