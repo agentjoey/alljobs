@@ -1,0 +1,10 @@
+project: alljobs
+working_tree_holder: null
+agents:
+  - { id: claude, roles: [orchestrator, reviewer] }
+  - { id: claude, roles: [worker] }
+  - { id: codex, roles: [worker] }
+  - { id: gemini, roles: [worker] }
+  - { id: kimi, roles: [worker] }
+  - { id: opencode, roles: [worker] }
+features:

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "pact": {
+      "args": [
+        "mcp"
+      ],
+      "command": "pactify",
+      "env": {}
+    }
+  }
+}

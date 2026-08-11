@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "pact": {
+      "command": [
+        "pactify",
+        "mcp"
+      ],
+      "enabled": true,
+      "environment": {},
+      "type": "local"
+    }
+  }
+}
