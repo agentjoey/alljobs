@@ -28,7 +28,7 @@ features:
         deps: [data-layer]
       - id: quickadd
         owner: kimi
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T3-quickadd.md
         evidence: 本轮只重拍两张证据截图（reviewer 指定唯一返工项），未动任何实现、测试、CSS。  【环境】node_modules 缺失 → npm ci（255 包，0 vulnerabilities）→ npm run build：Turbopack ✓，四路由全 ƒ（/、/log、/projects、/projects/[slug]），与 reviewer 复验结论一致。next start -p 3456（spec 口径端口，3456 空闲；3466 上原有 next-server 未动，截图后已停掉本轮服务器）。  【截图方式】自建 CDP 脚本 /tmp/quickadd-reshoot.mjs，截屏口径与 scripts/shot.mjs 完全一致：1440×900、deviceScaleFactor=2、mobile=false、fonts.ready+300ms、captureBeyondViewport、optimizeForSpeed、png。仅多交互步骤：原生 value setter + change/input 事件驱动受控控件，form.requestSubmit() 真实走 server action（非 reload 摆拍）。  【success 态（关键修复点可见）】选 codesk/codex、输入「reshoot final build」提交。脚本回报：slug="codesk" agent="codex"（select 选中项文本=codesk，落账后保留，未脱节）、focusBack=true（焦点回输入框）。截图可见：今日区落新行「01:20 codesk codex reshoot final build」，快速添加行项目 select 显示 codesk、记录者 select 显示 codex、文本框清空回占位、落账钮可用。写入 data 原文：- 01:20 codesk @codex reshoot final build（严格 - HH:MM <slug> @<agent> <text>）。  【validation 态】同一轮 build 全新加载后空文本+未选项目直接提交。脚本回报：#quickadd-err 出现、文案「写点内容并选择项目，再落账。」、aria-invalid="true"、aria-describedby="quickadd-err"。截图可见红下划线 + 行内错误文案，select 回「选择项目…」（fresh load 的初始态）。  【新 mtime（均晚于最后提交 f62048f 01:15:57，更远晚于两次修复提交 741221c/d3c7006）】 - quickadd-success-1440.png    2026-08-12 01:20:34 +0800（565479b） - quickadd-validation-1440.png 2026-08-12 01:20:35 +0800（574998b）  【data 还原】成功态产生的新文件 data/log/2026-08-12.md 已删除，git status data/ 无 diff。截图文件之外 git status 干净，无实现/测试/CSS 改动。
