@@ -25,3 +25,10 @@ features:
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T2-pages.md
         evidence: null
         deps: [data-layer]
+      - id: quickadd
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T3-quickadd.md
+        evidence: null
+        deps: [data-layer, pages]
