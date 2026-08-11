@@ -57,6 +57,22 @@
 
 过程注记：主评审者会话在 M2 复判前 transcript 失效，M2 终判由新开的最小核验代理独立执行（只判该项，输入为文件与截图事实）——替代已按规则披露。最终 10 张截图全部摄于最终版本（13:04–13:07，晚于最后一次代码改动）。
 
-## 待 production 阶段的验证项（本记录不替代）
+## Production 最终独立 Verification（2026-08-12 · main @ ee320ec）
 
-按 workflow §8 完整顺序对最终 build 执行：type/lint/test → 状态与数据边界（含坏文件注入实测）→ 键盘/焦点/对比/axe → 响应式双端截图 → 关键旅程 E2E（晨检→详情→落账）。由独立 Verification 会话执行，不采信本记录结论。
+**结论：VERIFICATION PASS**（独立 Verification Agent 新会话执行，全部第一手证据，无一采信前人结论）。
+
+| 步骤 | 结果 | 关键证据 |
+|---|---|---|
+| 自动化检查 | PASS | lint 0 errors · 102/102 测试 · build ✓ · 契约 seed cda17d0d 在 .next 产物存活 |
+| 状态与数据边界 | PASS | 坏 frontmatter/坏日志行实测注入：其余照常渲染 + 校对横幅精确指明文件/字段/行号；404 含索引；全部现场还原 |
+| 键盘与 a11y | PASS | 真实 Tab 行走 20 停全可达、焦点环 2px 红；aria-invalid/aria-describedby/role=alert 成立；对比度实算墨 14.22:1、最低 5.04:1；**axe-core 5 路由 violations = 0** |
+| 响应式 | PASS | 390 四路由 scrollWidth==390；双端 8 张最终 build 截图 → verify-screens/ |
+| 关键旅程 E2E | PASS | 晨检（注意→TradeLinks 红条）→ 真实键盘落账 → 总览/日志/详情三处同现 + 派生联动（划记格/计数/footer）→ 现场还原 |
+| reduced-motion | PASS | 仿真 reduce 后新行直接出现，animation none |
+
+跨日健壮性附证：验证横跨 08-11→08-12，周几/卡住天数/停滞判定/今日空态全部自动正确。
+Non-blocking 记录：shot.mjs 自身 1 lint warning；404 不回显错误 slug（代码注释已披露，验收满足）；快速添加输入框焦点样式=红下划线（与批准 mockup 逐字一致）。
+
+## 交付链摘要
+
+Mockup Gate 批准（r2）→ pactify 编排（worker=kimi/k3，reviewer=claude/opus-5，4 任务 7 轮迭代全部 accepted，hard gate lint+build+test）→ merge `ee320ec` → 本节独立 Verification PASS。发布（公网上线）待 Human Owner 完成 Cloudflare DNS 路由与 Access 策略（docs/deploy.md 标注的 Human-only 步骤）。

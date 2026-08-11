@@ -33,3 +33,15 @@ Next safe action: 等 Human Owner 的 Mockup Gate 决定。批准 → 任务转 
   修改意见 → mockup 迭代后重走独立复核；不批准 → 按 §4 Reopened 重推导方向。
   实现前先建 data/ 种子并让 Owner 校正真实状态/优先级。
 ```
+
+---
+
+## 终态更新（2026-08-12）
+
+v1 已 **shipped**：Mockup Gate 批准 → pactify 编排（worker=kimi/k3 · reviewer=claude/opus-5 ·
+hard gate）4/4 accepted → merge `ee320ec` → 独立 Verification **PASS**（见 verification.md）。
+本地 server 运行于 127.0.0.1:3456（`npm run start:prod`）。
+
+剩余 Human-only 步骤（docs/deploy.md）：Cloudflare DNS 路由 + Access 应用（邮件 OTP 白名单）；
+决定 kimi 安装的 `com.agentjoey.cloudflared` LaunchAgent 去留（现无 DNS 路由，公网不可达）；
+校正 data/projects/*.md 占位状态为真实值；可选 launchd 常驻应用本体。
