@@ -11,7 +11,7 @@ agents:
 features:
   - id: workbench-v1
     branch: 
-    status: in_progress
+    status: shipped
     tasks:
       - id: data-layer
         owner: kimi
