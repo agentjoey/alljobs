@@ -297,6 +297,20 @@ describe("项目详情 /projects/[slug]", () => {
     expect(html).toContain("DONE");
     expect(html).toContain("is-done");
   });
+
+  test("日组不被包裹：dayhead 与 sheet 平铺（mockup 30px 日间距）", () => {
+    // 同 /log：包裹 <div> 会让每个 dayhead 命中 :first-of-type，30px 日间距丢失
+    const data = ledger({
+      projects: [makeProject({ slug: "a" })],
+      entries: [
+        makeEntry({ slug: "a", date: "2026-08-11", file: "data/log/2026-08-11.md" }),
+        makeEntry({ slug: "a", date: "2026-08-10", file: "data/log/2026-08-10.md" }),
+      ],
+    });
+    const html = renderToStaticMarkup(<DetailView data={data} slug="a" now={NOW} />);
+    expect(html).not.toMatch(/<div><div class="section-head dayhead"/);
+    expect(html).toMatch(/<\/div><div class="section-head dayhead"/);
+  });
 });
 
 describe("slug 不存在", () => {
@@ -353,6 +367,15 @@ describe("日志 /log", () => {
     expect(html).not.toContain("远古一");
     expect(html).toContain("2026-06");
     expect(html).toContain("2 笔");
+  });
+
+  test("日组不被包裹：dayhead 与 sheet 是 main.ledger 的平铺兄弟（mockup 30px 日间距）", () => {
+    // mockup 里 dayhead/sheet 平铺在 main.ledger 下，.dayhead:first-of-type { margin-top: 0 }
+    // 只命中真正的第一个日头；若每个日组被 <div> 包裹，则每个 dayhead 都是各自 wrapper
+    // 的 first-of-type，30px 日间距全部丢失
+    const html = renderToStaticMarkup(<LogView data={seedLedger()} filters={{}} now={NOW} />);
+    expect(html).not.toMatch(/<div><div class="section-head dayhead"/);
+    expect(html).toMatch(/<\/div><div class="section-head dayhead"/);
   });
 
   test("空日不渲染；无记录给引导", () => {

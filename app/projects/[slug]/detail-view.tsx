@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import {
   deriveProjects,
@@ -183,7 +184,9 @@ export function DetailView({
               </Sheet>
             ) : (
               days.map((g) => (
-                <div key={g.date}>
+                // Fragment：dayhead/sheet 须平铺（同 mockup），
+                // 包裹 div 会让每个 dayhead 命中 :first-of-type，30px 日间距丢失
+                <Fragment key={g.date}>
                   <SectionHead
                     day
                     title={`${g.date} ${weekdayZh(g.date)}`}
@@ -194,7 +197,7 @@ export function DetailView({
                       <EntryRow key={`${e.date}-${e.line}`} entry={e} showSlug={false} />
                     ))}
                   </Sheet>
-                </div>
+                </Fragment>
               ))
             )}
             <p className="empty-note">

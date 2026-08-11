@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { mastheadCounts, weekdayZh } from "../../lib/data/derive";
 import type { LedgerData } from "../../lib/data/types";
@@ -140,7 +141,9 @@ export function LogView({
         )}
 
         {recent.map((g) => (
-          <div key={g.date}>
+          // Fragment：dayhead/sheet 须平铺在 main.ledger 下（同 mockup），
+          // 包裹 div 会让每个 dayhead 命中 :first-of-type，30px 日间距丢失
+          <Fragment key={g.date}>
             <SectionHead
               day
               title={`${g.date} ${weekdayZh(g.date)}${g.date === todayStr ? " · 今日" : ""}`}
@@ -151,7 +154,7 @@ export function LogView({
                 <EntryRow key={`${e.date}-${e.line}`} entry={e} />
               ))}
             </Sheet>
-          </div>
+          </Fragment>
         ))}
 
         {months.length > 0 && (
