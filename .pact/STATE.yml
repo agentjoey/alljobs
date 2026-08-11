@@ -14,7 +14,7 @@ features:
     tasks:
       - id: data-layer
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .agent/frontend-design/alljobs-workbench-v1/tasks/T1-data-layer.md
         evidence: null
