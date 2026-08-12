@@ -86,6 +86,15 @@ cp <替换好的config.yml> ~/.cloudflared/config.yml
 
 ingress 含义：`alljobs.agentjoey.ai` → `http://localhost:3456`；末行 `http_status:404` 是兜底，必须保留。
 
+**当前实际配置（2026-08-12）**：两条 ingress，对应两个源站——
+
+| 主机名 | 源站 | 来源 | 常驻性 |
+|---|---|---|---|
+| `alljobs.agentjoey.ai` | `localhost:3456` | 主仓库 `main`（工作底账版，已通过独立 Verification） | launchd `com.agentjoey.alljobs`，开机自起 |
+| `alljobs-preview.agentjoey.ai` | `localhost:3510` | worktree `../alljobs-restyle`（`restyle/apple-hig` 分支） | 临时进程，**非常驻**，仅供设计评审期间对比 |
+
+> **为什么要分两个工作副本**：生产与在改的分支若共用一个 tree，任何一次 `npm run build` 都会覆盖 `.next`，让线上服务踩在半成品上。故生产固定用主仓库（`data/` 唯一真相所在），改版走 `git worktree`（自带 node_modules——Turbopack 不接受软链的 node_modules，会报 "points out of the filesystem root"）。改版一旦合并进 main，生产端重新 build 即生效，预览可随时撤掉。
+
 cloudflared 常驻（launchd，登录即起、崩溃自愈）【Agent】：
 
 模板：`deploy/com.agentjoey.cloudflared.plist`。把 `<CLOUDFLARED_BIN>`（`which cloudflared`，如 `/opt/homebrew/bin/cloudflared`）与 `<USERNAME>` 替换为真实值后：
@@ -121,7 +130,7 @@ Access 配好之前，最后一条返回 **200**——这正是上面的暴露�
 > 以下每一步都在浏览器 Cloudflare One dashboard（one.dash.cloudflare.com）操作，agent 无法代办。
 
 1. **进入**：one.dash.cloudflare.com → 选账号 → **Access** → **Applications** → **Add an application** → **Self-hosted**。
-2. **应用**：Application name 随意（如 `alljobs`）；Session Duration 建议 **24 小时**（手机每天输一次验证码可接受；嫌烦可到 7 天，别更长）；Application domain：Subdomain `alljobs`、Domain `agentjoey.ai`。
+2. **应用**：Application name 随意（如 `alljobs`）；Session Duration 建议 **24 小时**（手机每天输一次验证码可接受；嫌烦可到 7 天，别更长）；Application domain：Subdomain `alljobs`、Domain `agentjoey.ai`。若同时启用了改版预览，在同一个应用里用 **+ Add domain** 再加一条 Subdomain `alljobs-preview`、Domain `agentjoey.ai`——一个应用一条策略同时管住两个主机名，不必建两个应用。
 3. **策略**：Add a policy → Action = **Allow**；Include 规则选 **Emails**，值 = `theagentjoey@gmail.com`（仅此一个邮箱）。
 4. **登录方式**：默认 One-time PIN（邮件验证码）即可，无需额外配置 IdP。
 5. 保存后用手机/无痕窗口打开 `https://alljobs.agentjoey.ai/`，应看到 Access 登录页；输邮箱 → 收验证码 → 进入应用。
