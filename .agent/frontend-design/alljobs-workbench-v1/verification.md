@@ -75,4 +75,4 @@ Non-blocking 记录：shot.mjs 自身 1 lint warning；404 不回显错误 slug�
 
 ## 交付链摘要
 
-Mockup Gate 批准（r2）→ pactify 编排（worker=kimi/k3，reviewer=claude/opus-5，4 任务 7 轮迭代全部 accepted，hard gate lint+build+test）→ merge `ee320ec` → 本节独立 Verification PASS。发布（公网上线）待 Human Owner 完成 Cloudflare DNS 路由与 Access 策略（docs/deploy.md 标注的 Human-only 步骤）。
+Mockup Gate 批准（r2）→ pactify 编排（worker=kimi/k3，reviewer=claude/opus-5，4 任务 7 轮迭代全部 accepted，hard gate lint+build+test）→ merge `ee320ec` → 本节独立 Verification PASS。发布（公网上线）待 Human Owner 完成 Cloudflare DNS 路由与 Access 策略（docs/deployment.md 标注的 Human-only 步骤）。

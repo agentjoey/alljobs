@@ -119,7 +119,7 @@ blocked_reason: 等供应商报价   # status=blocked 时必填
 
 - 验证顺序按 workflow §8：自动化检查 → 状态与数据边界（含坏文件注入）→ 键盘/焦点/对比/axe → 响应式双端截图 → 关键旅程 E2E（晨检→详情→快速添加落账）。T3 由独立 Verification 会话对最终 build 执行，不采信 Primary 文字结论。
 - 回滚：应用层 `git revert` + 重启本地 server 即回滚；Cloudflare Tunnel/Access 配置独立于应用代码，出问题可单独停 tunnel（服务下线但数据无损）。数据层为纯文件，应用故障不影响 data/ 可读写。
-- 部署形态：本地常驻 server（`npm run build && npm start` 或 launchd）+ cloudflared tunnel → alljobs.agentjoey.ai；Cloudflare Access 邮件验证码。Cloudflare 侧配置需 Owner 在 dashboard 登录操作，实现阶段我提供 config 模板与步骤文档（`docs/deploy.md`）。
+- 部署形态：本地常驻 server（`npm run build && npm start` 或 launchd）+ cloudflared tunnel → alljobs.agentjoey.ai；Cloudflare Access 邮件验证码。Cloudflare 侧配置需 Owner 在 dashboard 登录操作，实现阶段我提供 config 模板与步骤文档（`docs/deployment.md`）。
 
 ## Production 实现待办（独立评审遗留，不阻塞 Gate）
 

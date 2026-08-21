@@ -29,7 +29,7 @@ Known failures / open questions · uncommitted state:
   - mockup 用 Google Fonts CDN 加载 Geist（仅 mockup 允许；production 必须 next/font）
   - 本地静态预览：python http.server :4173（会话内启动，重启机器后需重启）
 Next safe action: 等 Human Owner 的 Mockup Gate 决定。批准 → 任务转 Approved，开始 production
-  实现（Next.js 页面 + data/ schema + seed + docs/deploy.md 的 cloudflared 配置模板）；
+  实现（Next.js 页面 + data/ schema + seed + docs/deployment.md 的 cloudflared 配置模板）；
   修改意见 → mockup 迭代后重走独立复核；不批准 → 按 §4 Reopened 重推导方向。
   实现前先建 data/ 种子并让 Owner 校正真实状态/优先级。
 ```
@@ -42,6 +42,6 @@ v1 已 **shipped**：Mockup Gate 批准 → pactify 编排（worker=kimi/k3 · r
 hard gate）4/4 accepted → merge `ee320ec` → 独立 Verification **PASS**（见 verification.md）。
 本地 server 运行于 127.0.0.1:3456（`npm run start:prod`）。
 
-剩余 Human-only 步骤（docs/deploy.md）：Cloudflare DNS 路由 + Access 应用（邮件 OTP 白名单）；
+剩余 Human-only 步骤（docs/deployment.md）：Cloudflare DNS 路由 + Access 应用（邮件 OTP 白名单）；
 决定 kimi 安装的 `com.agentjoey.cloudflared` LaunchAgent 去留（现无 DNS 路由，公网不可达）；
 校正 data/projects/*.md 占位状态为真实值；可选 launchd 常驻应用本体。
