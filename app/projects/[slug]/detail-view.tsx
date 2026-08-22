@@ -1,46 +1,30 @@
-import { Fragment } from "react";
 import Link from "next/link";
+import { Fragment } from "react";
+import { deriveProjects, weekdayZh } from "@/lib/data/derive";
+import type { LedgerData, TaskBucket } from "@/lib/data/types";
 import {
-  deriveProjects,
-  mastheadCounts,
-  weekdayZh,
-} from "../../../lib/data/derive";
-import type { LedgerData, Project } from "../../../lib/data/types";
-import { cn } from "../../../lib/utils";
-import { Footer } from "../../../components/ledger/footer";
-import { Masthead } from "../../../components/ledger/masthead";
-import {
-  countInWindow,
-  formatMmDd,
-  groupByDay,
-  rowStamp,
-  toDateStr,
-} from "../../../components/ledger/lib";
-import { AgentMark } from "../../../components/ledger/primitives/agent-mark";
-import { EntryRow } from "../../../components/ledger/primitives/entry-row";
-import { ProofBanner } from "../../../components/ledger/primitives/proof-banner";
-import { SectionHead } from "../../../components/ledger/primitives/section-head";
-import { Sheet } from "../../../components/ledger/primitives/sheet";
-import { Stamp } from "../../../components/ledger/primitives/stamp";
+  AgentPill,
+  Badge,
+  DetailCard,
+  EmptyState,
+  StatusDot,
+} from "@/components/workbench";
+import { EntryRow } from "@/components/workbench/EntryRow";
+import { countInWindow, formatMmDd, groupByDay, toDateStr } from "@/components/workbench/lib";
 
-/** /projects/[slug]：详情头 + blocked 红条 + Now/Next/Notes + 活动流（倒序日分组）。调用方保证 slug 存在。 */
-export function DetailView({
-  data,
-  slug,
-  now,
-}: {
+export type DetailViewProps = {
   data: LedgerData;
   slug: string;
   now: Date;
-}) {
-  const project = data.projects.find((p) => p.slug === slug) as Project;
+  tasks: Map<string, TaskBucket>;
+};
+
+export function DetailView({ data, slug, now, tasks }: DetailViewProps) {
+  const project = data.projects.find((p) => p.slug === slug)!;
   const [derived] = deriveProjects([project], data.entries, now);
-  const counts = mastheadCounts(data.projects, data.entries, now);
-  const stamp = rowStamp(derived!);
   const mine = data.entries.filter((e) => e.slug === slug);
   const days = groupByDay(mine);
   const total14 = countInWindow(data.entries, slug, now);
-  const done = project.status === "done";
   const todayStr = toDateStr(now);
   const dueDays =
     project.due !== undefined
@@ -50,200 +34,213 @@ export function DetailView({
             86_400_000,
         )
       : null;
+  const taskBucket = tasks.get(slug);
 
   return (
-    <>
-      <Masthead current="projects" counts={counts} today={now} />
-      <main className={cn("ledger", done && "is-done")}>
-        <ProofBanner issues={data.issues} />
-
-        <div className="detail-head">
-          <p className="crumb">
-            <Link href="/projects">项目</Link> / {slug}
-          </p>
-          <div className="detail-title">
-            <Stamp kind={stamp.cls}>{stamp.text}</Stamp>
-            <Stamp kind="priority">{project.priority}</Stamp>
-            <h1>{project.title}</h1>
-            <span className="slug">
-              {slug} · [{project.type}]
-            </span>
-          </div>
-          {(project.links?.repo ||
-            project.links?.obsidian ||
-            project.links?.folder ||
-            project.links?.url) && (
-            <div className="linkrow">
-              {project.links?.repo && (
-                <span className="linkrow-item">[repo] {project.links.repo}</span>
-              )}
-              {project.links?.obsidian && (
-                <a href={project.links.obsidian}>
-                  [vault] Obsidian <ExtArrow />
-                </a>
-              )}
-              {project.links?.folder && (
-                <span className="linkrow-item">[dir] {project.links.folder}</span>
-              )}
-              {project.links?.url && (
-                <a href={project.links.url}>
-                  [url] {project.links.url.replace(/^https?:\/\//, "")} <ExtArrow />
-                </a>
-              )}
-            </div>
-          )}
-          <div className="kv">
-            <span>
-              started <b>{project.started}</b>
-            </span>
-            {project.due && (
-              <span className={derived!.dueSoon ? "due-soon" : undefined}>
-                due{" "}
-                <b className={derived!.dueSoon ? "due-soon" : undefined}>
-                  {project.due}
+    <div className="flex h-full flex-col">
+      <header className="border-b border-hairline bg-surface px-6 py-5">
+        <div className="mb-2 flex items-center gap-2 text-[13px] text-label-secondary">
+          <Link href="/projects" className="text-accent-text hover:underline">
+            项目
+          </Link>
+          <span>/</span>
+          <span>{slug}</span>
+          <Badge variant="default">{project.priority}</Badge>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold text-label-primary">
+              {project.title}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-label-secondary">
+              <StatusDot status={project.status} label={labelForStatus(project.status)} />
+              <span>[{project.type}]</span>
+              <span>started {project.started}</span>
+              {project.due && (
+                <span className={derived.dueSoon ? "text-orange-text" : ""}>
+                  due {project.due}
                   {dueDays !== null &&
                     `（${dueDays > 0 ? `${dueDays} 天` : dueDays === 0 ? "今日" : `逾期 ${-dueDays} 天`}）`}
-                </b>
-              </span>
-            )}
-            {project.tags.length > 0 && (
-              <span>
-                tags <b>{project.tags.join(" · ")}</b>
-              </span>
-            )}
-            {project.agents.map((a) => (
-              <AgentMark key={a} name={a} />
-            ))}
-            <span>
-              近 14 天 <b>{total14} 笔</b>
-            </span>
+                </span>
+              )}
+              <span>近 14 天 {total14} 笔</span>
+            </div>
           </div>
         </div>
 
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {project.agents.map((a) => (
+            <AgentPill key={a} agent={a} />
+          ))}
+          {project.tags.map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-surface-secondary px-2 py-0.5 text-[11px] text-label-secondary"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+
+        {project.links && (
+          <div className="mt-3 flex flex-wrap gap-3 text-[13px]">
+            {project.links.repo && (
+              <span className="text-label-secondary">repo: {project.links.repo}</span>
+            )}
+            {project.links.obsidian && (
+              <a
+                href={project.links.obsidian}
+                className="text-accent-text hover:underline"
+              >
+                Obsidian →
+              </a>
+            )}
+            {project.links.folder && (
+              <span className="text-label-secondary">dir: {project.links.folder}</span>
+            )}
+            {project.links.url && (
+              <a href={project.links.url} className="text-accent-text hover:underline">
+                {project.links.url.replace(/^https?:\/\//, "")} →
+              </a>
+            )}
+          </div>
+        )}
+      </header>
+
+      <div className="flex-1 overflow-auto p-6">
         {project.status === "blocked" && (
-          <div className="blockbar" role="status">
-            <Stamp kind="blocked">
-              {derived!.blockedDays !== null ? `卡住 ${derived!.blockedDays} 天` : "卡住"}
-            </Stamp>
-            {project.blocked_reason}
-            {project.blocked_since && `（自 ${formatMmDd(project.blocked_since)}）`}
+          <div
+            className="mb-4 rounded-lg border border-red/20 bg-red/10 px-4 py-3 text-[14px] text-red-text"
+            role="status"
+          >
+            <span className="font-medium">
+              {derived.blockedDays !== null ? `卡住 ${derived.blockedDays} 天` : "卡住"}
+            </span>
+            <span className="ml-2">
+              {project.blocked_reason}
+              {project.blocked_since && `（自 ${formatMmDd(project.blocked_since)}）`}
+            </span>
           </div>
         )}
 
-        <div className="spread spread--detail">
-          <section className="page" aria-label="当前与下一步">
-            <SectionHead title="当前 NOW" />
-            {project.now ? (
-              <div className="prose prose--section">
-                <p>{project.now}</p>
-              </div>
-            ) : (
-              <MissingSection section="## Now" margin="NOW" />
-            )}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-4">
+            <DetailCard title="当前 NOW">
+              {project.now ? (
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-label-primary">
+                  {project.now}
+                </p>
+              ) : (
+                <p className="text-[13px] text-label-tertiary">
+                  文件缺 ## Now 段——在项目 md 里补一段，总览的注意力区同时受益。
+                </p>
+              )}
+            </DetailCard>
 
-            <SectionHead title="下一步 NEXT" count={project.next.length > 0 ? `${project.next.length} 项` : undefined} />
-            {project.next.length > 0 ? (
-              <div className="prose">
-                <ul>
+            <DetailCard title={`下一步 NEXT · ${project.next.length} 项`}>
+              {project.next.length > 0 ? (
+                <ul className="space-y-2">
                   {project.next.map((item, i) => (
-                    <li key={i}>
-                      <span className="idx">{String(i + 1).padStart(2, "0")}</span>
+                    <li key={i} className="flex gap-2 text-[15px] text-label-primary">
+                      <span className="text-label-tertiary">{String(i + 1).padStart(2, "0")}</span>
                       {item}
                     </li>
                   ))}
                 </ul>
-              </div>
-            ) : (
-              <MissingSection section="## Next" margin="NEXT" />
-            )}
+              ) : (
+                <p className="text-[13px] text-label-tertiary">
+                  文件缺 ## Next 段。
+                </p>
+              )}
+            </DetailCard>
 
             {project.notes && (
-              <>
-                <SectionHead title="笔记 NOTES" />
-                <div className="prose prose--section">
-                  <p>{project.notes}</p>
-                </div>
-              </>
+              <DetailCard title="笔记 NOTES">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-label-primary">
+                  {project.notes}
+                </p>
+              </DetailCard>
             )}
-          </section>
 
-          <section className="page" aria-label="活动记录">
-            <h2 className="sr-only">活动记录</h2>
-            {days.length === 0 ? (
-              <Sheet>
-                <div className="row">
-                  <span className="margin" aria-hidden="true">
-                    —
-                  </span>
-                  <span className="body body--muted">
-                    本页尚无记录。任何 agent 在{" "}
-                    <span className="mono mono--sm">data/log/</span> 提到{" "}
-                    <span className="mono mono--sm">{slug}</span> 即入账。
-                  </span>
+            {taskBucket && taskBucket.items.length > 0 && (
+              <DetailCard
+                title={`任务 · ${taskBucket.items.filter((t) => t.status !== "done").length} 待办`}
+              >
+                <div className="space-y-2">
+                  {taskBucket.items.slice(0, 5).map((t) => (
+                    <div key={t.line} className="flex items-center gap-2 text-[14px] text-label-primary">
+                      <TaskMarker status={t.status} />
+                      <span className={t.status === "done" ? "line-through text-label-tertiary" : ""}>
+                        {t.text}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </Sheet>
-            ) : (
-              days.map((g) => (
-                // Fragment：dayhead/sheet 须平铺（同 mockup），
-                // 包裹 div 会让每个 dayhead 命中 :first-of-type，30px 日间距丢失
-                <Fragment key={g.date}>
-                  <SectionHead
-                    day
-                    title={`${g.date} ${weekdayZh(g.date)}`}
-                    count={`${g.entries.length} 笔`}
-                  />
-                  <Sheet>
-                    {g.entries.map((e) => (
-                      <EntryRow key={`${e.date}-${e.line}`} entry={e} showSlug={false} />
-                    ))}
-                  </Sheet>
-                </Fragment>
-              ))
+                <Link
+                  href={`/board?project=${slug}`}
+                  className="mt-3 inline-block text-[13px] text-accent-text hover:underline"
+                >
+                  在看板中管理 →
+                </Link>
+              </DetailCard>
             )}
-            <p className="empty-note">
-              <Link className="empty-note-link" href={`/log?slug=${slug}`}>
-                更早记录见日志 · 按月归档 →
-              </Link>
-            </p>
-          </section>
+          </div>
+
+          <div>
+            <DetailCard title="活动记录">
+              {days.length === 0 ? (
+                <EmptyState
+                  title="本页尚无记录"
+                  description={`任何 agent 在 data/log/ 提到 ${slug} 即入账。`}
+                />
+              ) : (
+                <div className="-mx-4 max-h-[60vh] overflow-auto">
+                  {days.map((g) => (
+                    <Fragment key={g.date}>
+                      <h4 className="sticky top-0 z-10 border-b border-hairline bg-surface px-4 py-2 text-[12px] font-medium text-label-tertiary">
+                        {g.date} {weekdayZh(g.date)}
+                      </h4>
+                      {g.entries.map((e) => (
+                        <EntryRow key={`${e.date}-${e.line}`} entry={e} showSlug={false} />
+                      ))}
+                    </Fragment>
+                  ))}
+                </div>
+              )}
+            </DetailCard>
+          </div>
         </div>
-      </main>
-      <Footer
-        left={`alljobs 工作底账 · data/projects/${slug}.md`}
-        right="在编辑器或 Obsidian 中修改此页数据"
-      />
-    </>
-  );
-}
-
-function MissingSection({ section, margin }: { section: string; margin: string }) {
-  return (
-    <Sheet className="sheet--missing">
-      <div className="row">
-        <span className="margin" aria-hidden="true">
-          {margin}
-        </span>
-        <span className="body body--muted">
-          文件缺 <span className="mono mono--sm">{section}</span>{" "}
-          段——在项目 md 里补一段，总览的 NEXT 列同时受益。
-        </span>
       </div>
-    </Sheet>
+    </div>
   );
 }
 
-function ExtArrow() {
+function labelForStatus(status: string): string {
+  switch (status) {
+    case "active":
+      return "活跃";
+    case "blocked":
+      return "卡住";
+    case "paused":
+      return "搁置";
+    case "done":
+      return "完成";
+    default:
+      return status;
+  }
+}
+
+function TaskMarker({ status }: { status: string }) {
+  const color =
+    status === "done"
+      ? "bg-green"
+      : status === "doing"
+        ? "bg-accent"
+        : "bg-label-tertiary";
   return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden="true"
-    >
-      <path d="M2 8L8 2M3.5 2H8v4.5" />
-    </svg>
+    <span
+      className={`h-2 w-2 rounded-full ${color}`}
+      aria-label={status}
+    />
   );
 }

@@ -130,6 +130,35 @@ describe("readLedger", () => {
     expect(r.issues[0].file).toContain("notes.md");
   });
 
+  it("解析 kind=session 日志行", () => {
+    write("projects/alljobs.md", GOOD_PROJECT);
+    write("log/2026-08-11.md", "- 21:14 alljobs @kimi [session] 重设计 brief 定稿\n");
+    const r = readLedger(dir);
+    expect(r.issues).toEqual([]);
+    expect(r.entries).toHaveLength(1);
+    expect(r.entries[0]).toMatchObject({
+      date: "2026-08-11",
+      time: "21:14",
+      slug: "alljobs",
+      agent: "kimi",
+      kind: "session",
+      text: "重设计 brief 定稿",
+    });
+  });
+
+  it("未知 kind 进 ProofIssue 且保留 kind=null 条目", () => {
+    write("projects/alljobs.md", GOOD_PROJECT);
+    write(
+      "log/2026-08-11.md",
+      "- 21:14 alljobs @kimi [session] 合法会话\n- 22:00 alljobs @kimi [unknown] 未知 kind\n",
+    );
+    const r = readLedger(dir);
+    expect(r.entries).toHaveLength(2);
+    expect(r.entries[1]).toMatchObject({ kind: null, text: "未知 kind" });
+    expect(r.issues).toHaveLength(1);
+    expect(r.issues[0]).toMatchObject({ line: 2, field: "kind", message: "未知日志 kind：unknown" });
+  });
+
   it("空 data 目录不抛出", () => {
     const r = readLedger(dir);
     expect(r.projects).toEqual([]);

@@ -46,12 +46,34 @@ frontmatter 之后写三段（段标题固定）：
 文件名即日期（必须是真实日历日期）。frontmatter 可选（存在则被忽略，不解析也不报错）。每行一笔，行文法：
 
 ```
-- HH:MM <slug> @<agent> <text>
+- HH:MM <slug> @<agent> [kind] <text>
 ```
 
 - `HH:MM` 24 小时制；`<slug>` 必须是 `projects/` 里存在的项目；`@<agent>` 如 `@claude` `@codex` `@kimi` `@joey`。
+- `[kind]` 可选，目前仅支持 `[session]`，用于标记一段集中工作会话。
+- 未知 kind 不 fatal，会进入「校对」清单，且该行仍保留（kind=null）。
 - 一天之内按时间升序追加（新行落底）。
 - 无法解析的行、未知 slug 不会丢数据——进「校对」清单。
+
+## 任务 `tasks/<slug>.md`
+
+文件名即项目 slug，frontmatter 必须声明所属项目：
+
+```yaml
+---
+project: <slug>
+---
+```
+
+body 为 Markdown task list，每行一条任务：
+
+```md
+- [ ] 待办任务
+- [/] 进行中任务
+- [x] 已完成任务
+```
+
+非法 marker、非 task list 行、未知 slug 都会进「校对」清单。
 
 ## 派生规则（lib/data/derive.ts 实现）
 

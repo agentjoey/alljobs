@@ -1,178 +1,174 @@
-import { Fragment } from "react";
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { mastheadCounts, weekdayZh } from "../../lib/data/derive";
-import type { LedgerData } from "../../lib/data/types";
-import { Footer } from "../../components/ledger/footer";
-import { Masthead } from "../../components/ledger/masthead";
+import { Fragment } from "react";
+import { mastheadCounts, weekdayZh } from "@/lib/data/derive";
+import type { LedgerData } from "@/lib/data/types";
+import {
+  AppShell,
+  EmptyState,
+  ProofBanner,
+  SegmentedControl,
+} from "@/components/workbench";
+import { EntryRow } from "@/components/workbench/EntryRow";
 import {
   foldOlderThan,
   groupByDay,
   toDateStr,
   toggleHref,
-} from "../../components/ledger/lib";
-import { EntryRow } from "../../components/ledger/primitives/entry-row";
-import { ProofBanner } from "../../components/ledger/primitives/proof-banner";
-import { SectionHead } from "../../components/ledger/primitives/section-head";
-import { Sheet } from "../../components/ledger/primitives/sheet";
-
-export interface LogFilters {
-  slug?: string;
-  agent?: string;
-  more?: string;
-}
+} from "@/components/workbench/lib";
 
 const AGENT_ORDER = ["claude", "codex", "kimi", "joey"];
 const TOP_SLUGS = 3;
 
-/** /log：日分组倒序（检索逻辑：最新在上），项目/agent 过滤 chips，空日不渲染，按月折叠 */
-export function LogView({
-  data,
-  filters,
-  now,
-}: {
+export type LogViewProps = {
   data: LedgerData;
-  filters: LogFilters;
   now: Date;
-}) {
+};
+
+export function LogView({ data, now }: LogViewProps) {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const slug = sp.get("slug") ?? undefined;
+  const agent = sp.get("agent") ?? undefined;
+  const more = sp.get("more") ?? undefined;
+
   const counts = mastheadCounts(data.projects, data.entries, now);
   const todayStr = toDateStr(now);
   const filtered = data.entries.filter(
     (e) =>
-      (!filters.slug || e.slug === filters.slug) &&
-      (!filters.agent || e.agent === filters.agent),
+      (!slug || e.slug === slug) && (!agent || e.agent === agent),
   );
   const { recent, months } = foldOlderThan(groupByDay(filtered), now);
 
-  const current: Record<string, string | undefined> = {
-    slug: filters.slug,
-    agent: filters.agent,
-    more: filters.more,
-  };
+  const current: Record<string, string | undefined> = { slug, agent, more };
+
   const countBySlug = new Map<string, number>();
   for (const e of data.entries) countBySlug.set(e.slug, (countBySlug.get(e.slug) ?? 0) + 1);
   const slugs = [...countBySlug.entries()].sort(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
   );
-  const expanded = filters.more === "1";
+  const expanded = more === "1";
   const visibleSlugs = expanded ? slugs : slugs.slice(0, TOP_SLUGS);
   const agents = [
     ...AGENT_ORDER.filter((a) => data.entries.some((e) => e.agent === a)),
     ...new Set(data.entries.map((e) => e.agent).filter((a) => !AGENT_ORDER.includes(a))),
   ];
-  const clearSlug = (() => {
-    const next: Record<string, string> = {};
-    for (const [k, v] of Object.entries(current)) {
-      if (v !== undefined && k !== "slug" && k !== "more") next[k] = v;
-    }
-    const qs = new URLSearchParams(next).toString();
-    return qs ? `/log?${qs}` : "/log";
-  })();
+
+  const slugOptions = [
+    { value: "all", label: "全部项目", count: data.entries.length },
+    ...visibleSlugs.map(([s, c]) => ({ value: s, label: s, count: c })),
+    ...(slugs.length > TOP_SLUGS
+      ? [{ value: "more", label: expanded ? "收起" : "更多", count: undefined }]
+      : []),
+  ];
+
+  const agentOptions = [
+    { value: "all", label: "全部记录者", count: undefined },
+    ...agents.map((a) => ({
+      value: a,
+      label: a,
+      count: data.entries.filter((e) => e.agent === a).length,
+    })),
+  ];
+
+  const derived = data.projects.map((p) => ({ slug: p.slug, title: p.title }));
+  const attention = data.projects.filter(
+    (p) => p.status === "blocked",
+  ).length;
+  const projectsByStatus = {
+    active: derived.filter((_, i) => data.projects[i].status === "active"),
+    paused: derived.filter((_, i) => data.projects[i].status === "paused"),
+    done: derived.filter((_, i) => data.projects[i].status === "done"),
+  };
+  const writableSlugs = data.projects
+    .filter((p) => p.status === "active" || p.status === "blocked")
+    .map((p) => p.slug);
 
   return (
-    <>
-      <Masthead current="log" counts={counts} today={now} />
-      <main className="ledger">
-        <h1 className="sr-only">日志 · alljobs 工作底账</h1>
+    <AppShell
+      title="日志"
+      activeItem="log"
+      counts={{ today: counts.todayCount, attention }}
+      attentionCount={attention}
+      projectsByStatus={projectsByStatus}
+      newEntrySlugs={writableSlugs}
+    >
+      <div className="space-y-4 p-6">
         <ProofBanner issues={data.issues} />
 
-        <div className="filters" role="group" aria-label="过滤">
-          {/* chips 是链接（role=link）：选中态用 aria-current，aria-pressed 仅对 button 有效 */}
-          <Link className="chip" href={clearSlug} aria-current={!filters.slug ? "true" : undefined}>
-            全部项目
-          </Link>
-          {visibleSlugs.map(([slug]) => (
-            <Link
-              key={slug}
-              className="chip"
-              href={toggleHref("/log", current, "slug", slug)}
-              aria-current={filters.slug === slug ? "true" : undefined}
-            >
-              {slug}
-            </Link>
-          ))}
-          {slugs.length > TOP_SLUGS && (
-            <Link className="chip" href={toggleHref("/log", current, "more", "1")}>
-              {expanded ? "收起" : "更多 ›"}
-            </Link>
-          )}
-          <span className="chip-gap" aria-hidden="true" />
-          {agents.map((a) => (
-            <Link
-              key={a}
-              className="chip"
-              href={toggleHref("/log", current, "agent", a)}
-              aria-current={filters.agent === a ? "true" : undefined}
-            >
-              {a}
-            </Link>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            className="flex-wrap"
+            options={slugOptions}
+            value={slug ?? (more === "1" ? "more" : "all")}
+            onChange={(v) => {
+              if (v === "more") {
+                router.push(toggleHref("/log", current, "more", expanded ? "" : "1"));
+              } else {
+                const next: Record<string, string | undefined> = { ...current };
+                delete next.more;
+                router.push(toggleHref("/log", next, "slug", v === "all" ? "" : v));
+              }
+            }}
+          />
+          <SegmentedControl
+            className="flex-wrap"
+            options={agentOptions}
+            value={agent ?? "all"}
+            onChange={(v) => {
+              router.push(toggleHref("/log", current, "agent", v === "all" ? "" : v));
+            }}
+          />
         </div>
 
         {recent.length === 0 && months.length === 0 && (
-          <Sheet>
-            <div className="row">
-              <span className="margin" aria-hidden="true">
-                —
-              </span>
-              <span className="body body--muted">
-                {data.entries.length === 0 ? (
-                  <>
-                    还没有日志。在 <span className="mono mono--sm">data/log/{todayStr}.md</span>{" "}
-                    写下第一行：
-                    <span className="mono mono--sm">- HH:MM slug @agent 内容</span>
-                  </>
-                ) : (
-                  <>
-                    没有同时满足{" "}
-                    <span className="mono mono--sm">
-                      {[filters.slug, filters.agent && `@${filters.agent}`]
-                        .filter(Boolean)
-                        .join(" + ")}
-                    </span>{" "}
-                    的日志。
-                    <Link className="chip chip--inline" href="/log">
-                      清除过滤
-                    </Link>
-                  </>
-                )}
-              </span>
-            </div>
-          </Sheet>
+          <EmptyState
+            title="没有日志"
+            description={
+              data.entries.length === 0
+                ? `在 data/log/${todayStr}.md 写下第一行：- HH:MM slug @agent 内容`
+                : "没有同时满足过滤条件的日志。"
+            }
+            action={
+              data.entries.length > 0 ? (
+                <Link href="/log" className="text-accent-text hover:underline">
+                  清除过滤
+                </Link>
+              ) : undefined
+            }
+          />
         )}
 
         {recent.map((g) => (
-          // Fragment：dayhead/sheet 须平铺在 main.ledger 下（同 mockup），
-          // 包裹 div 会让每个 dayhead 命中 :first-of-type，30px 日间距丢失
           <Fragment key={g.date}>
-            <SectionHead
-              day
-              title={`${g.date} ${weekdayZh(g.date)}${g.date === todayStr ? " · 今日" : ""}`}
-              count={`${g.entries.length} 笔`}
-            />
-            <Sheet>
+            <h2 className="text-[13px] font-semibold text-label-secondary">
+              {g.date} {weekdayZh(g.date)}
+              {g.date === todayStr && " · 今日"} · {g.entries.length} 笔
+            </h2>
+            <div className="rounded-lg border border-hairline bg-surface">
               {g.entries.map((e) => (
                 <EntryRow key={`${e.date}-${e.line}`} entry={e} />
               ))}
-            </Sheet>
+            </div>
           </Fragment>
         ))}
 
         {months.length > 0 && (
-          <Sheet className="sheet--months">
+          <div className="rounded-lg border border-hairline bg-surface p-4">
             {months.map((m) => (
-              <div key={m.month} className="row">
-                <span className="margin">{m.month}</span>
-                <span className="body body--muted">按月折叠 · {m.count} 笔</span>
+              <div
+                key={m.month}
+                className="flex justify-between border-b border-hairline py-2 text-[14px] last:border-b-0"
+              >
+                <span className="text-label-secondary">{m.month}</span>
+                <span className="text-label-tertiary">{m.count} 笔</span>
               </div>
             ))}
-          </Sheet>
+          </div>
         )}
-        <p className="empty-note empty-note--flush">空日不占页。</p>
-      </main>
-      <Footer
-        left="alljobs 工作底账 · data/log/*.md"
-        right="行文法：- HH:MM slug @agent 内容"
-      />
-    </>
+      </div>
+    </AppShell>
   );
 }

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readLedger } from "./read";
+import { readTasks } from "./tasks";
+import { deriveStats } from "./stats";
 import { deriveProjects, attentionList, mastheadCounts } from "./derive";
 
 const DATA_DIR = join(__dirname, "..", "..", "data");
@@ -14,6 +16,13 @@ describe("data/ 种子", () => {
     expect(r.entries.length).toBeGreaterThan(0);
     const logDays = new Set(r.entries.map((e) => e.date));
     expect([...logDays].sort()).toEqual(["2026-08-07", "2026-08-08", "2026-08-10", "2026-08-11"]);
+
+    const knownSlugs = new Set(r.projects.map((p) => p.slug));
+    const tasks = readTasks(DATA_DIR, knownSlugs);
+    const taskIssues = [...tasks.values()].flatMap((b) => b.issues);
+    expect(taskIssues).toEqual([]);
+    expect(tasks.has("alljobs")).toBe(true);
+    expect(tasks.has("pactify-apps")).toBe(true);
   });
 
   it("每个项目文件含占位校正注释", () => {
@@ -34,12 +43,12 @@ describe("data/ 种子", () => {
     });
   });
 
-  it("派生与 mockup 一致（2026-08-11 视角：活跃 7 · 卡住 1 · 今日 4 笔；注意清单 blocked/stale/dueSoon）", () => {
+  it("派生与 mockup 一致（2026-08-11 视角：活跃 7 · 卡住 1 · 今日 5 笔；注意清单 blocked/stale/dueSoon）", () => {
     const today = new Date(2026, 7, 11, 12, 0);
     const r = readLedger(DATA_DIR);
-    // 今日 4 笔 = overview 3 笔 ∪ project 页 pactify-apps 07:58 一笔（三页并集去重）
+    // 今日 5 笔 = 原 4 笔 + 21:14 alljobs [session]
     const counts = mastheadCounts(r.projects, r.entries, today);
-    expect(counts).toEqual({ active: 7, blocked: 1, todayCount: 4 });
+    expect(counts).toEqual({ active: 7, blocked: 1, todayCount: 5 });
     const list = attentionList(deriveProjects(r.projects, r.entries, today));
     expect(list.map((i) => [i.project.slug, i.kind])).toEqual([
       ["tradelinks", "blocked"],
@@ -48,5 +57,15 @@ describe("data/ 种子", () => {
     ]);
     const blocked = list[0].project;
     expect(blocked.blockedDays).toBe(5);
+
+    const sessionCount = r.entries.filter((e) => e.kind === "session").length;
+    expect(sessionCount).toBe(1);
+    expect(r.entries.find((e) => e.kind === "session")?.slug).toBe("alljobs");
+
+    const knownSlugs = new Set(r.projects.map((p) => p.slug));
+    const tasks = readTasks(DATA_DIR, knownSlugs);
+    const stats = deriveStats(r, tasks, today);
+    expect(stats.taskCounts).toEqual({ todo: 1, doing: 1, done: 3 });
+    expect(stats.sessionCount).toBe(1);
   });
 });

@@ -55,10 +55,13 @@ export const projectFrontmatterSchema = z
     path: ["blocked_reason"],
   });
 
-/** 日志行文法 `- HH:MM <slug> @<agent> <text>` 解析出的单行 */
+export const logKindSchema = z.enum(["session"]);
+
+/** 日志行文法 `- HH:MM <slug> @<agent> [kind] <text>` 解析出的单行 */
 export const logLineSchema = z.object({
   time: timeSchema,
   slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "slug 须为小写字母/数字/连字符"),
   agent: z.string().min(1),
+  kind: logKindSchema.nullable().default(null),
   text: z.string().min(1),
 });

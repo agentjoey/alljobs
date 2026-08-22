@@ -26,6 +26,23 @@ export interface LogEntry extends LogLine {
   line: number;
 }
 
+/** 任务项状态 */
+export type TaskStatus = "todo" | "doing" | "done";
+
+/** 任务项：解析自 data/tasks/<slug>.md 的 task list */
+export interface TaskItem {
+  status: TaskStatus;
+  text: string;
+  /** 1-based 行号 */
+  line: number;
+}
+
+/** 单个项目的任务清单解析结果 */
+export interface TaskBucket {
+  items: TaskItem[];
+  issues: ProofIssue[];
+}
+
 /** 「校对」清单条目：单文件/单行解析失败不抛出，收集于此 */
 export interface ProofIssue {
   file: string;

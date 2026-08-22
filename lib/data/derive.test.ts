@@ -36,6 +36,7 @@ function makeEntry(over: Partial<LogEntry> = {}): LogEntry {
     slug: "demo",
     agent: "claude",
     text: "x",
+    kind: null,
     file: "data/log/2026-08-11.md",
     line: 1,
     ...over,

@@ -2,7 +2,7 @@ import "server-only";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import matter from "gray-matter";
-import { dateSchema, logLineSchema, projectFrontmatterSchema } from "./schema";
+import { dateSchema, logKindSchema, logLineSchema, projectFrontmatterSchema } from "./schema";
 import type { LedgerData, LogEntry, Project, ProofIssue } from "./types";
 
 /**
@@ -72,8 +72,8 @@ function parseBody(content: string): Pick<Project, "now" | "next" | "notes"> {
   return { now: text("now"), next, notes: text("notes") };
 }
 
-/** 行文法：`- HH:MM <slug> @<agent> <text>` */
-const LOG_LINE = /^- (\S+) (\S+) @(\S+) (.+)$/;
+/** 行文法：`- HH:MM <slug> @<agent> [kind] <text>` */
+const LOG_LINE = /^-\s+(\d{2}:\d{2})\s+([a-z0-9][a-z0-9-]*)\s+@(\S+)(?:\s+\[(\w+)\])?\s+(.+)$/;
 
 function readLogs(dir: string, knownSlugs: Set<string>, issues: ProofIssue[]): LogEntry[] {
   const entries: LogEntry[] = [];
@@ -104,7 +104,22 @@ function readLogs(dir: string, knownSlugs: Set<string>, issues: ProofIssue[]): L
         issues.push({ file, line: lineNo, message: `无法解析的日志行：${line}` });
         return;
       }
-      const r = logLineSchema.safeParse({ time: m[1], slug: m[2], agent: m[3], text: m[4] });
+      const rawKind = m[4];
+      let kind: string | null = null;
+      if (rawKind !== undefined) {
+        const kr = logKindSchema.safeParse(rawKind);
+        if (!kr.success) {
+          issues.push({
+            file,
+            line: lineNo,
+            field: "kind",
+            message: `未知日志 kind：${rawKind}`,
+          });
+        } else {
+          kind = kr.data;
+        }
+      }
+      const r = logLineSchema.safeParse({ time: m[1], slug: m[2], agent: m[3], kind, text: m[5] });
       if (!r.success) {
         const first = r.error.issues[0];
         issues.push({

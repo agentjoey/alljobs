@@ -86,4 +86,38 @@ describe("logLineSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("接受 kind=session", () => {
+    const r = logLineSchema.safeParse({
+      time: "21:14",
+      slug: "alljobs",
+      agent: "kimi",
+      kind: "session",
+      text: "重设计 brief 定稿",
+    });
+    expect(r.success).toBe(true);
+    expect((r as { success: true; data: { kind: string } }).data.kind).toBe("session");
+  });
+
+  it("kind 缺省为 null", () => {
+    const r = logLineSchema.safeParse({
+      time: "08:00",
+      slug: "alljobs",
+      agent: "claude",
+      text: "无 kind 日志",
+    });
+    expect(r.success).toBe(true);
+    expect((r as { success: true; data: { kind: unknown } }).data.kind).toBeNull();
+  });
+
+  it("拒绝未知 kind", () => {
+    const r = logLineSchema.safeParse({
+      time: "08:00",
+      slug: "alljobs",
+      agent: "claude",
+      kind: "standup",
+      text: "x",
+    });
+    expect(r.success).toBe(false);
+  });
 });
