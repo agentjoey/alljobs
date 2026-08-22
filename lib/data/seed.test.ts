@@ -15,7 +15,14 @@ describe("data/ 种子", () => {
     expect(r.projects).toHaveLength(10);
     expect(r.entries.length).toBeGreaterThan(0);
     const logDays = new Set(r.entries.map((e) => e.date));
-    expect([...logDays].sort()).toEqual(["2026-08-07", "2026-08-08", "2026-08-10", "2026-08-11"]);
+    // 2026-08-23：Claude 接手完成 v2 三栏重构审查修复，记一笔 [session]（见该日志文件）
+    expect([...logDays].sort()).toEqual([
+      "2026-08-07",
+      "2026-08-08",
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-23",
+    ]);
 
     const knownSlugs = new Set(r.projects.map((p) => p.slug));
     const tasks = readTasks(DATA_DIR, knownSlugs);
@@ -58,14 +65,17 @@ describe("data/ 种子", () => {
     const blocked = list[0].project;
     expect(blocked.blockedDays).toBe(5);
 
+    // sessionCount 不按 today 窗口过滤（deriveStats 同）：kimi 2026-08-11 一条 +
+    // Claude 2026-08-23 接手重构审查一条，均计入
     const sessionCount = r.entries.filter((e) => e.kind === "session").length;
-    expect(sessionCount).toBe(1);
+    expect(sessionCount).toBe(2);
     expect(r.entries.find((e) => e.kind === "session")?.slug).toBe("alljobs");
 
     const knownSlugs = new Set(r.projects.map((p) => p.slug));
     const tasks = readTasks(DATA_DIR, knownSlugs);
     const stats = deriveStats(r, tasks, today);
-    expect(stats.taskCounts).toEqual({ todo: 1, doing: 1, done: 3 });
-    expect(stats.sessionCount).toBe(1);
+    // 「完成 Apple HIG v2 三栏视图」在审查修复完成后由 [/] 改记 [x]
+    expect(stats.taskCounts).toEqual({ todo: 1, doing: 0, done: 4 });
+    expect(stats.sessionCount).toBe(2);
   });
 });
