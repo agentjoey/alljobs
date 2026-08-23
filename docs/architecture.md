@@ -2,74 +2,120 @@
 
 ## 一句话
 
-Next.js（App Router）读取 `data/` 下的 Markdown 文件、在服务端解析+派生，渲染成四条路由；
-唯一的写入路径是快速添加表单，通过一个 server action 追加一行到当日日志文件。没有数据库，
-没有 API，`data/` 目录本身就是持久层。
+alljobs 是一个 **filesystem-backed、agent-native 的个人工作台**：Next.js App Router 在服务端读取 `data/` 下的 Markdown，解析并派生项目/日志/任务/统计视图；Markdown 文件本身是持久层和 single source of truth。没有数据库，没有独立 API 服务，也没有应用内账号系统。
 
-## 数据流
+## 数据模型
 
-```
-data/projects/*.md  ──┐
-                       ├─→ lib/data/read.ts  ──→ lib/data/derive.ts  ──→ 页面组件（server component）
-data/log/*.md       ──┘   (gray-matter 解析      (lastEntry / stale /
-                            + zod 校验，           dueSoon / blockedDays /
-                            容错：坏文件/坏行       14 日活动 / 注意清单
-                            收集进 ProofIssue[]，   排序)
-                            不抛错、不拖垮页面)
-
-快速添加提交
-  → app/actions/quickadd.ts（server action，zod 校验）
-  → lib/data/append.ts（追加一行到 data/log/<今日>.md）
-  → 页面重渲染（React 19 form action 的隐式流程，见 AGENTS.md「Key Implementation Details」）
+```text
+data/projects/<slug>.md      项目卡：status / priority / agents / links + Now / Next / Notes
+data/log/<YYYY-MM-DD>.md     每日日志：- HH:MM <slug> @<agent> [kind?] <text>
+data/tasks/<slug>.md         任务：- [ ] / [/] / [x]
 ```
 
-`read.ts` 是唯一的容错边界：单个项目文件 frontmatter 损坏、或单条日志行不合行文法，都会被收进
-`ProofIssue[]` 而不是抛异常——其余数据照常渲染，页面顶部的「校对」横幅（`ProofBanner`）指明
-文件与字段。这是 v1 brief 的硬性验收标准之一（人为写坏一个文件，其余页面必须正常）。
+详细契约、容错规则与派生规则见 `data/README.md`。
+
+核心原则：**文件即真相**。agent 或人直接修改 Markdown 就完成写入；git 提供历史；Obsidian 或普通编辑器都可以直接操作同一份数据。
+
+## 读取数据流
+
+```text
+data/projects/*.md ──┐
+data/log/*.md      ───┼─→ lib/data/read.ts ─→ derive / stats / task readers ─→ App Router views
+data/tasks/*.md    ───┘
+                         │
+                         └─ ProofIssue[]：坏文件/坏行被隔离并展示，不拖垮其余页面
+```
+
+`lib/data/read.ts` 仍是主要容错边界：项目 frontmatter、日志行或关联数据出错时，问题进入 `ProofIssue[]`；可用数据继续渲染。`ProofBanner` 把错误暴露给用户，禁止静默吞掉。
+
+v2 在此基础上增加：
+
+- tasks reader：把 Markdown task marker 解析成 todo / doing / done
+- stats 派生：30 日日志、agent/project 分布、streak、task counts、session count 等
+- 日志可选 `[session]` kind；未知 kind 产生 issue，但日志文本不丢失
+
+## 写入数据流
+
+alljobs 仍刻意保持极小写入面。
+
+### 快速添加日志
+
+```text
+QuickAddSheet
+  → app/actions/quickadd.ts
+  → lib/data/append.ts
+  → data/log/<今日>.md 追加一行
+  → re-render / revalidate
+```
+
+输入经过 zod/项目存在性校验；文件系统路径不是 client 可控参数。React 19 form reset 的显示值/真实提交值脱节问题在 v1 已有回归测试与修复历史。
+
+### 移动任务
+
+```text
+/board
+  → app/actions/movetask.ts
+  → 校验 slug / project / line / newStatus
+  → 改写 data/tasks/<slug>.md 对应 marker
+  → revalidate /board
+```
+
+v2 Verification 曾发现 slug 校验不足可能导致路径逃逸，现已加入格式与项目存在性校验。Board 同时提供拖拽与键盘可操作路径，不把 HTML5 drag-and-drop 当成唯一入口。
 
 ## 路由
 
-| 路由 | 文件 | 职责 |
-|---|---|---|
-| `/` | `app/(overview)/page.tsx` + `overview-view.tsx` | 注意清单 + 今日日志/快速添加 + 活跃项目分组（P0→P2） |
-| `/projects` | `app/projects/(list)/page.tsx` + `projects-view.tsx` | 全量项目 + 状态/类型/agent 过滤（URL searchParams 驱动，默认「全部」） |
-| `/projects/[slug]` | `app/projects/[slug]/page.tsx` + `detail-view.tsx` | 单项目详情、Now/Next/Notes、活动流；slug 不存在 → `not-found-view.tsx` |
-| `/log` | `app/log/page.tsx` + `log-view.tsx` | 全站日志时间线，按日分组倒序，项目/agent 过滤 |
+| 路由 | 职责 |
+|---|---|
+| `/` | 今天：注意力清单 + 今日时间线 + 快速添加 |
+| `/projects` | 项目索引：源列表 + 项目列表 + 空详情态 |
+| `/projects/[slug]` | 项目详情：状态、链接、Now/Next/Notes、活动与任务 |
+| `/log` | 全站日志时间线与过滤 |
+| `/board` | 项目 task 看板，todo / doing / done 三列，支持状态写回 |
+| `/stats` | 活跃/阻塞、30 日活动、agent/project 分布、streak、任务/session 统计 |
 
-每条路由是 server component（每次请求重新读文件——本地常驻 server 下改 `data/` 刷新即见），
-`page.tsx` 只负责数据获取与 loading 边界，视图逻辑在同目录的 `*-view.tsx`。`loading.tsx` 是骨架屏
-（`components/ledger/skeleton.tsx`），不是转圈动画。
+主要页面按请求从文件重新读取数据；因此本地常驻 server 下修改 `data/` 后即可在下一次渲染看到结果，不需要数据库同步任务。
 
-## 组件
+## UI 组件
 
-`components/ledger/`：所有页面共用的原语——
+当前 canonical UI 位于 `components/workbench/`，视觉基线来自 `.agent/frontend-design/redesign-v2/`：
 
-- `masthead.tsx` / `footer.tsx`：顶栏（导航 tabs、日期、活跃/卡住/今日计数）与页脚
-- `primitives/`：`stamp`（状态胶囊）、`agent-mark`（agent 色标+文字双编码）、`tally`（14 日活动强度）、
-  `project-row`、`entry-row`、`today-sheet`（快速添加，唯一 client component，其余皆 server component）、
-  `proof-banner`、`section-head`、`sheet`
-- `contract.tsx`：方向契约（THESIS…FINISH 六块）以隐藏注释形式注入 `app/layout.tsx` body 首子节点，
-  build 后可 `grep` 验证设计契约在产物中存活（impeccable 工作流约定）
+- `AppShell` / `Sidebar` / `Toolbar`：全站 shell、源列表与操作区
+- `SplitView` / `ContentArea`：桌面三栏与单主内容布局；移动端折叠
+- `ListRow` / `DetailCard` / `SegmentedControl` / `Badge` / `AgentPill` / `StatusDot`：工作台原语
+- `QuickAddSheet`：快速记录表单
+- `ProofBanner`：解析/数据问题显式呈现
 
-## 视觉系统（两套，未合并）
+v1 的 `components/ledger/` 与「工作底账 The Working Ledger」视觉是历史 baseline，不再是 main 当前实现。旧设计材料保留作证据，不应与 runtime architecture 混为一谈。
 
-- **main 分支**：「工作底账 The Working Ledger」——账页纸质感，红栏线结构、平印墨戳、mono 数据声部。
-  token 全在 `app/globals.css`。已通过独立 Verification，是当前生产版本。
-- **`restyle/apple-hig` 分支**：用 `apple-design` skill 依据 Apple HIG 重做的设计系统——Liquid Glass
-  顶栏（全站唯一用玻璃）、分组列表卡片、系统语义色、明暗双模式。独立评审 Good，Critical/High 已修，
-  **未合并**（视觉方向终审见 `.agent/BACKLOG.md`）。
-  两套设计系统互斥于 `app/globals.css` 一份文件，合并即替换，不共存。
+## 当前视觉系统
 
-## 部署拓扑
+**main：Apple HIG v2 浅色三栏工作台。** 信息架构借鉴 Finder / Notes：左侧源列表，中间对象列表，右侧详情；非 split 页面使用统一 AppShell。移动端通过 drawer/单栏栈保证主要路由可达。
 
-见 [deployment.md](deployment.md)（初次搭建）与 [operations.md](operations.md)（日常运维）。
-简述：本机 `next start -H 127.0.0.1 -p 3456`（launchd 常驻）→ cloudflared tunnel → Cloudflare
-Zero Trust Access（邮件验证码）→ `alljobs.agentjoey.ai`。应用本身不含任何鉴权代码，安全边界完全
-由「tunnel 是唯一入口」+「Access 只放行一个邮箱」两条构成。
+`redesign/apple-hig-v2` 已于 2026-08-23 合入 `main`。旧 `restyle/apple-hig`、`redesign/apple-motion`、`feature/dashboard` 均为历史探索。
 
-## 测试
+## 部署与安全边界
 
-`vitest`，102 例。多数用 `renderToStaticMarkup` 断言渲染出的 HTML 片段（而非组件测试库的交互模拟），
-外加 `lib/data/*.test.ts` 覆盖解析容错、派生逻辑边界（跨月、空日、坏 frontmatter）。
-`components/ledger/primitives/today-sheet.dom.test.tsx` 是唯一用 jsdom + 真实 DOM 生命周期的用例，
-覆盖 React 19 表单隐式 reset 的时序 bug 回归。
+部署拓扑仍是：
+
+```text
+next start -H 127.0.0.1 -p 3456
+  → launchd 常驻
+  → cloudflared tunnel
+  → Cloudflare Zero Trust Access
+  → alljobs.agentjoey.ai
+```
+
+应用本身不实现登录/权限体系。安全边界是“服务仅监听 loopback + tunnel 为远程入口 + Cloudflare Access 控制访问”。详见 `docs/deployment.md` 与 `docs/operations.md`。
+
+repo 合并某个 UI baseline 不等于生产进程已经重新 build/restart 到同一 SHA；production baseline 必须单独验证并留证据，见 `AJ-BL-003`。
+
+## 测试与验证
+
+当前 v2 最近一次记录（`.agent/frontend-design/redesign-v2/verification.md`，2026-08-23）：
+
+- `npm run lint`：0 error（1 个既有 warning）
+- `npm test`：75/75
+- `npm run build`：成功，6 个路由均可构建
+- 针对性实测：board 键盘状态移动、真实 task 文件写回/还原、移动端主导航可达
+
+v1 曾有 102 tests，但 v2 删除旧 ledger 组件后没有把所有组件级覆盖等价迁移到 `components/workbench/*`。因此“75 < 102”本身不是失败，真正的技术债是关键 UI 行为覆盖不足；该项由 `AJ-BL-004` 跟踪。
