@@ -21,7 +21,7 @@ Joey 的个人多项目工作台：对并行推进的所有项目做日常追踪
 Markdown 文件即完成进度写入，无 API、无凭证。v1 已实现并部署，正等待「工作底账」与「Apple
 HIG」两个视觉方向的最终取舍（见 `.agent/CURRENT.md`）。
 
-**Location:** ~/AgentWorks/CodeSpace/alljobs
+**Location:** ~/AgentWorks/GPT_Workspace/alljobs
 **GitHub:**   agentjoey/alljobs
 **Live:**     https://alljobs.agentjoey.ai（Cloudflare Access 邮件验证码登录）
 **Version:**  v0.1.0（v1 功能完整，尚无 release.sh /版本号自动化）

@@ -5,7 +5,7 @@ status: active
 priority: P0
 agents: [claude]
 links:
-  repo: "~/AgentWorks/CodeSpace/alljobs"
+  repo: "~/AgentWorks/GPT_Workspace/alljobs"
 tags: [workbench, nextjs]
 started: 2026-08-10
 ---

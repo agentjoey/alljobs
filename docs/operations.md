@@ -21,7 +21,7 @@ cloudflared tunnel list                                                   # allj
 
 **重启应用**（改了 `app/`、`lib/`、`components/` 等需要重新 build 的代码后）：
 ```bash
-cd ~/AgentWorks/CodeSpace/alljobs
+cd ~/AgentWorks/GPT_Workspace/alljobs
 npm run build
 launchctl unload ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
 launchctl load   ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
@@ -42,7 +42,7 @@ tail -f ~/.cloudflared/logs/alljobs.err     # tunnel 侧
 | `alljobs.agentjoey.ai` 打不开/超时 | `launchctl list \| grep cloudflared`（PID 是否在）；`cloudflared tunnel list`（连接数是否为 0） |
 | 502 / 连接被拒 | `launchctl list \| grep alljobs`（应用本体是否在跑）；`curl localhost:3456` 本地直连是否正常 |
 | 页面显示"校对"横幅 | 某个 `data/*.md` 文件解析失败——横幅本身会指明文件与字段，去修那个文件，其余页面不受影响 |
-| 改了 `data/` 但页面没变 | 确认改的是生产在用的路径（`~/AgentWorks/CodeSpace/alljobs/data/`，不是某个 worktree 或旧 clone） |
+| 改了 `data/` 但页面没变 | 确认改的是生产在用的路径（`~/AgentWorks/GPT_Workspace/alljobs/data/`，不是某个 worktree 或旧 clone） |
 | 未登录却直接进了应用（跳过 Access） | **立即处理**：说明 Access 策略失效或 tunnel 配置被改动，检查 Cloudflare dashboard 的 Access Application 是否还在、策略是否还是仅放行 `theagentjoey@gmail.com` |
 | 想临时下线 | `launchctl unload ~/Library/LaunchAgents/com.agentjoey.cloudflared.plist`（只停外网入口，本地 3456 与数据不受影响）|
 
