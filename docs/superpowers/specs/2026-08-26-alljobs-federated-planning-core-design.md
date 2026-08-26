@@ -27,6 +27,7 @@ The design must support projects that simultaneously contain implementation and 
 6. Tasks are source-owned objects. A project may contain both read-only external Tasks and writable AllJobs-native Tasks.
 7. AllJobs does not persist a second Markdown copy of external Roadmaps, Backlogs, or Tasks.
 8. KPI and Measure are a second-priority extension. Their domain contract is designed here, but V1 does not require live data-source integrations.
+9. Project registration is two-phase and Human-gated. Archive replaces a separate unbind operation and preserves inactive binding metadata for audit and restoration.
 
 ## 3. Project model
 
@@ -36,6 +37,7 @@ Each project has one required type, one or more controlled work modes, an operat
 title: TradeLinks
 type: code
 work_modes: [implementation, operations]
+registration_status: registered
 status: active
 priority: P0
 agents: [codex, claude, joey]
@@ -48,6 +50,7 @@ tags: [commerce, intelligence]
 |---|---|
 | `type` | Required: `code \| business` |
 | `work_modes` | Required non-empty array: `implementation \| operations`; both may coexist |
+| `registration_status` | Required: `registered \| archived`; controls discovery, provider reads, writes, and default visibility |
 | `status` | Required operational status: `active \| blocked \| paused \| done` |
 | `priority` | Portfolio-wide `P0 \| P1 \| P2`; only the planning owner changes it unless explicitly delegated |
 | `agents` | Agents or humans commonly responsible for work; not an authorization mechanism by itself |
@@ -240,6 +243,69 @@ Every code project configures `docs/BACKLOG.md`, including code projects doing o
 AllJobs must resolve the repository from the registered project binding, enforce containment within the trusted repository, reject symlinks that escape it, and never accept arbitrary request-provided paths.
 
 If a code project lacks its required binding or document, AllJobs reports `Planning source not configured` or the specific missing document. It does not create a native substitute.
+
+### 5.3 Project registration
+
+The registered project set is represented by `data/projects/<slug>.md`; V1 does not add a separate database registry.
+
+Code-project discovery is read-only and restricted to direct children of configured trusted code-workspace roots. Discovery rejects arbitrary absolute paths, cwd-based candidates, globs, recursive depth, symlink escapes, and caller-supplied force flags.
+
+Business projects are not discovered from the filesystem. Their registration starts from an explicit owner request containing the proposed project identity and native planning configuration.
+
+Registration is two-phase:
+
+```text
+inspect candidate
+  → produce registration proposal + proposalDigest
+  → Human Gate
+  → re-inspect candidate and current registry
+  → apply only when digest and preconditions still match
+```
+
+The proposal includes:
+
+- proposed project slug, title, type, work modes, and status;
+- trusted source path and provider for code projects;
+- presence and validation summary for required planning documents;
+- source file fingerprints and repository commit when available;
+- project-slug, source-path, and provider-identity collisions;
+- AllJobs Project and Activity/Log records that registration will create;
+- blocking issues and warnings.
+
+Inspect and proposal perform zero writes, installs, network calls, candidate-code execution, external-document initialization, or task creation.
+
+Apply rules:
+
+- the proposal digest covers the complete proposed binding and inspected source state;
+- changed source or registry state returns `STALE_STATE` with zero writes;
+- registering an already registered identical project is idempotent;
+- the same trusted source cannot be actively registered under two project slugs;
+- a project slug cannot be rebound to another source through registration; archive and a new reviewed proposal are required;
+- registration writes only the AllJobs Project record and Activity/Log entry;
+- initializing or repairing external `docs/ROADMAP.md` and `docs/BACKLOG.md` is a separate Human-gated agent workflow.
+
+### 5.4 Archive and restore
+
+Archive is the only V1 unbind operation. It changes `registration_status` from `registered` to `archived`; it does not delete the Project or mutate external sources.
+
+An archive proposal reports active native Tasks, unresolved external references, current provider binding, and affected Planning surfaces. Human confirmation authorizes the whole-project archive even when active work remains; the action never silently completes or cancels those objects.
+
+After archive:
+
+- the Project is excluded from Today, Attention, Roadmap, Backlog, Board, Stats, and the default Project list;
+- provider reads stop;
+- native Roadmap, Task, KPI, and Project-content writes are rejected;
+- Project data, native objects, Log, Outcome, and provenance remain available in an explicit Archived view;
+- external references remain historical references and are not deleted;
+- provider path and binding metadata remain stored but inactive;
+- external Roadmap, Backlog, and Task content is not snapshotted into AllJobs;
+- an archive Activity/Log event records actor, time, reason, and the approved proposal digest.
+
+Restore is also two-phase and Human-gated. It revalidates the inactive binding, trusted-root containment, source availability, required documents, schema, relations, current registry collisions, and content digest. A valid approved restore changes only `registration_status` back to `registered` and records a restore event.
+
+If the source moved, changed identity, escaped the trusted workspace, or now collides with another registration, restore is rejected. For an archived slug, a new reviewed registration proposal may replace its inactive binding only after the proposal explicitly identifies the binding change and passes the Human Gate.
+
+V1 provides no destructive project-delete operation.
 
 ## 6. Projection and caching
 
@@ -450,6 +516,14 @@ The first release of this extension may support manual observations only. Live c
 
 Every Planning surface must distinguish:
 
+- registration candidate found;
+- registration proposal ready;
+- registration collision;
+- registration or restore proposal stale;
+- registered project;
+- archive proposal with active-work warning;
+- archived project;
+- restore blocked by source or schema drift;
 - source not configured;
 - source file missing;
 - healthy external read;
@@ -486,6 +560,7 @@ Rollback keeps the old parser and files intact until cutover acceptance. New str
 V1 includes:
 
 - `type` and `work_modes` project contract;
+- trusted-workspace discovery, two-phase registration, archive, and restore;
 - repo-markdown Roadmap and single-file Backlog parsers;
 - AllJobs-native business Roadmaps and native Tasks;
 - normalized source-owned identities and read-only provenance;
@@ -498,6 +573,8 @@ V1 includes:
 
 V1 excludes:
 
+- destructive project deletion;
+- recursive or arbitrary-path project discovery;
 - a persistent external-data snapshot;
 - bidirectional synchronization;
 - automatic editing of repo-owned planning from AllJobs;
@@ -520,13 +597,21 @@ The design is implementation-ready only when the implementation specification ca
 7. external objects are visibly read-only and expose their provenance;
 8. business projects cannot create Backlog, implementation Backlog cannot omit its Phase, and no Backlog can reference a missing or foreign Phase;
 9. waiting, blocked, cancelled, and independent Tasks produce the specified derived behavior;
-10. migration dry-run counts every retained, ignored, duplicate, and invalid Task and supports rollback before cutover.
+10. migration dry-run counts every retained, ignored, duplicate, and invalid Task and supports rollback before cutover;
+11. registration inspect/proposal produces zero writes and stale apply returns `STALE_STATE` with zero writes;
+12. duplicate registration is idempotent while slug, source, and provider collisions fail closed;
+13. archive stops provider reads and native writes without deleting native or external objects;
+14. archived projects disappear from active surfaces but remain available in an explicit Archived view;
+15. restore revalidates trusted containment, source identity, schema, relations, collisions, and digest before reactivation.
 
 ## 16. Confirmed design summary
 
 ```text
 Project type       = code | business
 Project work mode  = implementation and/or operations
+Registration       = trusted inspect/propose/apply with Human Gate
+Archive            = stop reads and writes, retain inactive binding and history
+Restore            = revalidate and Human-gate before reactivation
 
 Code Roadmap       = repo-owned Phase document, AllJobs read-only
 Code Backlog       = one repo-owned Backlog document, AllJobs read-only
