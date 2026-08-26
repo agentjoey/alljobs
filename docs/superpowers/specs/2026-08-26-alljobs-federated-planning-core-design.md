@@ -28,6 +28,8 @@ The design must support projects that simultaneously contain implementation and 
 7. AllJobs does not persist a second Markdown copy of external Roadmaps, Backlogs, or Tasks.
 8. KPI and Measure are a second-priority extension. Their domain contract is designed here, but V1 does not require live data-source integrations.
 9. Project registration is two-phase and Human-gated. Archive replaces a separate unbind operation and preserves inactive binding metadata for audit and restoration.
+10. The current AllJobs development machine is the single Control Host. Other computers participate through the browser and Git; V1 has no active-active AllJobs deployment.
+11. A Project may record multiple execution-location aliases, but machine location never becomes a planning source, credential, or write authorization.
 
 ## 3. Project model
 
@@ -41,6 +43,7 @@ registration_status: registered
 status: active
 priority: P0
 agents: [codex, claude, joey]
+execution_locations: [alljobs-host, daily-work]
 tags: [commerce, intelligence]
 ```
 
@@ -54,6 +57,7 @@ tags: [commerce, intelligence]
 | `status` | Required operational status: `active \| blocked \| paused \| done` |
 | `priority` | Portfolio-wide `P0 \| P1 \| P2`; only the planning owner changes it unless explicitly delegated |
 | `agents` | Agents or humans commonly responsible for work; not an authorization mechanism by itself |
+| `execution_locations` | Optional machine aliases where work or runtime may occur; informational only and may contain multiple values |
 | `tags` | Free-form classification only; tags never trigger schema or UI requirements |
 
 ### 3.2 Work-mode rules
@@ -223,15 +227,16 @@ An explicit manual conversion may create a new native Task from an external Task
 
 ### 5.2 Source binding
 
-A code project records a trusted repository binding in its AllJobs project file:
+A code project records a Git source binding in its AllJobs project file:
 
 ```yaml
 planning:
-  provider: repo-markdown
-  repo: ~/AgentWorks/CodeSpace/tradelinks
+  provider: git-markdown
+  remote: git@github.com:agentjoey/tradelinks.git
+  ref: refs/heads/main
 ```
 
-For `repo-markdown`, V1 paths are fixed:
+For `git-markdown`, V1 paths are fixed:
 
 ```text
 docs/ROADMAP.md
@@ -240,7 +245,7 @@ docs/BACKLOG.md
 
 Every code project configures `docs/BACKLOG.md`, including code projects doing only operational work. `docs/ROADMAP.md` is required when `implementation` is present in `work_modes`; otherwise it may be absent.
 
-AllJobs must resolve the repository from the registered project binding, enforce containment within the trusted repository, reject symlinks that escape it, and never accept arbitrary request-provided paths.
+AllJobs resolves the registered remote and ref into a managed read-only bare mirror at `~/.alljobs/mirrors/<project>.git`. It reads planning documents from one exact resolved commit. Paths must remain inside that Git tree; AllJobs rejects absolute paths, `..`, symlink escapes, and request-provided path overrides.
 
 If a code project lacks its required binding or document, AllJobs reports `Planning source not configured` or the specific missing document. It does not create a native substitute.
 
@@ -248,7 +253,9 @@ If a code project lacks its required binding or document, AllJobs reports `Plann
 
 The registered project set is represented by `data/projects/<slug>.md`; V1 does not add a separate database registry.
 
-Code-project discovery is read-only and restricted to direct children of configured trusted code-workspace roots. Discovery rejects arbitrary absolute paths, cwd-based candidates, globs, recursive depth, symlink escapes, and caller-supplied force flags.
+Code-project discovery is read-only and restricted to direct children of configured trusted code-workspace roots on the Control Host. Discovery inspects the local candidate and its configured Git remote without fetching. It rejects arbitrary absolute paths, cwd-based candidates, globs, recursive depth, symlink escapes, and caller-supplied force flags.
+
+A project that exists only on another computer must first be committed and pushed to a Git remote, then cloned or staged on the Control Host through a separate human-authorized operation before discovery. V1 does not reach directly into another computer's filesystem.
 
 Business projects are not discovered from the filesystem. Their registration starts from an explicit owner request containing the proposed project identity and native planning configuration.
 
@@ -265,7 +272,7 @@ inspect candidate
 The proposal includes:
 
 - proposed project slug, title, type, work modes, and status;
-- trusted source path and provider for code projects;
+- trusted candidate path, Git remote, ref, and provider for code projects;
 - presence and validation summary for required planning documents;
 - source file fingerprints and repository commit when available;
 - project-slug, source-path, and provider-identity collisions;
@@ -281,7 +288,9 @@ Apply rules:
 - registering an already registered identical project is idempotent;
 - the same trusted source cannot be actively registered under two project slugs;
 - a project slug cannot be rebound to another source through registration; archive and a new reviewed proposal are required;
-- registration writes only the AllJobs Project record and Activity/Log entry;
+- after Human approval, apply may clone or fetch into a temporary bare-mirror staging path; it verifies the resolved ref and inspected source state before atomically promoting the mirror;
+- a mismatch removes the temporary staging state, returns `STALE_STATE`, and creates no Project record;
+- successful registration writes only the AllJobs Project record, Activity/Log entry, and managed bare mirror;
 - initializing or repairing external `docs/ROADMAP.md` and `docs/BACKLOG.md` is a separate Human-gated agent workflow.
 
 ### 5.4 Archive and restore
@@ -298,7 +307,8 @@ After archive:
 - Project data, native objects, Log, Outcome, and provenance remain available in an explicit Archived view;
 - external references remain historical references and are not deleted;
 - provider path and binding metadata remain stored but inactive;
-- external Roadmap, Backlog, and Task content is not snapshotted into AllJobs;
+- the managed Git mirror may remain as an inactive transport replica, but it is not fetched or exposed through active Planning views;
+- external Roadmap, Backlog, and Task content is not copied into AllJobs-native Markdown or a normalized snapshot;
 - an archive Activity/Log event records actor, time, reason, and the approved proposal digest.
 
 Restore is also two-phase and Human-gated. It revalidates the inactive binding, trusted-root containment, source availability, required documents, schema, relations, current registry collisions, and content digest. A valid approved restore changes only `registration_status` back to `registered` and records a restore event.
@@ -320,9 +330,9 @@ canonical source
   → render
 ```
 
-V1 does not persist a second Markdown or JSON copy of external Roadmaps, Backlogs, or Tasks.
+V1 does not persist a second AllJobs-native Markdown copy or normalized JSON projection of external Roadmaps, Backlogs, or Tasks. The managed bare mirror is the transport replica and remains source-owned Git data.
 
-It may use an in-memory cache keyed by source path, modification time, and content hash. That cache:
+The managed bare mirror is a standard Git transport replica, not an AllJobs-owned planning copy. AllJobs may additionally use an in-memory parsed cache keyed by resolved commit, document path, and blob hash. That parsed cache:
 
 - is not canonical;
 - is not committed to Git;
@@ -330,9 +340,9 @@ It may use an in-memory cache keyed by source path, modification time, and conte
 - is invalidated when source content changes;
 - never becomes a fallback write target.
 
-The UI exposes provenance for external data: provider, repository, source path, source commit when available, content hash, and last successful read time.
+The UI exposes provenance for external data: provider, remote, ref, resolved commit, document path, blob hash, last successful fetch, freshness state, and last fetch error when present.
 
-A persistent last-known snapshot is outside V1. It may be reconsidered only if real use shows that temporary source unavailability materially harms daily planning.
+A persistent normalized last-known snapshot separate from the Git mirror is outside V1. It may be reconsidered only if real use shows that mirror-based stale reads are insufficient.
 
 ## 7. Fixed repository document contracts
 
@@ -427,7 +437,8 @@ The agent must:
 6. reject stale content and reread before retrying;
 7. validate IDs, schema, Phase relations, dependencies, and cycles;
 8. report the exact diff and validation result;
-9. preserve Git history through the repository's normal workflow.
+9. preserve Git history through the repository's normal workflow;
+10. commit and push the planning change to the registered ref before expecting AllJobs to display it.
 
 ### 9.2 Business-project mode
 
@@ -439,7 +450,8 @@ The agent must:
 4. use stable IDs and digest-protected targeted sections;
 5. validate schema and relations before atomic replacement;
 6. append a concise Activity/Log entry for a meaningful change;
-7. return a structured change proposal instead of claiming success when it lacks workspace access.
+7. return a structured change proposal instead of claiming success when it lacks Control Host workspace access;
+8. from another computer, use a reviewed Git branch or patch handoff rather than writing the Control Host through a shared filesystem.
 
 ### 9.3 Human Gate
 
@@ -541,7 +553,122 @@ Every Planning surface must distinguish:
 
 The later T3 UI brief must define visible feedback, recovery action, focus behavior, screen-reader announcements, desktop/mobile layout, and keyboard alternatives for each applicable state. This domain specification does not select the final Planning navigation or visual composition.
 
-## 13. Migration and compatibility
+## 13. Deployment topology
+
+### 13.1 Machine roles
+
+The physical machine currently hosting the AllJobs repository is the V1 **Control Host**. It is the only machine allowed to run the production AllJobs writer and Cloudflare Tunnel.
+
+```text
+Phone / development machine / daily-work computer
+                │
+                │ Browser through Cloudflare Access
+                ▼
+Current development machine — AllJobs Control Host
+├── production AllJobs checkout
+├── Next.js server on 127.0.0.1:3456
+├── AllJobs-native data and local write authority
+├── provider-refresh worker
+├── managed read-only Git mirrors
+└── cloudflared tunnel
+                ▲
+                │ read-only git fetch
+                │
+          registered Git remotes
+                ▲
+                │ commit + push
+                │
+development and work computers running project agents
+```
+
+Other computers are:
+
+- browser clients of the Control Host;
+- execution locations for projects and agents;
+- Git writers for their own code repositories;
+- proposal producers for AllJobs-native changes when they cannot access the Control Host workspace.
+
+They are not additional AllJobs servers and never share the production `data/` directory over LAN, NAS, iCloud, or another live filesystem-sync mechanism.
+
+Project `execution_locations` may name these machines for filtering or handoff context, such as `alljobs-host` and `daily-work`. These aliases do not contain credentials, do not imply online status, and are never used to construct filesystem paths or authorize a provider read.
+
+### 13.2 Control Host services
+
+The Control Host runs:
+
+1. the production Next.js build through launchd;
+2. `next start` bound to `127.0.0.1:3456`;
+3. one Cloudflare Tunnel mapping `alljobs.agentjoey.ai` to that loopback listener;
+4. a provider-refresh worker responsible for registered Git mirrors;
+5. the canonical AllJobs-native Markdown under the production checkout's `data/` directory;
+6. mutable provider state outside the repository under `~/.alljobs/`.
+
+Recommended state layout:
+
+```text
+~/.alljobs/
+  mirrors/<project>.git
+  state/<project>.json
+  locks/<project>.lock
+  logs/
+```
+
+Git credentials, Cloudflare credentials, and provider errors containing sensitive remote details stay outside the repository. Read-only deploy keys or equivalently scoped credentials are preferred for mirrors.
+
+The production checkout is a runtime and native-data checkout. Product-development agents on the same physical machine use separate Git worktrees and never point development servers or destructive tests at the production `data/` directory.
+
+### 13.3 Source refresh
+
+Page rendering reads only local mirrors and never performs a network fetch inline.
+
+The refresh worker:
+
+1. acquires a per-project lock;
+2. fetches only the configured registered remote and ref;
+3. resolves the ref to an exact commit;
+4. reads Roadmap and Backlog blobs from that commit without checkout;
+5. validates schema and relations;
+6. atomically records the successful commit, blob hashes, fetch time, and validation result;
+7. releases the lock.
+
+The worker never merges, rebases, checks out code, installs dependencies, executes hooks, or runs candidate project code. Manual refresh requests enqueue the same bounded operation; they do not add a second fetch path.
+
+The V1 default refresh interval is five minutes, plus explicit manual refresh. A deployment setting may change the interval only with owner approval; every interval uses the same single worker path and freshness metadata.
+
+If fetch or validation fails:
+
+- the last successfully fetched mirror commit remains readable;
+- the Project is marked `stale` or `source unavailable` with the failure time;
+- native AllJobs data remains writable for registered projects;
+- the failed source is never replaced with empty data;
+- no provider error may invalidate healthy projects.
+
+Uncommitted or unpushed changes on another computer are intentionally invisible to AllJobs.
+
+### 13.4 Cross-machine agent behavior
+
+Coding agents on any computer update their repository's fixed planning documents, validate them, commit, and push. AllJobs displays the change after the Control Host refreshes the registered ref.
+
+Business and non-development agents use one of two V1 paths:
+
+- run on the Control Host and use the `alljobs-planning` skill against native files with digest protection; or
+- produce a reviewed AllJobs Git branch or patch handoff from another computer, then let an authorized Control Host workflow merge and validate it.
+
+V1 does not expose a cross-machine write API, accept direct SSH/file-share writes into `data/`, or let remote agents forge Human approval. A controlled remote write service may be designed later only if branch/patch handoff creates repeated real-world friction.
+
+### 13.5 Availability and recovery
+
+- If the Control Host sleeps, shuts down, loses network, or stops its tunnel, AllJobs is unavailable; V1 has no automatic failover.
+- If a project computer is offline but its changes were pushed, AllJobs continues reading the Git mirror.
+- If a Git remote is unavailable, AllJobs shows the last successful mirror commit as stale.
+- If another computer has newer unpushed planning, AllJobs correctly continues showing the last pushed commit.
+- AllJobs-native `data/` is canonical on the Control Host. Git history covers committed changes, and the Control Host's system backup covers the interval before commit; neither mechanism creates another active writer.
+- Moving to another Control Host is a controlled recovery: stop the old web server, refresh worker, and tunnel; restore the repository, native data, provider configuration, mirrors or refetchable mirror bindings, and credentials; validate; then start the new single host.
+- At no time may two Control Hosts write native data or serve the same production tunnel concurrently.
+
+The current loopback binding and Cloudflare Access boundary remain mandatory. No other computer receives a LAN listener that can bypass Access.
+
+## 14. Migration and compatibility
 
 1. Reconcile the current repository baseline and authoritative design documents before implementation.
 2. Map project types: current `code` remains `code`; current `biz` and `ops` become `business`; each current `product` project requires owner classification because the label is ambiguous.
@@ -555,13 +682,17 @@ The later T3 UI brief must define visible feedback, recovery action, focus behav
 
 Rollback keeps the old parser and files intact until cutover acceptance. New structured files remain additive until that gate.
 
-## 14. V1 scope
+## 15. V1 scope
 
 V1 includes:
 
 - `type` and `work_modes` project contract;
+- optional multi-machine `execution_locations` metadata with no authority semantics;
 - trusted-workspace discovery, two-phase registration, archive, and restore;
-- repo-markdown Roadmap and single-file Backlog parsers;
+- git-markdown Roadmap and single-file Backlog parsers;
+- one Control Host on the current development machine;
+- managed read-only bare mirrors and one bounded provider-refresh worker;
+- freshness, stale-source, and last-successful-commit provenance;
 - AllJobs-native business Roadmaps and native Tasks;
 - normalized source-owned identities and read-only provenance;
 - relation validation and item-scoped ProofIssue reporting;
@@ -575,7 +706,11 @@ V1 excludes:
 
 - destructive project deletion;
 - recursive or arbitrary-path project discovery;
-- a persistent external-data snapshot;
+- active-active or automatic failover deployment;
+- cross-machine shared-filesystem writes;
+- direct reads of uncommitted or unpushed files on another computer;
+- per-machine connector daemons and a remote native-data write API;
+- a persistent normalized external-data snapshot separate from the managed Git mirror;
 - bidirectional synchronization;
 - automatic editing of repo-owned planning from AllJobs;
 - a database or realtime collaboration;
@@ -584,7 +719,7 @@ V1 excludes:
 - execution-system state-machine duplication;
 - final UI navigation, mockup, and implementation details, which require a separate T3 UI brief.
 
-## 15. Acceptance criteria
+## 16. Acceptance criteria
 
 The design is implementation-ready only when the implementation specification can prove:
 
@@ -602,16 +737,28 @@ The design is implementation-ready only when the implementation specification ca
 12. duplicate registration is idempotent while slug, source, and provider collisions fail closed;
 13. archive stops provider reads and native writes without deleting native or external objects;
 14. archived projects disappear from active surfaces but remain available in an explicit Archived view;
-15. restore revalidates trusted containment, source identity, schema, relations, collisions, and digest before reactivation.
+15. restore revalidates trusted containment, source identity, schema, relations, collisions, and digest before reactivation;
+16. exactly one Control Host owns production native writes and the Cloudflare Tunnel;
+17. page rendering performs no network fetch and reads every external projection from one exact mirror commit;
+18. a failed fetch preserves the last successful commit, marks the source stale, and does not affect healthy projects;
+19. planning committed and pushed from another computer becomes visible after refresh, while unpushed changes remain invisible;
+20. the refresh worker never checks out or executes candidate project code and never runs repository hooks;
+21. Control Host recovery demonstrates stop-old-before-start-new and preserves native data, bindings, provenance, and Access boundaries;
+22. one Project can name multiple execution locations without changing its Git source identity, canonical owner, or write permissions.
 
-## 16. Confirmed design summary
+## 17. Confirmed design summary
 
 ```text
 Project type       = code | business
 Project work mode  = implementation and/or operations
+Execution location = zero or more informational machine aliases
 Registration       = trusted inspect/propose/apply with Human Gate
 Archive            = stop reads and writes, retain inactive binding and history
 Restore            = revalidate and Human-gate before reactivation
+Deployment         = current development machine is the single Control Host
+Other computers    = browser clients + project agents + Git writers
+Code transport     = registered Git remote → Control Host bare mirror
+Native writes      = Control Host only; remote agents use reviewed branch/patch handoff
 
 Code Roadmap       = repo-owned Phase document, AllJobs read-only
 Code Backlog       = one repo-owned Backlog document, AllJobs read-only
