@@ -1,7 +1,7 @@
 # AllJobs Planning Core V1 — Implementation Spec / T3 Brief
 
 **Revision:** 1
-**Status:** Draft — architecture approved; implementation and destructive reset still require Human Owner approval
+**Status:** Approved — revision 1 approved for Task 0 and Task 1; production UI and legacy retirement remain blocked by the rendered Mockup Gate
 **Date:** 2026-08-26
 **Architecture baseline:** [`docs/superpowers/specs/2026-08-26-alljobs-federated-planning-core-design.md`](../../../docs/superpowers/specs/2026-08-26-alljobs-federated-planning-core-design.md)
 
@@ -18,6 +18,15 @@ Mockup Gate: Required — new information architecture, project-type variants, r
 Review path: fresh-context independent Design Review before production UI; fresh-context independent Verification against the final candidate build; T3 should use different agents or harnesses
 Human checkpoints: approve this brief revision; approve rendered mockup; approve any scope/risk change; approve the final candidate build and release/rollback decision
 ```
+
+## Approval record
+
+- **Decision:** Approved without revision.
+- **Human Owner:** Joey.
+- **Approved revision:** 1.
+- **Approval date:** 2026-08-26.
+- **Authorized next work:** Complete Task 0 repository gates and proceed to Task 1's non-production rendered mockup and independent Design Review.
+- **Still blocked:** legacy-file deletion, production UI implementation, external repository changes, deployment, production mutation, and Task 2+ until the rendered Mockup Gate is explicitly approved.
 
 ## 1. Outcome
 
@@ -412,13 +421,16 @@ Rollback is mandatory when any of these occurs after cutover:
 
 Rollback stops the replacement app and refresh worker, restores the tagged legacy commit, installs its locked dependencies, rebuilds, and restarts the app on the same loopback port. The Tunnel, DNS route, and Access policy remain running and unchanged. Replacement native data is preserved for diagnosis and is never fed to the legacy parser.
 
-## 14. Human decisions still required
+## 14. Human decisions
 
-This document intentionally leaves only gate decisions, not product placeholders:
+Completed gate:
 
-1. approve or revise this Brief revision 1;
-2. approve one rendered mockup revision after independent Design Review;
-3. name the real code-project pilot and create/approve the real business-project pilot during implementation;
-4. approve the final candidate commit, cutover window, and whole-release rollback readiness.
+- Brief revision 1 approved without revision on 2026-08-26.
 
-Until decision 1 is explicit, no legacy file deletion, product implementation, external repository change, deployment change, or production mutation is authorized.
+Remaining gates:
+
+1. approve one rendered mockup revision after independent Design Review;
+2. name the real code-project pilot and create/approve the real business-project pilot during implementation;
+3. approve the final candidate commit, cutover window, and whole-release rollback readiness.
+
+Decision 1 was approved on 2026-08-26. The next binding Human Gate is approval of the rendered Task 1 mockup. Until that decision is explicit, no legacy-file deletion, production UI implementation, external repository change, deployment change, or production mutation is authorized.

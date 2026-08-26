@@ -2,7 +2,7 @@
 
 ## Repository initialization — 2026-08-26
 
-**Task / Brief / revision:** Repository initialization before Task 0; `.agent/frontend-design/planning-core-v1/brief.md` revision 1 remains Draft
+**Task / Brief / revision:** Task 0 repository gate; `.agent/frontend-design/planning-core-v1/brief.md` revision 1 approved by Human Owner on 2026-08-26
 
 **Agent role / harness / session:** Primary Agent / Codex / current session
 
@@ -18,8 +18,9 @@
 
 **Decisions and assumptions:**
 
-- the user's repository-initialization instruction authorizes reversible repository preparation only;
-- it does not constitute approval of Brief revision 1 or authorize product implementation, legacy-file deletion, external planning-document initialization, deployment, or production mutation;
+- the Human Owner explicitly approved Brief revision 1 without revision on 2026-08-26;
+- approval authorizes completion of Task 0 and Task 1's non-production rendered mockup and Design Review;
+- legacy-file deletion, production UI implementation, external planning-document initialization, deployment, and production mutation remain blocked by the rendered Mockup Gate;
 - production Tunnel, hostname, Access policy, credentials, port, and loopback boundary remain untouched;
 - the legacy tag is a whole-release rollback anchor, not a runtime compatibility source.
 
@@ -39,7 +40,7 @@
 
 - default Turbopack production build cannot be used as evidence in the current managed execution environment because its build worker attempts a prohibited internal socket bind; webpack build evidence is valid for the unchanged source but the final Control Host must run the normal release command outside this restriction;
 - the Control Host application was not listening on port `3456` during initialization; service startup/recovery is outside this initialization authorization;
-- Brief revision 1 and the rendered Mockup Gate still require explicit Human Owner approval;
+- Brief revision 1 is approved; the rendered Mockup Gate still requires explicit Human Owner approval;
 - no product implementation is in progress.
 
-**Next safe action:** Explain Task 0 scope to the Human Owner. If Brief revision 1 is then explicitly approved, record that approval and complete Task 0's gate record; otherwise revise the Brief without starting Task 1 or deleting legacy files.
+**Next safe action:** Resolve the open Task 0 production-health decision: restore the retired application on `127.0.0.1:3456`, or record the Human Owner's explicit acceptance that it remains offline during the rebuild. Then begin Task 1's non-production rendered mockup; do not delete legacy files or start production UI before Mockup approval.

@@ -1,15 +1,15 @@
 # Current Status — alljobs
 
-Version:        v0.1.0-retired (legacy build still serving until approved cutover)
-Phase:          Planning Core V1 — specification
-Phase Status:   Repository initialized; Draft brief ready for Human Owner approval
+Version:        v0.1.0-retired (release retained; application listener currently absent)
+Phase:          Planning Core V1 — T3 pre-implementation
+Phase Status:   Brief revision 1 approved; Task 0 has one open production-health decision
 Last Updated:   2026-08-26 by Codex
 
 ## Current decision
 
 The previously developed AllJobs product is non-authoritative and will be replaced as a greenfield build. Its routes, UI directions, Markdown schemas, sample data, tests, and product documentation are not migration inputs.
 
-The existing production build remains online only to avoid service interruption while the replacement is designed and verified. No legacy product file or production data has been deleted in the specification phase.
+The legacy release remains recoverable while the replacement is designed and verified, but no application was listening on `127.0.0.1:3456` during initialization. No legacy product file or production data has been deleted.
 
 ## Preserved production assets
 
@@ -25,7 +25,7 @@ The existing production build remains online only to avoid service interruption 
 - T3 implementation spec / Brief revision 1: `.agent/frontend-design/planning-core-v1/brief.md`
 - Development plan: `docs/superpowers/plans/2026-08-26-alljobs-federated-planning-core-rebuild.md`
 
-The architecture baseline is approved. Brief revision 1 and its development plan are documentation outputs only; they do not authorize implementation, legacy-file deletion, external repository changes, deployment, or production mutation.
+The architecture baseline and Brief revision 1 are approved. The approval authorizes Task 0 and Task 1's non-production rendered mockup. Legacy-file deletion, production UI, external repository changes, deployment, and production mutation remain blocked until the rendered Mockup Gate is explicitly approved.
 
 ## Repository initialization
 
@@ -41,7 +41,7 @@ Full evidence and handoff: `.agent/frontend-design/planning-core-v1/handoff.md`.
 
 ## Next safe action
 
-Human Owner reviews and approves or revises Brief revision 1. After approval, execution begins at Task 0 of the development plan, creates a recoverable legacy tag and isolated worktree, then stops again at the required rendered Mockup Gate before retiring legacy tracked files.
+Human Owner decides whether to restore the retired application on `127.0.0.1:3456` during the rebuild or explicitly accept it remaining offline. After that Task 0 production-health gate is resolved, proceed to Task 1's non-production rendered mockup and stop again for approval before retiring legacy tracked files.
 
 ## Release history
 

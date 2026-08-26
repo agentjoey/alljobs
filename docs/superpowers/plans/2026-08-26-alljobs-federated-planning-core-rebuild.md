@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- This plan is not implementation authorization. Stop before Task 0 until the Human Owner approves Brief revision 1.
+- Brief revision 1 was approved on 2026-08-26. Current authorization covers Task 0 and Task 1's non-production rendered mockup; stop before Task 2 until the Human Owner approves the rendered Mockup Gate.
 - The task is T3. The rendered Mockup Gate, independent Design Review, independent final Verification, owner walkthrough, and release approval cannot be self-waived.
 - Implementation uses an isolated branch/worktree with its own real `node_modules`; the production checkout continues serving the legacy build until Task 14 cutover.
 - Do not change or recreate the existing Cloudflare Tunnel, `alljobs.agentjoey.ai` DNS route, Access application/policy, or credentials.
@@ -34,7 +34,7 @@
 - Modify: `.agent/frontend-design/planning-core-v1/brief.md`
 - Create: `.agent/frontend-design/planning-core-v1/handoff.md`
 
-- [ ] **Obtain explicit approval of Brief revision 1**
+- [x] **Obtain explicit approval of Brief revision 1**
 
 Record the Human Owner decision, date, approved revision, and allowed next action in the brief. If the owner changes scope, mark the brief `Reopened`, revise it, and obtain approval again.
 
@@ -51,7 +51,9 @@ curl -fsS http://127.0.0.1:3456/ >/dev/null
 
 Expected: clean tracked state, legacy tests/build pass, and the current local origin responds. If the production checkout is dirty, stop and resolve ownership of the changes before continuing.
 
-- [ ] **Create a recoverable legacy tag**
+Execution note, 2026-08-26: source baseline passed (`75/75` tests and official webpack production build), but `127.0.0.1:3456` refused connections and no AllJobs LaunchAgent was loaded. This checkbox remains open until the Human Owner chooses service restoration or explicitly accepts the retired service remaining offline during the rebuild.
+
+- [x] **Create a recoverable legacy tag**
 
 ```bash
 legacy_sha="$(git rev-parse HEAD)"
@@ -61,7 +63,7 @@ git show --no-patch --decorate archive/v0.1.0-retired
 
 Expected: the annotated tag resolves to the exact verified legacy commit. Do not move this tag later.
 
-- [ ] **Create an isolated implementation worktree**
+- [x] **Create an isolated implementation worktree**
 
 ```bash
 git worktree add ../alljobs-planning-core-v1 -b feature/planning-core-v1 main
@@ -72,11 +74,11 @@ git status --short --branch
 
 Expected: branch `feature/planning-core-v1`, clean worktree, and a real local `node_modules` directory.
 
-- [ ] **Write the handoff record**
+- [x] **Write the handoff record**
 
 Record the approved brief revision, legacy tag/SHA, production checkout path, implementation worktree path, branch, current commit, commands run, and the next safe action in `.agent/frontend-design/planning-core-v1/handoff.md`.
 
-- [ ] **Commit the gate record**
+- [x] **Commit the gate record**
 
 ```bash
 git add .agent/frontend-design/planning-core-v1/brief.md .agent/frontend-design/planning-core-v1/handoff.md
