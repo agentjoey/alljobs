@@ -28,6 +28,13 @@ Human checkpoints: approve this brief revision; approve rendered mockup; approve
 - **Authorized next work:** Complete Task 0 repository gates and proceed to Task 1's non-production rendered mockup and independent Design Review.
 - **Still blocked:** legacy-file deletion, production UI implementation, external repository changes, deployment, production mutation, and Task 2+ until the rendered Mockup Gate is explicitly approved.
 
+Post-approval sequencing decision, 2026-08-26:
+
+- the Human Owner chose to keep the retired application offline;
+- the Human Owner authorized clearing the already-retired product assets before Task 1;
+- the cleanup is limited to the exact recoverable manifest in `docs/retired-v0.1-manifest.md`;
+- this decision does not authorize a replacement runtime, production UI, external repository change, deployment, or production mutation before the rendered Mockup Gate.
+
 ## 1. Outcome
 
 AllJobs becomes a personal, single-owner planning control plane for code-development and business-operation projects. It visualizes one coherent Project → Roadmap → Backlog/Task model while preserving source ownership:
@@ -93,7 +100,7 @@ Keeping a file does not make its old product assumptions authoritative. Deployme
 - `.agent/CURRENT.md`, `.agent/BACKLOG.md`, `.agent/sprints/sprint-001.md`, and both legacy frontend-design evidence trees as active project state; only Git history retains them;
 - all tests whose assertions describe the retired product.
 
-Deletion happens only in the isolated implementation worktree after the owner approves this brief and the rendered mockup. The production checkout remains untouched until final cutover.
+The Human Owner explicitly authorized deletion of the exact retired-asset manifest before the rendered mockup because the retired application will remain offline. Cleanup is a recoverable Git deletion only; creating the replacement runtime, routes, or production UI remains blocked until the rendered Mockup Gate is approved.
 
 ## 4. Scope
 
@@ -426,6 +433,7 @@ Rollback stops the replacement app and refresh worker, restores the tagged legac
 Completed gate:
 
 - Brief revision 1 approved without revision on 2026-08-26.
+- Retired application accepted offline and exact-manifest cleanup authorized on 2026-08-26.
 
 Remaining gates:
 

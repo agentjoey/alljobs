@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Brief revision 1 was approved on 2026-08-26. Current authorization covers Task 0 and Task 1's non-production rendered mockup; stop before Task 2 until the Human Owner approves the rendered Mockup Gate.
+- Brief revision 1 was approved on 2026-08-26. The Human Owner also accepted the retired application remaining offline and authorized exact-manifest legacy cleanup before Task 1. Current authorization covers Task 0, Task 0A cleanup, and Task 1's non-production rendered mockup; stop before replacement-runtime work in Task 2 until the rendered Mockup Gate is approved.
 - The task is T3. The rendered Mockup Gate, independent Design Review, independent final Verification, owner walkthrough, and release approval cannot be self-waived.
 - Implementation uses an isolated branch/worktree with its own real `node_modules`; the production checkout continues serving the legacy build until Task 14 cutover.
 - Do not change or recreate the existing Cloudflare Tunnel, `alljobs.agentjoey.ai` DNS route, Access application/policy, or credentials.
@@ -38,7 +38,7 @@
 
 Record the Human Owner decision, date, approved revision, and allowed next action in the brief. If the owner changes scope, mark the brief `Reopened`, revise it, and obtain approval again.
 
-- [ ] **Confirm the current production baseline is clean and healthy**
+- [x] **Confirm the current production baseline and decide service disposition**
 
 Run in the current production checkout:
 
@@ -51,7 +51,7 @@ curl -fsS http://127.0.0.1:3456/ >/dev/null
 
 Expected: clean tracked state, legacy tests/build pass, and the current local origin responds. If the production checkout is dirty, stop and resolve ownership of the changes before continuing.
 
-Execution note, 2026-08-26: source baseline passed (`75/75` tests and official webpack production build), but `127.0.0.1:3456` refused connections and no AllJobs LaunchAgent was loaded. This checkbox remains open until the Human Owner chooses service restoration or explicitly accepts the retired service remaining offline during the rebuild.
+Execution note, 2026-08-26: source baseline passed (`75/75` tests and official webpack production build), but `127.0.0.1:3456` refused connections and no AllJobs LaunchAgent was loaded. The Human Owner explicitly accepted the retired service remaining offline during the rebuild.
 
 - [x] **Create a recoverable legacy tag**
 
@@ -84,6 +84,32 @@ Record the approved brief revision, legacy tag/SHA, production checkout path, im
 git add .agent/frontend-design/planning-core-v1/brief.md .agent/frontend-design/planning-core-v1/handoff.md
 git commit -m "docs: approve planning core implementation brief"
 ```
+
+## Task 0A: Retire the exact legacy-product manifest
+
+**Files:**
+
+- Create: `docs/retired-v0.1-manifest.md`
+- Delete: exactly the 147 tracked paths enumerated by that manifest
+- Modify: `.agent/CURRENT.md`
+- Modify: `.agent/BACKLOG.md`
+- Modify: `.agent/frontend-design/planning-core-v1/handoff.md`
+
+- [x] **Verify the source commit, rollback tag, count, and manifest digest**
+
+The sorted `git ls-files` result must contain 147 paths and hash to `3083dc0ec67c9e9678f8a0e24e843a676455209661cc13a8199c7f8c4c1056cd`. The immutable rollback tag must resolve to `d69b70c630234e0480e952ef892aea638202a058`.
+
+- [x] **Delete only the reviewed manifest**
+
+Use Git-aware deletion with the exact manifest roots. Do not delete Planning Core records, deployment/Tunnel assets, repository configuration, package locks, Pact state, generic screenshot tooling, or Git history.
+
+- [x] **Prove absence and preservation**
+
+Verify all 147 paths are absent from the feature tree, every preserved path in the manifest remains present, `git diff --check` passes, and no untracked legacy copy remains.
+
+- [x] **Commit the recoverable cleanup**
+
+Commit the manifest, decision records, and exact deletions together. Do not create a replacement `app/`, `data/`, product document, route, or UI in this commit.
 
 ## Task 1: T3 rendered mockup and design approval
 
@@ -132,12 +158,11 @@ git add .agent/frontend-design/planning-core-v1
 git commit -m "design: approve planning core T3 mockup"
 ```
 
-## Task 2: Retire v0.1 and create the clean application foundation
+## Task 2: Create the clean application foundation after Mockup approval
 
 **Files:**
 
-- Create: `docs/retired-v0.1-manifest.md`
-- Delete: legacy tracked files enumerated by that manifest
+- Verify: `docs/retired-v0.1-manifest.md`
 - Recreate: `app/layout.tsx`
 - Recreate: `app/page.tsx`
 - Recreate: `app/globals.css`
@@ -155,9 +180,9 @@ git commit -m "design: approve planning core T3 mockup"
 - Create: `playwright.config.ts`
 - Create: `tests/smoke/app-shell.test.tsx`
 
-- [ ] **Write the exact retirement manifest before deleting files**
+- [ ] **Verify the completed retirement manifest before creating new runtime files**
 
-The manifest must list every tracked v0.1 file to remove, grouped as routes, actions, components, data/parser/tests, old product documents, old sprint state, and old frontend-design evidence. It must also list the preserved tunnel/domain files and the legacy tag.
+The manifest must show zero retired paths present in the current tree and must still identify the preserved tunnel/domain files and legacy tag.
 
 Verify the list:
 
@@ -166,7 +191,7 @@ git ls-files app components/workbench lib/data data .agent/frontend-design/alljo
 git diff --exit-code
 ```
 
-Expected: every deletion target is tracked and no uncommitted change is being overwritten.
+Expected: no deletion target remains in the current tree and no uncommitted change is being overwritten.
 
 - [ ] **Write a failing foundation smoke test**
 
@@ -186,9 +211,9 @@ Run `npm test -- tests/smoke/app-shell.test.tsx`.
 
 Expected: FAIL because the clean shell does not exist yet.
 
-- [ ] **Remove the exact legacy set and recreate only the minimal shell**
+- [ ] **Create only the approved minimal shell**
 
-Use `git rm` only with paths copied from the reviewed manifest. Keep the approved Planning Core design/spec/plan, new T3 brief/mockup, deploy templates, and generic repository configuration. Recreate `app/` as a minimal semantic shell using the approved mockup tokens, with no data behavior yet.
+Keep the approved Planning Core design/spec/plan, new T3 brief/mockup, deploy templates, and generic repository configuration. Recreate `app/` as a minimal semantic shell using the approved mockup tokens, with no data behavior yet.
 
 - [ ] **Install only the approved foundation dependencies**
 

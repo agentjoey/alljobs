@@ -5,7 +5,8 @@ This file tracks owner gates only. The executable task sequence and acceptance c
 ## P0 — blocked on Human Owner
 
 - [x] Approve `.agent/frontend-design/planning-core-v1/brief.md` revision 1 — approved 2026-08-26.
-- [ ] Decide whether the retired application should be restored during the rebuild or explicitly remain offline.
+- [x] Keep the retired application offline during the rebuild — decided 2026-08-26.
+- [x] Remove the exact 147-path retired-product manifest while preserving Tunnel/domain/Access and rollback assets — completed 2026-08-26.
 - [ ] After Task 1, approve the rendered T3 mockup revision.
 - [ ] During pilots, name the real code project and approve creation of the business project.
 - [ ] After independent review and verification, approve the final candidate commit and cutover.

@@ -20,7 +20,8 @@
 
 - the Human Owner explicitly approved Brief revision 1 without revision on 2026-08-26;
 - approval authorizes completion of Task 0 and Task 1's non-production rendered mockup and Design Review;
-- legacy-file deletion, production UI implementation, external planning-document initialization, deployment, and production mutation remain blocked by the rendered Mockup Gate;
+- the Human Owner explicitly accepted the retired application remaining offline and authorized exact-manifest legacy cleanup before Task 1;
+- replacement runtime and production UI implementation, external planning-document initialization, deployment, and production mutation remain blocked by the rendered Mockup Gate;
 - production Tunnel, hostname, Access policy, credentials, port, and loopback boundary remain untouched;
 - the legacy tag is a whole-release rollback anchor, not a runtime compatibility source.
 
@@ -43,4 +44,13 @@
 - Brief revision 1 is approved; the rendered Mockup Gate still requires explicit Human Owner approval;
 - no product implementation is in progress.
 
-**Next safe action:** Resolve the open Task 0 production-health decision: restore the retired application on `127.0.0.1:3456`, or record the Human Owner's explicit acceptance that it remains offline during the rebuild. Then begin Task 1's non-production rendered mockup; do not delete legacy files or start production UI before Mockup approval.
+## Task 0A cleanup result — 2026-08-26
+
+- Human Owner explicitly accepted the retired service remaining offline and authorized cleanup.
+- `docs/retired-v0.1-manifest.md` records the source commit, rollback tag, 147 exact tracked paths, path-list digest, and preserved assets.
+- All 147 tracked legacy paths were removed with Git-aware deletion.
+- Verification found zero manifest paths remaining and every listed preserved repository asset present.
+- No replacement runtime, route, product data, production UI, external repository change, deployment, or production mutation was created.
+- The deletion is recoverable from `archive/v0.1.0-retired`.
+
+**Next safe action:** Begin Task 1's non-production rendered mockup and independent Design Review. Do not create a replacement runtime or production UI before Mockup approval.

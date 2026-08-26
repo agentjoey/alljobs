@@ -2,7 +2,7 @@
 
 Version:        v0.1.0-retired (release retained; application listener currently absent)
 Phase:          Planning Core V1 — T3 pre-implementation
-Phase Status:   Brief revision 1 approved; Task 0 has one open production-health decision
+Phase Status:   Task 0 and Task 0A complete; ready for Task 1 mockup
 Last Updated:   2026-08-26 by Codex
 
 ## Current decision
@@ -36,12 +36,21 @@ The architecture baseline and Brief revision 1 are approved. The approval author
 - Baseline: 75/75 legacy tests passed and Next production build passed with the official webpack path;
 - Default Turbopack build is blocked by the managed environment's internal socket restriction;
 - no application was listening on `127.0.0.1:3456`, and initialization did not start or modify production services.
+- Human Owner explicitly accepted the retired application remaining offline during the rebuild.
 
 Full evidence and handoff: `.agent/frontend-design/planning-core-v1/handoff.md`.
 
+## Legacy cleanup
+
+- Human Owner authorized cleanup and accepted the retired application remaining offline;
+- exactly 147 tracked legacy paths were removed according to `docs/retired-v0.1-manifest.md`;
+- old routes, actions, UI components, sample data, legacy parsers/tests, old product docs, sprint record, and old UI evidence are absent;
+- Tunnel/domain/Access knowledge, deployment templates, Planning Core records, toolchain files, Git history, and rollback tag remain;
+- no replacement runtime, route, product data, production UI, external repository change, deployment, or production mutation was created.
+
 ## Next safe action
 
-Human Owner decides whether to restore the retired application on `127.0.0.1:3456` during the rebuild or explicitly accept it remaining offline. After that Task 0 production-health gate is resolved, proceed to Task 1's non-production rendered mockup and stop again for approval before retiring legacy tracked files.
+Proceed to Task 1's non-production rendered mockup and independent Design Review. Do not create a replacement runtime or production UI before Mockup approval.
 
 ## Release history
 

@@ -45,8 +45,9 @@ Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Bac
   `npm install` 装一份真实依赖，不能 `ln -s` 复用主仓库的。
 - **headless Chrome CLI 截图有 500px 最小窗口宽陷阱**：`--window-size=390` 实际按 500 布局再裁切，
   移动端证据会失真。用 `scripts/shot.mjs`（CDP `Emulation.setDeviceMetricsOverride`），不要裸调 CLI。
-- **当前只授权 Task 0–1**：Brief revision 1 已批准，可完成 repo gate 与 non-production rendered mockup；
-  在 Human Owner 批准 Mockup Gate 之前，不得删除旧文件、实现 production UI、初始化外部 repo 文档、部署或改动生产。
+- **当前授权 Task 0 / 0A / 1**：Brief revision 1 已批准，Human Owner 已接受旧版离线并授权按
+  `docs/retired-v0.1-manifest.md` 清除旧产品，可继续 non-production rendered mockup；在批准 Mockup Gate 之前，
+  不得创建 replacement runtime、实现 production UI、初始化外部 repo 文档、部署或改动生产。
 - **旧产品不兼容迁移**：不得读取或转换 v0.1 schema/sample data；旧版本只通过 Git tag 整版回滚。
 
 ## Dev Commands
