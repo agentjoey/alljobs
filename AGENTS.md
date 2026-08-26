@@ -10,6 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # alljobs — Project Context
 
+## Frontend workflow authority
+
+All frontend UI design, development, and review follows
+`/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` version 3.3. This repository-local
+authority corrects the obsolete v3.1 path that omitted the `Tools/` directory.
+
 ## ⭐ Session 启动（每次必执行）
 ```bash
 git pull
