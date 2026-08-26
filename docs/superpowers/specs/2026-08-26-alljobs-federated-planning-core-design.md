@@ -1,10 +1,10 @@
 # AllJobs Federated Planning Core Design
 
-**Status:** Confirmed design direction; pending Human Owner review of this written specification
+**Status:** Approved architecture baseline; superseded only by an explicitly approved later revision
 **Date:** 2026-08-26
 **Scope:** Planning Core domain and source-of-truth architecture
-**Tier:** T3 — new core navigation, data contracts, write paths, and migration
-**Implementation authorization:** None. This document does not authorize product code, data migration, deployment, or external writes.
+**Tier:** T3 — new core navigation, data contracts, write paths, and greenfield replacement
+**Implementation authorization:** None. This document does not authorize product code, legacy-data deletion, deployment, or external writes.
 
 ## 1. Purpose
 
@@ -668,19 +668,21 @@ V1 does not expose a cross-machine write API, accept direct SSH/file-share write
 
 The current loopback binding and Cloudflare Access boundary remain mandatory. No other computer receives a LAN listener that can bypass Access.
 
-## 14. Migration and compatibility
+## 14. Greenfield reset and compatibility
 
-1. Reconcile the current repository baseline and authoritative design documents before implementation.
-2. Map project types: current `code` remains `code`; current `biz` and `ops` become `business`; each current `product` project requires owner classification because the label is ambiguous.
-3. Add `work_modes` without inferring lifecycle from historical status.
-4. Pilot the external document contract in one real code project and the native contract in one real business project.
-5. Introduce read-only parsers and validation before any new write UI.
-6. Migrate only active current Tasks to stable-section identity through a dry-run report reviewed by the owner.
-7. During compatibility, legacy and structured Tasks must have an explicit read precedence and cannot both own the same logical Task.
+The Human Owner has declared the previously developed AllJobs product, sample data, UI directions, tests, and product documentation non-authoritative. V1 is a greenfield replacement, not a data migration.
+
+1. Record the exact final legacy commit and create a recoverable Git tag before removing any tracked legacy product file.
+2. Keep the current production checkout and tunnel serving the legacy build while the replacement is developed and verified in an isolated worktree.
+3. Do not map, import, transform, dual-read, or preserve runtime compatibility for legacy Projects, Tasks, Logs, routes, schemas, or visual artifacts.
+4. Recreate `data/` from empty validated directories and new pilot fixtures; no old sample object may appear in the replacement unless the owner creates it again under the new contract.
+5. Preserve the Cloudflare Tunnel, `alljobs.agentjoey.ai`, Cloudflare Access policy, port `3456`, and loopback-only `127.0.0.1` origin boundary. Repository deployment templates and documents may be rewritten, but these infrastructure identities and security invariants may not change without a separate Human Gate.
+6. Pilot the external document contract in one explicitly selected code project and the native contract in one explicitly selected business project.
+7. Introduce read-only parsers and validation before any new write UI.
 8. Enable digest-protected native writes only after conflict, filesystem-failure, and rollback tests pass.
-9. Remove the legacy line parser only when the migration report shows zero unresolved active Tasks, zero duplicate identities, and zero broken relations.
+9. Cut over only after the T3 mockup, independent review, independent verification, owner walkthrough, and release approval gates pass against the same candidate build.
 
-Rollback keeps the old parser and files intact until cutover acceptance. New structured files remain additive until that gate.
+Rollback restores the tagged legacy commit and rebuilds the application. It never merges legacy data into the replacement or runs both schemas in one process.
 
 ## 15. V1 scope
 
@@ -700,7 +702,7 @@ V1 includes:
 - digest-protected, atomic native Task and business Roadmap writes;
 - the `alljobs-planning` skill contract;
 - a code-project and business-project pilot fixture;
-- dry-run migration and rollback gates.
+- a greenfield reset manifest, fresh pilot bootstrap, and whole-release rollback gate.
 
 V1 excludes:
 
@@ -732,7 +734,7 @@ The design is implementation-ready only when the implementation specification ca
 7. external objects are visibly read-only and expose their provenance;
 8. business projects cannot create Backlog, implementation Backlog cannot omit its Phase, and no Backlog can reference a missing or foreign Phase;
 9. waiting, blocked, cancelled, and independent Tasks produce the specified derived behavior;
-10. migration dry-run counts every retained, ignored, duplicate, and invalid Task and supports rollback before cutover;
+10. the replacement runtime contains no legacy parser, compatibility reader, migrated sample object, or route dependency, and the tagged legacy release remains rebuildable for whole-release rollback;
 11. registration inspect/proposal produces zero writes and stale apply returns `STALE_STATE` with zero writes;
 12. duplicate registration is idempotent while slug, source, and provider collisions fail closed;
 13. archive stops provider reads and native writes without deleting native or external objects;

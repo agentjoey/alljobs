@@ -17,59 +17,52 @@ cat .agent/CURRENT.md
 ```
 
 ## Project Overview
-Joey 的个人多项目工作台：对并行推进的所有项目做日常追踪，任何 agent 改一个 `data/` 下的
-Markdown 文件即完成进度写入，无 API、无凭证。v1 已实现并部署，正等待「工作底账」与「Apple
-HIG」两个视觉方向的最终取舍（见 `.agent/CURRENT.md`）。
+Joey 的个人多项目规划工作台。当前正在以绿地方式重建 Planning Core：统一可视化和管理
+Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Backlog 在各自 repo 内作为唯一事实源。
+旧 v0.1 产品方向、schema、样例数据、UI 与测试均已作废；旧 build 仅在新版本通过全部门禁前继续提供服务。
 
 **Location:** ~/AgentWorks/GPT_Workspace/alljobs
 **GitHub:**   agentjoey/alljobs
 **Live:**     https://alljobs.agentjoey.ai（Cloudflare Access 邮件验证码登录）
-**Version:**  v0.1.0（v1 功能完整，尚无 release.sh /版本号自动化）
+**Version:**  v0.1.0-retired（仍临时在线）；Planning Core V1 尚未开始实现
 
-**Technical docs:** [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md) · [Product](PRODUCT.md)
+**Canonical planning docs:** [Architecture baseline](docs/superpowers/specs/2026-08-26-alljobs-federated-planning-core-design.md) · [T3 Brief](.agent/frontend-design/planning-core-v1/brief.md) · [Development plan](docs/superpowers/plans/2026-08-26-alljobs-federated-planning-core-rebuild.md)
 
-## Tech Stack
+## Target Tech Stack
 | Layer | Tech |
 |---|---|
 | 前端框架 | Next.js 16（App Router）+ React 19 + TypeScript |
-| 样式 | Tailwind v4 + shadcn/ui（radix-nova）+ 手写设计系统 token（`app/globals.css`） |
-| 数据层 | 无数据库——`data/*.md`（gray-matter + zod 解析，`lib/data/`），git 即历史 |
-| 测试 | vitest（102 例，`npm test`） |
-| 部署 | 本地 `next start` 常驻（launchd）+ Cloudflare Tunnel + Zero Trust Access |
+| 样式 | Tailwind v4 + shadcn/ui（radix-nova）+ T3 mockup 批准后的新设计系统 |
+| 数据层 | AllJobs-native Markdown + repo-owned Markdown 的只读 Git mirror projection；无数据库 |
+| 测试 | Vitest + Testing Library + Playwright；最终数量以实现证据为准 |
+| 部署 | 单一 Control Host：本地 Next + refresh worker（launchd）+ 现有 Cloudflare Tunnel / Access |
 
-## Key Implementation Details
-（仅非显而易见的陷阱/约定，其余读代码即可）
+## Key Constraints
 
 - **`next start` 必须带 `-H 127.0.0.1`**（见 `package.json` 的 `start:prod`）。Next 默认 `--hostname 0.0.0.0`，
   不显式绑回环地址会让本机应用对整个局域网零鉴权敞开——tunnel 是唯一入口这条安全边界靠这个参数成立，改脚本时勿删。
-- **React 19 表单 action 的隐式 reset** 在 commit 的 layout 阶段触发，晚于任何 `requestAnimationFrame` 回调；
-  受控 select 要在提交后重新同步显示，必须监听原生 `reset` 事件 + `queueMicrotask`（见
-  `components/ledger/primitives/today-sheet.tsx` 注释，三轮踩坑后的结论）。
 - **Turbopack 不接受软链的 `node_modules`**（`git worktree` 场景会踩到）：worktree 需要
   `npm install` 装一份真实依赖，不能 `ln -s` 复用主仓库的。
 - **headless Chrome CLI 截图有 500px 最小窗口宽陷阱**：`--window-size=390` 实际按 500 布局再裁切，
   移动端证据会失真。用 `scripts/shot.mjs`（CDP `Emulation.setDeviceMetricsOverride`），不要裸调 CLI。
-- **`color-mix(in srgb, X 55%, transparent)` 不是"变浅的 X"，是半透明的 X**：用它做焦点环/语义色这类
-  非文字元素时，实际对比度远低于直觉（Apple 改版分支上真实测出过 2.3:1 的焦点环，需要 3:1）。语义性
-  颜色用实色 token，半透明只用来做真正的 tint 底纹。
-- **对比度实测走 `scripts/a11y-contrast.mjs` / `a11y-focus.mjs`**：CDP 驱动，明暗双模式、真实键盘
-  Tab 走位，别用肉眼判断或只查静态文字对——上一次就是这么漏掉焦点环这个 Critical 的。
+- **本阶段只有文档授权**：在 Human Owner 批准 Brief revision 1 之前，不得删除旧文件、修改产品代码、
+  初始化外部 repo 文档、部署或改动生产。实现必须逐项遵循 development plan 与 T3 门禁。
+- **旧产品不兼容迁移**：不得读取或转换 v0.1 schema/sample data；旧版本只通过 Git tag 整版回滚。
 
 ## Dev Commands
 ```bash
 npm run dev            # 开发服务器（3000）
 npm run build           # 生产构建
 npm run start:prod      # 生产运行，端口 3456（本项目约定，含 -H 127.0.0.1）
-npm test                # vitest，102 例
+npm test                # 当前仍运行 legacy suite；实现阶段将按新计划替换
 npm run lint             # eslint
 node scripts/shot.mjs <url> <out.png> <width> <scale> <mobile:0|1> [light|dark]   # CDP 截图
 ```
 
-## Release 后必做
-本项目暂无 `release.sh` 自动化（v0.1.0 起步阶段，单人使用，未走版本号 bump 流程）。发生结构性变更后手动：
-1. 更新本节上方 Version / 更新 `.agent/CURRENT.md` 的 Version History
-2. 架构变更 → 更新 `docs/architecture.md`
-3. 部署流程变更 → 更新 `docs/deployment.md`
+## Release gate
+
+Planning Core 是 T3：必须绑定 approved Brief/mockup/final commit，完成独立 Review 与 Verification、Human Owner
+亲手走查和发布批准，且 final screenshot 来自最终 build。切换时保留 Tunnel/domain/Access，失败按计划整版回滚。
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
 # pact protocol
