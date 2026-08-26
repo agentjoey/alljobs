@@ -2,7 +2,7 @@
 
 Version:        v0.1.0-retired (legacy build still serving until approved cutover)
 Phase:          Planning Core V1 — specification
-Phase Status:   Draft brief and executable plan ready for Human Owner approval
+Phase Status:   Repository initialized; Draft brief ready for Human Owner approval
 Last Updated:   2026-08-26 by Codex
 
 ## Current decision
@@ -26,6 +26,18 @@ The existing production build remains online only to avoid service interruption 
 - Development plan: `docs/superpowers/plans/2026-08-26-alljobs-federated-planning-core-rebuild.md`
 
 The architecture baseline is approved. Brief revision 1 and its development plan are documentation outputs only; they do not authorize implementation, legacy-file deletion, external repository changes, deployment, or production mutation.
+
+## Repository initialization
+
+- Planning baseline commit: `6656480d1905e363d4f9ef3e745345f4d9be6406`;
+- Legacy rollback tag: `archive/v0.1.0-retired`;
+- Implementation branch: `feature/planning-core-v1`;
+- Isolated worktree: `/Users/xtation/AgentWorks/GPT_Workspace/alljobs-planning-core-v1`;
+- Baseline: 75/75 legacy tests passed and Next production build passed with the official webpack path;
+- Default Turbopack build is blocked by the managed environment's internal socket restriction;
+- no application was listening on `127.0.0.1:3456`, and initialization did not start or modify production services.
+
+Full evidence and handoff: `.agent/frontend-design/planning-core-v1/handoff.md`.
 
 ## Next safe action
 
