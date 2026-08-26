@@ -9,7 +9,7 @@ Last Updated:   2026-08-26 by Codex
 
 The previously developed AllJobs product is non-authoritative and will be replaced as a greenfield build. Its routes, UI directions, Markdown schemas, sample data, tests, and product documentation are not migration inputs.
 
-The legacy release remains recoverable while the replacement is designed and verified, but no application was listening on `127.0.0.1:3456` during initialization. No legacy product file or production data has been deleted.
+The legacy release remains recoverable only through Git history and `archive/v0.1.0-retired`. The retired service is offline, and its exact 147-path product manifest has been removed from the current tree.
 
 ## Preserved production assets
 
@@ -25,7 +25,7 @@ The legacy release remains recoverable while the replacement is designed and ver
 - T3 implementation spec / Brief revision 1: `.agent/frontend-design/planning-core-v1/brief.md`
 - Development plan: `docs/superpowers/plans/2026-08-26-alljobs-federated-planning-core-rebuild.md`
 
-The architecture baseline and Brief revision 1 are approved. The approval authorizes Task 0 and Task 1's non-production rendered mockup. Legacy-file deletion, production UI, external repository changes, deployment, and production mutation remain blocked until the rendered Mockup Gate is explicitly approved.
+The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized and completed exact-manifest legacy cleanup. Current authorization now covers Task 1's non-production rendered mockup; replacement runtime, production UI, external repository changes, deployment, and production mutation remain blocked until the rendered Mockup Gate is explicitly approved.
 
 ## Repository initialization
 
@@ -56,4 +56,4 @@ Proceed to Task 1's non-production rendered mockup and independent Design Review
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
-| v0.1.0 | 2026-08-12 | Retired as product direction; still deployed temporarily | Legacy multi-project activity ledger; retained only as whole-release rollback until Planning Core cutover |
+| v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |

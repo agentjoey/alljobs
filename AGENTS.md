@@ -19,7 +19,8 @@ cat .agent/CURRENT.md
 ## Project Overview
 Joey 的个人多项目规划工作台。当前正在以绿地方式重建 Planning Core：统一可视化和管理
 Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Backlog 在各自 repo 内作为唯一事实源。
-旧 v0.1 产品方向、schema、样例数据、UI 与测试均已作废；旧 build 仅在新版本通过全部门禁前继续提供服务。
+旧 v0.1 产品方向、schema、样例数据、UI 与测试均已作废并从当前树清除；旧版服务保持离线，
+只通过 Git 历史与 `archive/v0.1.0-retired` 保留整版回滚能力。
 
 **Location:** ~/AgentWorks/GPT_Workspace/alljobs
 **GitHub:**   agentjoey/alljobs
@@ -51,12 +52,12 @@ Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Bac
 - **旧产品不兼容迁移**：不得读取或转换 v0.1 schema/sample data；旧版本只通过 Git tag 整版回滚。
 
 ## Dev Commands
+
+当前树有意处于“无 replacement runtime”状态；下列旧 package scripts 仅作为 toolchain 占位，不能作为
+Planning Core 的 build/test 入口。Task 2 在 Mockup Gate 获批后重建并验证正式命令。
+
 ```bash
-npm run dev            # 开发服务器（3000）
-npm run build           # 生产构建
-npm run start:prod      # 生产运行，端口 3456（本项目约定，含 -H 127.0.0.1）
-npm test                # 当前仍运行 legacy suite；实现阶段将按新计划替换
-npm run lint             # eslint
+npm ci                  # 安装锁定 toolchain；worktree 必须真实安装 node_modules
 node scripts/shot.mjs <url> <out.png> <width> <scale> <mobile:0|1> [light|dark]   # CDP 截图
 ```
 

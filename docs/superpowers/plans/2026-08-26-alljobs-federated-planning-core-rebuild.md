@@ -14,7 +14,7 @@
 
 - Brief revision 1 was approved on 2026-08-26. The Human Owner also accepted the retired application remaining offline and authorized exact-manifest legacy cleanup before Task 1. Current authorization covers Task 0, Task 0A cleanup, and Task 1's non-production rendered mockup; stop before replacement-runtime work in Task 2 until the rendered Mockup Gate is approved.
 - The task is T3. The rendered Mockup Gate, independent Design Review, independent final Verification, owner walkthrough, and release approval cannot be self-waived.
-- Implementation uses an isolated branch/worktree with its own real `node_modules`; the production checkout continues serving the legacy build until Task 14 cutover.
+- Implementation uses an isolated branch/worktree with its own real `node_modules`. By explicit Human Owner decision, the retired service remains offline and the old product is absent from the current tree; only the immutable rollback tag retains it.
 - Do not change or recreate the existing Cloudflare Tunnel, `alljobs.agentjoey.ai` DNS route, Access application/policy, or credentials.
 - Preserve `next start -p 3456 -H 127.0.0.1`. No preview server may bind `0.0.0.0` or attach to the production Tunnel.
 - Before editing Next.js code, read `node_modules/next/dist/docs/01-app/02-guides/server-actions.md`, `forms.md`, and `01-app/03-api-reference/06-cli/next.md` from the implementation worktree.

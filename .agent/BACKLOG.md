@@ -15,7 +15,7 @@ This file tracks owner gates only. The executable task sequence and acceptance c
 
 - [ ] Execute Tasks 0–14 of the approved development plan in an isolated worktree.
 - [ ] Preserve the existing Tunnel, domain, Access policy, Control Host, `3456` port, and loopback binding.
-- [ ] Keep the legacy build serving until the final cutover gate; retain `archive/v0.1.0-retired` for whole-release rollback.
+- [x] Keep the retired service offline and retain `archive/v0.1.0-retired` for whole-release rollback.
 
 ## P2 — separate later brief
 
