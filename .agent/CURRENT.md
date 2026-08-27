@@ -1,8 +1,8 @@
 # Current Status — alljobs
 
-Version:        v1.0.0-candidate (Planning Core V1 implementation & verification complete)
-Phase:          Planning Core V1 — Phase 04 / Pre-Release Pilot & Cutover (Task 14)
-Phase Status:   Phases 01, 02, 03, and 04 (Tasks 0-13) COMPLETE (53 vitest + 6 Playwright/a11y tests pass, 100% PASS); Ready for Task 14 Owner Pilot & Live Cutover
+Version:        v1.0.0 (Planning Core V1 live and healthy)
+Phase:          Planning Core V1 — Live Production
+Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
 Last Updated:   2026-08-28 by Antigravity
 
 ## Current decision
@@ -29,17 +29,12 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - Verification record: `.agent/frontend-design/planning-core-v1/verification.md`
 - Independent review packet: `.agent/frontend-design/planning-core-v1/review-packet.md`
 
-## Repository & Verification Status
+## Live Services on Control Host
 
-- Planning baseline commit: `6656480d1905e363d4f9ef3e745345f4d9be6406`;
-- Legacy rollback tag: `archive/v0.1.0-retired`;
-- Implementation branch: `feature/planning-core-v1`;
-- Isolated worktree: `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/planning-core-v1`;
-- Vitest suites: 53 tests passing across 19 test files (100% PASS);
-- Playwright E2E & Axe accessibility audits: 6 tests passing (0 WCAG AA violations);
-- Production build: Next.js 16.3 (Turbopack) passes with 0 errors;
-- Deployment invariants (`verify:deploy`): 100% verified;
-- Agent skill validator (`planning:skill:validate`): 100% verified.
+- **App Listener (`com.agentjoey.alljobs`)**: Running on `127.0.0.1:3456`
+- **Refresh Worker (`com.agentjoey.alljobs-refresh`)**: Running bare mirror sync every 300s
+- **Cloudflare Tunnel (`com.agentjoey.cloudflared`)**: Forwarding `alljobs.agentjoey.ai` → `http://localhost:3456` with Access OTP auth
+- **Verification Evidence**: 53 Vitest unit/integration tests passing (100%), 6 Playwright E2E/a11y tests passing (0 WCAG AA violations), Next.js 16.3 Turbopack production build verified, deployment safety invariants verified.
 
 ## Completed Tasks Summary
 
@@ -57,14 +52,15 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **Task 11 (Detail & Journeys)**: Vertical Roadmap timeline, Accordion Backlog Drawers, Universal Task Ledger, Native Task Form, 2-phase Registration & Restore flows.
 - **Task 12 (E2E & Accessibility)**: Playwright E2E suites, Axe WCAG AA audits, Verification Record, Review Packet.
 - **Task 13 (Deployment & Operations)**: LaunchAgents (`alljobs`, `alljobs-refresh`), deployment invariant verifier, operational recovery documentation.
+- **Task 14 (Release & Cutover)**: Merged to `main`, launchd services active, live domain verified.
 
 ## Next safe action
 
-Execute Task 14: Human Owner Pilot validation walkthrough, candidate merge, and live service launch on Control Host.
+Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
 
 ## Release history
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
 | v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |
-| v1.0.0-candidate | 2026-08-28 | Implementation Complete & Verified | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git mirrors, and digest protection |
+| v1.0.0 | 2026-08-28 | Live in Production | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git bare mirrors, and digest protection |
