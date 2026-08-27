@@ -1,24 +1,22 @@
-# Planning Core V1 — Operations Manual
+# Operations & Maintenance — AllJobs Planning Core V1
 
-## Control Host Environment
+## Daily Verification & Health Checks
 
-- **Single Control Host**: Joey 的 macOS 开发机为唯一的 Control Host。
-- **Loopback Enforcement**:
-  - `start:prod` 命令定义为 `next start -p 3456 -H 127.0.0.1`；
-  - 必须绑定 `127.0.0.1` 回环地址，防止局域网直接未经鉴权访问。
+```bash
+# 1. Check local listener
+curl -fsS http://127.0.0.1:3456/ >/dev/null && echo "App healthy"
 
-## Cloudflare Tunnel & Access
+# 2. Check LaunchAgents status
+launchctl list | rg "com\.agentjoey\.(alljobs|alljobs-refresh|cloudflared)"
 
-- **Public Endpoint**: `https://alljobs.agentjoey.ai`
-- **Ingress Rule**: 路由到 `http://127.0.0.1:3456`
-- **Authentication**: Cloudflare Access 邮箱验证码登录防护。
+# 3. Check refresh worker logs
+tail -n 20 ~/Library/Logs/alljobs/refresh-stdout.log
 
-## Refresh Daemon
+# 4. Trigger one-off manual refresh
+npm run planning:refresh -- --once
+```
 
-- **Background Sync**: 通过 launchd 定时执行 `npm run planning:refresh`。
-- **Stale Protection**: 当网络不可用或 fetch 失败时，保留 last success 缓存，并在前端琥珀色状态条中标注 `STALE`。
+## Backup & Restoration
 
-## Rollback Strategy
-
-- 旧版 release 已打 tag `archive/v0.1.0-retired`。
-- 如需整版回滚，可通过 git checkout tag 进行还原。
+- Native data files live under `./data/` (Markdown and JSON). Back up directory using standard Time Machine / filesystem backups.
+- Mirrors live under `~/.alljobs/mirrors/` and can be reconstructed at any time by refreshing from remotes.

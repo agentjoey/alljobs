@@ -15,14 +15,17 @@ Joey 的个人多项目规划工作台。统一可视化和管理 Project → Ro
 - **Control Host**: 当前本地开发机作为唯一的 Control Host。
 - **Loopback Enforcement**: `next start` 必须带 `-H 127.0.0.1`（见 `start:prod`），确保仅通过 Cloudflare Tunnel / Access 提供鉴权入口。
 
-## Dev Commands
+## Dev & Operational Commands
 
 ```bash
-npm run dev                 # 本地 Next.js 开发服务器
-npm test                    # 运行 Vitest 单元与组件测试
-npm run test:e2e            # 运行 Playwright 端到端测试
-npm run typecheck           # TypeScript 静态类型检查
-npm run lint                # ESLint 代码规范检查
-npm run build               # Next.js 生产环境构建
-npm run start:prod          # 启动生产应用 (127.0.0.1:3456)
+npm run dev                     # 本地 Next.js 开发服务器
+npm test                        # 运行 Vitest 单元与组件测试
+npm run test:e2e                # 运行 Playwright 端到端测试
+npm run typecheck               # TypeScript 静态类型检查
+npm run lint                    # ESLint 代码规范检查
+npm run build                   # Next.js 生产环境构建
+npm run start:prod              # 启动生产应用 (127.0.0.1:3456)
+npm run planning:refresh        # 运行 Git bare mirror 刷新 worker
+npm run planning:skill:validate # 验证 alljobs-planning agent skill 规范与样例
+npm run verify:deploy           # 验证部署脚本与安全回环不变量
 ```
