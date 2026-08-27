@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # isolated local git worktrees
 /.worktrees/
