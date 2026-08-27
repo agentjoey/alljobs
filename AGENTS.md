@@ -52,18 +52,20 @@ Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Bac
   `npm install` 装一份真实依赖，不能 `ln -s` 复用主仓库的。
 - **headless Chrome CLI 截图有 500px 最小窗口宽陷阱**：`--window-size=390` 实际按 500 布局再裁切，
   移动端证据会失真。用 `scripts/shot.mjs`（CDP `Emulation.setDeviceMetricsOverride`），不要裸调 CLI。
-- **当前授权 Task 0 / 0A / 1**：Brief revision 1 已批准，Human Owner 已接受旧版离线并授权按
-  `docs/retired-v0.1-manifest.md` 清除旧产品，可继续 non-production rendered mockup；在批准 Mockup Gate 之前，
-  不得创建 replacement runtime、实现 production UI、初始化外部 repo 文档、部署或改动生产。
+- **Mockup Gate 状态**: Task 1 Mockup Gate 于 2026-08-27 获 Human Owner 明确批准（"mockup gate 通过，进入下一步"）。
+- **当前授权 Task 2**: 正在构建 Planning Core V1 的基础运行时（Next.js semantic shell、Paper Workbench 样式系统、Vitest 与 Playwright 测试基座）。
 - **旧产品不兼容迁移**：不得读取或转换 v0.1 schema/sample data；旧版本只通过 Git tag 整版回滚。
 
 ## Dev Commands
 
-当前树有意处于“无 replacement runtime”状态；下列旧 package scripts 仅作为 toolchain 占位，不能作为
-Planning Core 的 build/test 入口。Task 2 在 Mockup Gate 获批后重建并验证正式命令。
-
 ```bash
-npm ci                  # 安装锁定 toolchain；worktree 必须真实安装 node_modules
+npm run dev                 # 本地 Next.js 开发服务器
+npm test                    # 运行 Vitest 单元与组件测试
+npm run test:e2e            # 运行 Playwright 端到端测试
+npm run typecheck           # TypeScript 静态类型检查
+npm run lint                # ESLint 代码规范检查
+npm run build               # Next.js 生产环境构建
+npm run start:prod          # 启动生产应用 (127.0.0.1:3456)
 node scripts/shot.mjs <url> <out.png> <width> <scale> <mobile:0|1> [light|dark]   # CDP 截图
 ```
 
