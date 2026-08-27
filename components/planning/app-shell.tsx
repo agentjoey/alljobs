@@ -45,7 +45,7 @@ export function AppShell({ children, statusProps }: AppShellProps) {
         </div>
 
         <div className="header-status">
-          <span className="status-dot status-dot--healthy" aria-label="Control Host Online" />
+          <span className="status-dot status-dot--healthy" role="status" aria-label="Control Host Online" />
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px" }}>127.0.0.1:3456</span>
         </div>
       </header>

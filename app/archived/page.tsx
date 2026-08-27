@@ -8,17 +8,10 @@ import { StatePanel } from "@/components/planning/state-panel";
 
 export default function ArchivedPage() {
   const [archivedProjects, setArchivedProjects] = useState<ProjectRegistryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [restoreSlug, setRestoreSlug] = useState<string | null>(null);
   const [confirmationInput, setConfirmationInput] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-
-  // In client component, fetch list or render placeholder
-  useEffect(() => {
-    // For demo/production client listing
-    setLoading(false);
-  }, []);
 
   const handleRestore = async (slug: string) => {
     if (confirmationInput !== slug) return;

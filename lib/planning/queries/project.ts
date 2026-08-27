@@ -41,7 +41,7 @@ export async function getProjectDetail(
 
   let roadmap: RoadmapItem[] = [];
   let backlog: BacklogItem[] = [];
-  let issues: ProofIssue[] = [...taskIssues];
+  const issues: ProofIssue[] = [...taskIssues];
   let provenance: SourceProvenance[] = [];
   let projection = null;
 
