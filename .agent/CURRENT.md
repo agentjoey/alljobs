@@ -2,7 +2,7 @@
 
 Version:        v0.1.0-retired (release retained; application listener currently absent)
 Phase:          Planning Core V1 — T3 pre-implementation
-Phase Status:   Phase 01 (Tasks 0, 0A, 1, 2) & Phase 02 (Tasks 3, 4, 5) COMPLETE (34/34 tests pass); Phase 03 (Task 6: Git Mirrors & Worker) in progress
+Phase Status:   Phase 01 (Tasks 0-2), Phase 02 (Tasks 3-5), Phase 03 (Tasks 6-9) COMPLETE (49/49 tests pass); Phase 04 (Task 10: App Shell & Workbench) in progress
 Last Updated:   2026-08-28 by Antigravity
 
 ## Current decision
@@ -27,7 +27,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - Mockup brief revision 3: `.agent/frontend-design/planning-core-v1/mockup-brief.md`
 - Mockup review & evidence: `.agent/frontend-design/planning-core-v1/mockup-review.md`
 
-The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized exact-manifest legacy cleanup. Task 1 Mockup Gate was explicitly APPROVED by the Human Owner on 2026-08-27. Phase 01 and Phase 02 (Tasks 0, 0A, 1, 2, 3, 4, 5) are complete with 34/34 passing tests.
+The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized exact-manifest legacy cleanup. Task 1 Mockup Gate was explicitly APPROVED by the Human Owner on 2026-08-27. Phases 01, 02, and 03 (Tasks 0 through 9) are complete with 49/49 passing tests.
 
 ## Repository initialization
 
@@ -46,10 +46,14 @@ The architecture baseline and Brief revision 1 are approved. The Human Owner sep
 - **Task 3 (Canonical Domain & Relations)**: `lib/planning/domain/schemas.ts`, `relations.ts`, `errors.ts`, ProofIssue isolation, cycle detection.
 - **Task 4 (Pure Markdown Parsers)**: `lib/planning/markdown/section-document.ts`, `roadmap.ts`, `backlog.ts`, `tasks.ts`, `render.ts`, test fixtures.
 - **Task 5 (Atomic Native Storage)**: `lib/planning/native/store.ts`, `lock.ts`, `digest.ts`, `activity.ts`, `paths.ts`, `STALE_WRITE` protection.
+- **Task 6 (Control Host Config & Git Refresh)**: `lib/planning/config.ts`, `providers/git-runner.ts`, `providers/git-markdown.ts`, `providers/refresh.ts`, `scripts/planning-refresh.ts`.
+- **Task 7 (Registration, Archive, Restore Lifecycle)**: `lib/planning/registry/inspect.ts`, `apply.ts`, `archive.ts`, `restore.ts`, `proposal.ts`.
+- **Task 8 (Projections & Typed Server Actions)**: `lib/planning/queries/portfolio.ts`, `project.ts`, `tasks.ts`, `attention.ts`, `app/actions/projects.ts`, `native-planning.ts`, `refresh.ts`.
+- **Task 9 (Agent Skill)**: `skills/alljobs-planning/SKILL.md`, references, examples, and `planning:skill:validate`.
 
 ## Next safe action
 
-Execute Phase 03 / Task 6: Implement Control Host configuration, safe Git runner (`-c core.hooksPath=/dev/null`), `git-markdown` external projection provider, and `planning-refresh` background worker.
+Execute Phase 04 / Task 10: Implement approved Paper Workbench App Shell, Universal Search (`⌘K`), Portfolio Workbench Dashboard, and Projects Card Grid.
 
 ## Release history
 

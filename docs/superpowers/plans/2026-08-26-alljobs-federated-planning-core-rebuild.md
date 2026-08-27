@@ -238,72 +238,13 @@ git commit -m "design: approve planning core T3 mockup"
 - Create: `lib/planning/providers/*.test.ts`
 - Create: `scripts/planning-refresh.ts`
 
-- [ ] **Write failing config and Git-runner tests**
-
-Cover missing/invalid config, realpath containment, direct-child candidate restriction, symlink escape, HTTPS/SSH/scp-like remote validation, non-branch ref rejection, shell metacharacters as inert arguments, disabled hooks, exact remote/ref fetch, no checkout, and per-project isolation.
-
-Example config contract:
-
-```json
-{
-  "trustedCodeRoots": ["/Users/xtation/AgentWorks/CodeSpace"],
-  "refreshIntervalSeconds": 300
-}
-```
-
-The production config lives at `~/.alljobs/config.json`; the repository file is only a schema-valid example.
-
-- [ ] **Implement a no-shell Git command boundary**
-
-```ts
-export interface GitRunner {
-  run(args: readonly string[], options: { cwd?: string }): Promise<{
-    stdout: string;
-    stderr: string;
-    exitCode: number;
-  }>;
-}
-```
-
-Every invocation prepends `-c core.hooksPath=/dev/null`; use argument arrays, never `exec`, shell interpolation, repository scripts, or candidate hooks.
-
-- [ ] **Write failing projection/refresh tests with local bare repositories**
-
-Test one exact commit across both documents, blob hashes, partial validity, missing Roadmap rules by work mode, failed fetch preserving last success, manual and scheduled refresh sharing one function, per-project lock, and one project failure not affecting another.
-
-- [ ] **Implement `git-markdown` and refresh state**
-
-```ts
-export interface ExternalProjection {
-  project: string;
-  revision: string;
-  fetchedAt: string;
-  freshness: "fresh" | "stale" | "unavailable";
-  roadmap: RoadmapItem[];
-  backlog: BacklogItem[];
-  tasks: Task[];
-  issues: ProofIssue[];
-  provenance: SourceProvenance[];
-}
-```
-
-`git-markdown` returns an empty external Task list in V1; `contracts.ts` keeps a provider-neutral Task projection interface for later providers and test fixtures. Do not invent `docs/TASKS.md`.
-
-- [ ] **Implement one worker entry point**
-
-`scripts/planning-refresh.ts --once` refreshes all registered code projects once. Without `--once`, it loops at the validated configured interval, prevents overlapping cycles, handles termination signals, and logs redacted project/error summaries under `~/.alljobs/logs/`.
-
-- [ ] **Run provider checks**
-
-```bash
-npm test -- lib/planning/providers
-npm run typecheck
-ALLJOBS_HOME="$(mktemp -d)" npm run planning:refresh -- --once
-```
-
-Expected: provider tests pass; the empty temporary config invocation fails closed with a clear config error and performs no network call.
-
-- [ ] **Commit provider infrastructure**
+- [x] **Write failing config and Git-runner tests**
+- [x] **Implement a no-shell Git command boundary**
+- [x] **Write failing projection/refresh tests with local bare repositories**
+- [x] **Implement `git-markdown` and refresh state**
+- [x] **Implement one worker entry point**
+- [x] **Run provider checks**
+- [x] **Commit provider infrastructure**
 
 ```bash
 git add config lib/planning/providers lib/planning/config.ts scripts/planning-refresh.ts package.json package-lock.json
@@ -322,51 +263,14 @@ git commit -m "feat: add safe git planning refresh"
 - Create: `lib/planning/registry/*.test.ts`
 - Create: `lib/planning/native/project-file.ts`
 
-- [ ] **Write failing read-only inspect tests**
-
-Use spies to prove inspect performs zero network calls, filesystem writes, installs, hooks, candidate execution, mirror creation, Task creation, or external document initialization. Cover direct trusted child, symlink escape, arbitrary path, nested path, detached/no remote, missing documents, and business explicit proposal.
-
-- [ ] **Define canonical proposal hashing**
-
-```ts
-export interface RegistrationProposal {
-  proposalDigest: string;
-  project: Project;
-  binding?: GitMarkdownBinding;
-  inspectedRevision?: string;
-  documentFingerprints: Record<string, string>;
-  writes: ProposedWrite[];
-  warnings: ProposalMessage[];
-  blockers: ProposalMessage[];
-}
-```
-
-Hash canonical JSON of every binding, inspected-state, registry-collision, and proposed-write field. Exclude display-only timestamps from the digest.
-
-- [ ] **Write failing apply/idempotency/collision tests**
-
-Cover exact apply, source change, registry change, identical idempotent registration, slug rebind, duplicate active source, temporary mirror promotion mismatch, cleanup, and `STALE_STATE` zero writes.
-
-- [ ] **Implement registration apply**
-
-Apply re-runs complete inspection, compares the digest, stages a bare mirror under a unique path, validates the resolved ref/documents, then atomically promotes mirror state before writing the Project and Activity event. If any step fails, no active Project record remains.
-
-- [ ] **Write failing archive/restore tests**
-
-Cover active-work warning, archived visibility, provider refresh stop, native-write rejection, retained objects/binding, no external copy, restore containment/source/schema/relation/collision checks, stale restore proposal, and explicit binding replacement proposal.
-
-- [ ] **Implement archive and restore**
-
-Both flows use proposal digests and complete rechecks. Archive changes only `registration_status` plus activity. Restore changes only registration status plus activity after full validation. V1 exposes no delete operation.
-
-- [ ] **Run registry suites**
-
-```bash
-npm test -- lib/planning/registry lib/planning/native lib/planning/providers
-npm run typecheck
-```
-
-- [ ] **Commit lifecycle state machines**
+- [x] **Write failing read-only inspect tests**
+- [x] **Define canonical proposal hashing**
+- [x] **Write failing apply/idempotency/collision tests**
+- [x] **Implement registration apply**
+- [x] **Write failing archive/restore tests**
+- [x] **Implement archive and restore**
+- [x] **Run registry suites**
+- [x] **Commit lifecycle state machines**
 
 ```bash
 git add lib/planning/registry lib/planning/native/project-file.ts
@@ -388,37 +292,12 @@ git commit -m "feat: add human-gated project lifecycle"
 - Create: `app/actions/refresh.ts`
 - Create: `app/actions/*.test.ts`
 
-- [ ] **Write failing projection tests**
-
-Cover code/business variant composition, native/external Task namespacing, Task relation derivation, cancelled exclusion, `Not decomposed`, backlog/task counts without percentages, waiting follow-up, blocked/due/stale/invalid attention, archived exclusion, and one-provider-failure isolation.
-
-- [ ] **Implement read models without secondary persistence**
-
-Queries read native Markdown plus the current mirror revision/state, normalize in memory, derive display values, and return issues/provenance. They never write a JSON/Markdown projection cache.
-
-- [ ] **Write failing Server Action tests**
-
-Test form parsing, typed field errors, source read-only rejection, archived rejection, expected digest propagation, `STALE_STATE`, `STALE_WRITE`, activity entry, refresh reuse, and `revalidatePath` only after success.
-
-```ts
-export type ActionResult<T> =
-  | { status: "success"; data: T; message: string }
-  | { status: "error"; code: string; message: string;
-      fieldErrors?: Record<string, string[]> };
-```
-
-- [ ] **Implement minimal Server Actions**
-
-Actions translate FormData into domain commands and typed results. Domain/services enforce authority; actions do not duplicate validation. Registration/archive/restore apply requires the proposal digest and an explicit confirmation value naming the project.
-
-- [ ] **Run query/action suites**
-
-```bash
-npm test -- lib/planning/queries app/actions
-npm run typecheck
-```
-
-- [ ] **Commit application service layer**
+- [x] **Write failing projection tests**
+- [x] **Implement read models without secondary persistence**
+- [x] **Write failing Server Action tests**
+- [x] **Implement minimal Server Actions**
+- [x] **Run query/action suites**
+- [x] **Commit application service layer**
 
 ```bash
 git add lib/planning/queries app/actions
@@ -443,41 +322,12 @@ git commit -m "feat: compose planning projections and actions"
 - Modify: `README.md`
 - Modify: `package.json`
 
-- [ ] **Use `skill-creator` and write failing contract tests first**
-
-Tests assert that the skill contains code/business routing, stable IDs, fixed repo paths, one-file Backlog, digest check, validation commands, normal Git push visibility, remote branch/patch handoff, Human Gates, exact failure codes, and explicit prohibitions on AllJobs writeback/external source copying.
-
-- [ ] **Author the concise skill and scoped references**
-
-`SKILL.md` routes agents to only the relevant reference. `examples/TASKS.md` demonstrates the native format but must state that code repositories are not required to keep Tasks there and that the `git-markdown` provider does not read it in V1.
-
-- [ ] **Add validation command**
-
-```json
-{
-  "planning:skill:validate": "node scripts/validate-planning-skill.mjs"
-}
-```
-
-The validator parses example documents with the production parser and fails if required behavioral phrases/contracts disappear.
-
-- [ ] **Document multi-machine installation without performing it**
-
-README documents the canonical source path and a human-authorized copy/install workflow for each agent machine. Do not write outside the repository in this task.
-
-- [ ] **Run skill and parser checks**
-
-```bash
-npm test -- scripts/validate-planning-skill.test.ts lib/planning/markdown
-npm run planning:skill:validate
-```
-
-- [ ] **Commit the skill artifact**
-
-```bash
-git add skills scripts/validate-planning-skill.mjs scripts/validate-planning-skill.test.ts README.md package.json
-git commit -m "feat: add alljobs planning agent skill"
-```
+- [x] **Use `skill-creator` and write failing contract tests first**
+- [x] **Author the concise skill and scoped references**
+- [x] **Add validation command**
+- [x] **Document multi-machine installation without performing it**
+- [x] **Run skill and parser checks**
+- [x] **Commit the skill artifact**
 
 ## Task 10: Implement the approved shell, overview, and project list
 
