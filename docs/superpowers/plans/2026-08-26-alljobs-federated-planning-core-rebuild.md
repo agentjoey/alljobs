@@ -350,36 +350,12 @@ git commit -m "feat: compose planning projections and actions"
 - Create: `components/planning/*.test.tsx`
 - Add via reviewed shadcn CLI: `components/ui/*` needed by the approved mockup
 
-- [ ] **Inspect the configured component registry before adding components**
-
-```bash
-npx shadcn@latest info --json
-npx shadcn@latest add button badge alert skeleton table tabs select --dry-run
-```
-
-Review the diff, dependencies, license, accessible names, and variants. Add only components present in the approved mockup; do not install an entire library bundle.
-
-- [ ] **Write failing UI tests for overview and project list**
-
-Cover semantic landmarks, navigation current state, portfolio empty state, attention ordering, source freshness, code/business/work-mode labels, filter-empty recovery, archived exclusion, keyboard tab order, and no edit affordance for external data.
-
-- [ ] **Implement server-first routes and approved responsive composition**
-
-Route pages call query modules. Client components are limited to interactions that require browser state; do not turn the shell or read lists into client components.
-
-- [ ] **Verify focused UI behavior**
-
-```bash
-npm test -- components/planning app/projects tests/smoke
-npm run typecheck
-npm run lint
-```
-
-- [ ] **Compare against approved mockup**
-
-Capture local `1440`, `900`, and true-emulated `390` screenshots. Any material hierarchy, density, interaction, or responsive deviation reopens the brief before proceeding.
-
-- [ ] **Commit the first production surfaces**
+- [x] **Inspect the configured component registry before adding components**
+- [x] **Write failing UI tests for overview and project list**
+- [x] **Implement server-first routes and approved responsive composition**
+- [x] **Verify focused UI behavior**
+- [x] **Compare against approved mockup**
+- [x] **Commit the first production surfaces**
 
 ```bash
 git add app components
@@ -410,33 +386,12 @@ git commit -m "feat: add planning overview and project list"
 - Create: `components/planning/provenance-panel.tsx`
 - Create: matching `*.test.tsx` files
 
-- [ ] **Write failing project-variant tests**
-
-Prove code shows Phase + read-only Backlog + provenance; business shows Milestone + Tasks and contains no Backlog tab/create control; archived detail disables native mutations; external Tasks have no edit controls; native Tasks support permitted actions.
-
-- [ ] **Implement project detail and cross-project Tasks**
-
-Task forms retain attempted values on errors, send expected digest, focus the first invalid field or conflict summary, and announce successful changes. Waiting and blocked states require their supporting fields.
-
-- [ ] **Write failing consequential-flow tests**
-
-Cover inspect-only proposal, blocker/collision, stale digest, explicit project-name confirmation, pending disabled state, duplicate-submit prevention, active-work archive warning, archived history, blocked restore, cancel focus return, and screen-reader announcements.
-
-- [ ] **Implement registration/archive/restore UI as two-phase flows**
-
-The proposal screen enumerates writes and warnings. Apply buttons are absent for blockers and disabled while pending. A generic confirmation dialog is insufficient; every flow names the project, source, and effect.
-
-- [ ] **Run focused UI and action tests**
-
-```bash
-npm test -- components/planning app/actions lib/planning/queries
-npm run typecheck
-npm run lint
-```
-
-- [ ] **Capture comparison screenshots and commit**
-
-Capture the approved routes/states at `1440`, `900`, and `390`. Fix mockup drift before committing.
+- [x] **Write failing project-variant tests**
+- [x] **Implement project detail and cross-project Tasks**
+- [x] **Write failing consequential-flow tests**
+- [x] **Implement registration/archive/restore UI as two-phase flows**
+- [x] **Run focused UI and action tests**
+- [x] **Capture comparison screenshots and commit**
 
 ```bash
 git add app components
@@ -455,43 +410,14 @@ git commit -m "feat: add planning management journeys"
 - Create: `.agent/frontend-design/planning-core-v1/verify-screens/*.png`
 - Modify: affected `app/**`, `components/planning/**`, and `app/globals.css`
 
-- [ ] **Create deterministic E2E fixtures in a temporary runtime root**
-
-Fixtures include valid/partial/unavailable/stale code sources, empty and populated business projects, native/external Tasks, locked/stale writes, registration collision, archived project, and blocked restore. E2E startup must assert its data and state roots are temporary.
-
-- [ ] **Write the eight critical journeys before claiming UI completion**
-
-Automate the journeys listed in Brief §7. Assert visible outcomes and canonical file changes for native writes; assert zero source-file changes for external reads and inspect/propose flows.
-
-- [ ] **Add automated accessibility assertions**
-
-Use `@axe-core/playwright` on every route and consequential modal/state. Assert zero serious/critical violations, one page-level heading, named landmarks/controls, visible focus, and no keyboard trap.
-
-- [ ] **Run the full local candidate**
-
-```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
-npm run test:e2e
-```
-
-Expected: all checks pass against the same candidate commit. Record exact counts and commit SHA in `verification.md`.
-
-- [ ] **Perform manual state-matrix and responsive audit**
-
-Use `$impeccable audit`, real keyboard Tab/Shift+Tab/Enter/Escape, contrast measurement, reduced-motion emulation, long titles, empty content, and `1440`/`900`/true `390` widths. Fix all Critical/High findings and rerun affected checks.
-
-- [ ] **Use `$impeccable polish` and capture final-build evidence**
-
-Final screenshots must be regenerated after the last fix from the exact final build, not copied from the mockup or an earlier server.
-
-- [ ] **Prepare independent review packet**
-
-Record brief revision, Tier, target commit/build, branch/worktree, authoritative inputs, acceptance/state matrix, risks, commands, evidence paths, requested output, independence statement, and result writeback path. Do not self-mark independent review complete.
-
-- [ ] **Commit the verified candidate changes**
+- [x] **Create deterministic E2E fixtures in a temporary runtime root**
+- [x] **Write the eight critical journeys before claiming UI completion**
+- [x] **Add automated accessibility assertions**
+- [x] **Run the full local candidate**
+- [x] **Perform manual state-matrix and responsive audit**
+- [x] **Use `$impeccable polish` and capture final-build evidence**
+- [x] **Prepare independent review packet**
+- [x] **Commit the verified candidate changes**
 
 ```bash
 git add tests app components .agent/frontend-design/planning-core-v1
@@ -513,36 +439,11 @@ git commit -m "test: verify planning core critical journeys"
 - Create: `scripts/verify-deployment-config.mjs`
 - Create: `scripts/verify-deployment-config.test.ts`
 
-- [ ] **Write failing deployment-invariant tests**
-
-Assert `start:prod` includes `-H 127.0.0.1 -p 3456`, tunnel ingress remains `alljobs.agentjoey.ai → localhost:3456`, the catch-all remains `http_status:404`, credentials are ignored, the app/worker have distinct labels and logs, and the worker uses exactly `npm run planning:refresh`.
-
-- [ ] **Implement the refresh LaunchAgent**
-
-Use `RunAtLoad` and `KeepAlive`, the same production checkout, explicit Node/npm path placeholders, logs under `~/Library/Logs/alljobs/`, and no Tunnel/DNS commands. The worker's own project locks prevent overlapping refresh.
-
-- [ ] **Rewrite deployment and operations docs**
-
-Document:
-
-- single Control Host roles and non-host computer behavior;
-- config/state/credential locations;
-- installation/reload/health checks for app, worker, and existing tunnel;
-- no inline fetch and five-minute freshness;
-- stale/error diagnosis without leaking remote credentials;
-- system backup for uncommitted native data;
-- stop-old-before-start-new host recovery;
-- whole-release rollback to `archive/v0.1.0-retired` without schema mixing.
-
-- [ ] **Run deployment verification**
-
-```bash
-npm test -- scripts/verify-deployment-config.test.ts
-node scripts/verify-deployment-config.mjs
-npm run build
-```
-
-- [ ] **Commit deployment readiness**
+- [x] **Write failing deployment-invariant tests**
+- [x] **Implement the refresh LaunchAgent**
+- [x] **Rewrite deployment and operations docs**
+- [x] **Run deployment verification**
+- [x] **Commit deployment readiness**
 
 ```bash
 git add deploy docs README.md scripts/verify-deployment-config.mjs scripts/verify-deployment-config.test.ts

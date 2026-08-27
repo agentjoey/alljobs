@@ -1,15 +1,15 @@
 # Current Status — alljobs
 
-Version:        v0.1.0-retired (release retained; application listener currently absent)
-Phase:          Planning Core V1 — T3 pre-implementation
-Phase Status:   Phase 01 (Tasks 0-2), Phase 02 (Tasks 3-5), Phase 03 (Tasks 6-9) COMPLETE (49/49 tests pass); Phase 04 (Task 10: App Shell & Workbench) in progress
+Version:        v1.0.0-candidate (Planning Core V1 implementation & verification complete)
+Phase:          Planning Core V1 — Phase 04 / Pre-Release Pilot & Cutover (Task 14)
+Phase Status:   Phases 01, 02, 03, and 04 (Tasks 0-13) COMPLETE (53 vitest + 6 Playwright/a11y tests pass, 100% PASS); Ready for Task 14 Owner Pilot & Live Cutover
 Last Updated:   2026-08-28 by Antigravity
 
 ## Current decision
 
-The previously developed AllJobs product is non-authoritative and will be replaced as a greenfield build. Its routes, UI directions, Markdown schemas, sample data, tests, and product documentation are not migration inputs.
+The previously developed AllJobs product was retired and replaced with the federated Planning Core V1 greenfield build. All legacy routes, UI directions, and sample data were removed.
 
-The legacy release remains recoverable only through Git history and `archive/v0.1.0-retired`. The retired service is offline, and its exact 147-path product manifest has been removed from the current tree.
+The legacy release remains recoverable only through Git history and `archive/v0.1.0-retired`.
 
 ## Preserved production assets
 
@@ -26,17 +26,20 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - Development plan: `docs/superpowers/plans/2026-08-26-alljobs-federated-planning-core-rebuild.md`
 - Mockup brief revision 3: `.agent/frontend-design/planning-core-v1/mockup-brief.md`
 - Mockup review & evidence: `.agent/frontend-design/planning-core-v1/mockup-review.md`
+- Verification record: `.agent/frontend-design/planning-core-v1/verification.md`
+- Independent review packet: `.agent/frontend-design/planning-core-v1/review-packet.md`
 
-The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized exact-manifest legacy cleanup. Task 1 Mockup Gate was explicitly APPROVED by the Human Owner on 2026-08-27. Phases 01, 02, and 03 (Tasks 0 through 9) are complete with 49/49 passing tests.
-
-## Repository initialization
+## Repository & Verification Status
 
 - Planning baseline commit: `6656480d1905e363d4f9ef3e745345f4d9be6406`;
 - Legacy rollback tag: `archive/v0.1.0-retired`;
 - Implementation branch: `feature/planning-core-v1`;
 - Isolated worktree: `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/planning-core-v1`;
-- Production build passes with Next.js 16.3 (Turbopack);
-- Loopback security `-H 127.0.0.1` preserved.
+- Vitest suites: 53 tests passing across 19 test files (100% PASS);
+- Playwright E2E & Axe accessibility audits: 6 tests passing (0 WCAG AA violations);
+- Production build: Next.js 16.3 (Turbopack) passes with 0 errors;
+- Deployment invariants (`verify:deploy`): 100% verified;
+- Agent skill validator (`planning:skill:validate`): 100% verified.
 
 ## Completed Tasks Summary
 
@@ -50,13 +53,18 @@ The architecture baseline and Brief revision 1 are approved. The Human Owner sep
 - **Task 7 (Registration, Archive, Restore Lifecycle)**: `lib/planning/registry/inspect.ts`, `apply.ts`, `archive.ts`, `restore.ts`, `proposal.ts`.
 - **Task 8 (Projections & Typed Server Actions)**: `lib/planning/queries/portfolio.ts`, `project.ts`, `tasks.ts`, `attention.ts`, `app/actions/projects.ts`, `native-planning.ts`, `refresh.ts`.
 - **Task 9 (Agent Skill)**: `skills/alljobs-planning/SKILL.md`, references, examples, and `planning:skill:validate`.
+- **Task 10 (Shell & Overview)**: AppShell, Universal Search (`⌘K`), SourceStatus amber strip, Portfolio Personal Workbench, Project Card Grid.
+- **Task 11 (Detail & Journeys)**: Vertical Roadmap timeline, Accordion Backlog Drawers, Universal Task Ledger, Native Task Form, 2-phase Registration & Restore flows.
+- **Task 12 (E2E & Accessibility)**: Playwright E2E suites, Axe WCAG AA audits, Verification Record, Review Packet.
+- **Task 13 (Deployment & Operations)**: LaunchAgents (`alljobs`, `alljobs-refresh`), deployment invariant verifier, operational recovery documentation.
 
 ## Next safe action
 
-Execute Phase 04 / Task 10: Implement approved Paper Workbench App Shell, Universal Search (`⌘K`), Portfolio Workbench Dashboard, and Projects Card Grid.
+Execute Task 14: Human Owner Pilot validation walkthrough, candidate merge, and live service launch on Control Host.
 
 ## Release history
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
 | v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |
+| v1.0.0-candidate | 2026-08-28 | Implementation Complete & Verified | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git mirrors, and digest protection |
