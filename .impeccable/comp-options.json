@@ -1,0 +1,45 @@
+{
+  "title": "选择 AllJobs Planning Bench 构图",
+  "question": "三套方案使用同一视觉语言，只改变首屏拓扑。请选择一套作为完整 Task 1 mockup 的构图基线，或在 steer 中说明要融合的部分。",
+  "options": [
+    {
+      "id": "comp-a",
+      "label": "连续规划台",
+      "kicker": "推荐",
+      "lineage": "continuous planning rail + source ledger",
+      "thesis": "左侧项目索引、中央 Roadmap 主轨和右侧来源账本同时在场，最适合日常跨项目扫描。",
+      "palette": ["#F3F0E6", "#17150F", "#EDB450", "#A84C35"],
+      "materials": ["工程纸", "规划轨道", "来源账本"],
+      "viewport": "Roadmap 主轨支配首屏，Backlog 与 Task 以不同密度挂接；attention queue 和 provenance 保持可见但不抢焦点。",
+      "risk": "三栏信息量最高，900px 中间宽度需要更积极地重排。",
+      "sketch": ".impeccable/mocks/comp-a-continuous-rail.png"
+    },
+    {
+      "id": "comp-b",
+      "label": "横向路线台",
+      "kicker": "阶段优先",
+      "lineage": "horizontal roadmap runway + work ledger",
+      "thesis": "先比较全部项目，再沿横向 Roadmap 地平线判断现在、下一步和发布门禁。",
+      "palette": ["#F3F0E6", "#17150F", "#EDB450", "#A84C35"],
+      "materials": ["工程纸", "路线站点", "双栏清单"],
+      "viewport": "项目条带占据上层，Roadmap 作为整页横轴，Backlog 和 Task 并排放在下层。",
+      "risk": "Roadmap 表达最强，但来源详情和异常恢复需要进入二级表面。",
+      "sketch": ".impeccable/mocks/comp-b-horizontal-runway.png"
+    },
+    {
+      "id": "comp-c",
+      "label": "项目折叠台",
+      "kicker": "项目优先",
+      "lineage": "project accordion + open workbench",
+      "thesis": "项目索引本身就是主交互，展开一个项目时仍保留整个 portfolio 的位置感。",
+      "palette": ["#F3F0E6", "#17150F", "#EDB450", "#A84C35"],
+      "materials": ["工程纸", "折叠索引", "证据面板"],
+      "viewport": "左侧展开项目摘要，右侧显示 Roadmap、来源、issue 和下一步安全动作。",
+      "risk": "项目详情效率高，但跨项目 attention 不如连续规划台直接。",
+      "sketch": ".impeccable/mocks/comp-c-project-accordion.png"
+    }
+  ],
+  "reroll": false,
+  "canon": false,
+  "steer": true
+}

@@ -35,6 +35,16 @@ Post-approval sequencing decision, 2026-08-26:
 - the cleanup is limited to the exact recoverable manifest in `docs/retired-v0.1-manifest.md`;
 - this decision does not authorize a replacement runtime, production UI, external repository change, deployment, or production mutation before the rendered Mockup Gate.
 
+## Mockup Gate record
+
+- **Candidate:** Paper Workbench revision 3 (pleurat.com-derived).
+- **Prepared:** 2026-08-27 on `feature/planning-core-v1` in the isolated Planning Core worktree.
+- **Human direction:** 2026-08-27 decision “全面转向 pleurat 风格”, superseding Star Atlas revision 2. All decorative atlas diagrams removed in favor of pure ledger lists plus provenance panels; light cream paper ground only; signature amber provenance status bar (`#status-strip`) binding route path, source custody, revision/digest, and freshness state to every consequential surface; hatch fill for external read-only custody and solid fill for native writable custody.
+- **Enhancements approved:** Projects cards grid, Backlog expandable accordion drawers, Header universal search (`⌘K`), vertical Roadmap timeline, and Personal Portfolio Workbench Dashboard.
+- **Independent review:** round 1 returned `PASS WITH FIXES` (25/36); rev2 closed functional findings; rev3 rebuilds the visual system to Paper Workbench with empirical pleurat tokens.
+- **Human Gate disposition:** **APPROVED** by Human Owner on 2026-08-27 ("mockup gate 通过，进入下一步").
+- **Authorization granted:** Proceed to Task 2 (clean application foundation and Next.js minimal shell).
+
 ## 1. Outcome
 
 AllJobs becomes a personal, single-owner planning control plane for code-development and business-operation projects. It visualizes one coherent Project → Roadmap → Backlog/Task model while preserving source ownership:

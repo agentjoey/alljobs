@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-27T13:30:00Z",
+  "title": "Design System: AllJobs Paper Workbench",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper Ground",
+        "canonical": "#f1eee6",
+        "tonalRamp": ["#ffffff", "#fbf7e6", "#f1eee6", "#e8e4da", "#d6d0c2", "#b8b09f", "#8a8271", "#4a463c"]
+      },
+      "paper-raised": {
+        "role": "neutral",
+        "displayName": "Raised Paper Surface",
+        "canonical": "#fbf7e6",
+        "tonalRamp": ["#ffffff", "#fbf7e6", "#f4efe0", "#ece5d2", "#ded5be", "#c4bba4", "#948b74", "#4a463c"]
+      },
+      "paper-recessed": {
+        "role": "neutral",
+        "displayName": "Recessed Paper",
+        "canonical": "#e8e4da",
+        "tonalRamp": ["#ffffff", "#f5f2eb", "#e8e4da", "#ded8cb", "#ccc4b3", "#aba290", "#78705f", "#3a372f"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "#16140e",
+        "tonalRamp": ["#16140e", "#28251b", "#3c382b", "#544e3e", "#736b56", "#999076", "#c2bba3", "#f1eee6"]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#4a463c",
+        "tonalRamp": ["#201e18", "#333027", "#4a463c", "#635e52", "#827c6d", "#a39d8e", "#c7c2b5", "#f1eee6"]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "#5e584d",
+        "tonalRamp": ["#2b2821", "#423d33", "#5e584d", "#7a7366", "#9b9383", "#bdb6a6", "#ddd8cb", "#f1eee6"]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "rgba(22, 20, 14, 0.16)",
+        "tonalRamp": ["rgba(22,20,14,0.06)", "rgba(22,20,14,0.12)", "rgba(22,20,14,0.16)", "rgba(22,20,14,0.24)", "rgba(22,20,14,0.32)", "rgba(22,20,14,0.48)", "rgba(22,20,14,0.64)", "rgba(22,20,14,0.85)"]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline Rule",
+        "canonical": "rgba(22, 20, 14, 0.32)",
+        "tonalRamp": ["rgba(22,20,14,0.12)", "rgba(22,20,14,0.20)", "rgba(22,20,14,0.32)", "rgba(22,20,14,0.44)", "rgba(22,20,14,0.56)", "rgba(22,20,14,0.70)", "rgba(22,20,14,0.84)", "#16140e"]
+      },
+      "amber": {
+        "role": "primary",
+        "displayName": "Amber Provenance Accent",
+        "canonical": "#f3b44a",
+        "tonalRamp": ["#fef8ee", "#fdf0db", "#fce1b7", "#facf8d", "#f7bf63", "#f3b44a", "#e09f35", "#b87c1f"]
+      },
+      "amber-soft": {
+        "role": "primary",
+        "displayName": "Soft Amber Well",
+        "canonical": "#fdf2de",
+        "tonalRamp": ["#ffffff", "#fefbf5", "#fdf2de", "#fbe8c4", "#f8dca4", "#f4ca7d", "#efa945", "#c98218"]
+      },
+      "rust": {
+        "role": "tertiary",
+        "displayName": "Rust Attention",
+        "canonical": "#a83b3b",
+        "tonalRamp": ["#fdf2f2", "#fbe2e2", "#f5c1c1", "#ed9696", "#e06565", "#c94646", "#a83b3b", "#7d2626"]
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Survey Green",
+        "canonical": "#2e7d4f",
+        "tonalRamp": ["#f0f8f3", "#dcf0e4", "#b4dec4", "#82c49d", "#53a876", "#378d59", "#2e7d4f", "#1e5736"]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Universal Focus",
+        "canonical": "#f3b44a",
+        "tonalRamp": ["#fdf0db", "#fce1b7", "#facf8d", "#f7bf63", "#f3b44a", "#e09f35", "#b87c1f", "#8a580a"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Workbench Display", "purpose": "Single route thesis in General Sans, clamp(30px, 3vw, 44px)." },
+      "title": { "displayName": "Surface Title", "purpose": "Clean structural headings for ledger and provenance containers." },
+      "body": { "displayName": "Operational Body", "purpose": "Crisp descriptions and readable planning context." },
+      "row-title": { "displayName": "Ledger Row Title", "purpose": "Primary work-item copy within dense ledgers." },
+      "action": { "displayName": "Action", "purpose": "Buttons, tabs, and concise interactive triggers." },
+      "navigation": { "displayName": "Navigation", "purpose": "Quiet primary route labels with amber indicators." },
+      "caption": { "displayName": "Caption & Meta", "purpose": "Project tags, due dates, source facts, and helper copy." },
+      "annotation": { "displayName": "Provenance Annotation", "purpose": "Uppercase IBM Plex Mono for paths, revisions, digests, and status." }
+    },
+    "shadows": [
+      { "name": "modal-separation", "value": "0 20px 60px rgba(22, 20, 14, 0.24)", "purpose": "Lifts a Human Gate confirmation dialog above the paper workbench." },
+      { "name": "card-lift", "value": "0 4px 12px rgba(22, 20, 14, 0.08)", "purpose": "Subtle tactile lift on hover for interactive elements." }
+    ],
+    "motion": [
+      { "name": "standard-ease", "value": "0.2s cubic-bezier(.2,.8,.2,1)", "purpose": "Restrained tactile transitions; disabled under reduced motion." },
+      { "name": "skeleton-sweep", "value": "1.4s ease-in-out infinite", "purpose": "Loading-only sweep; replaced by static paper fill under reduced motion." }
+    ],
+    "breakpoints": [
+      { "name": "intermediate", "value": "1120px" },
+      { "name": "mobile", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Amber Provenance Status Bar",
+      "kind": "custom",
+      "refersTo": "status-strip",
+      "description": "The signature amber status bar binding route, source custody, revision/digest, and freshness status.",
+      "html": "<div class=\"ds-status-strip\"><span class=\"ds-status-path\">ROUTE: /projects/alljobs</span><span class=\"ds-status-custody\">CUSTODY: git-markdown (READ-ONLY)</span><span class=\"ds-status-digest\">DIGEST: docs/BACKLOG.md:8f2a…19c</span><span class=\"ds-status-freshness\">STATUS: FRESH</span></div>",
+      "css": ".ds-status-strip { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; min-height: 32px; padding: 6px 16px; background: var(--amber, #f3b44a); color: var(--ink, #16140e); font-family: var(--font-mono, \"IBM Plex Mono\", monospace); font-size: 10.5px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid rgba(22, 20, 14, 0.24); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single confirmed next action on a workbench surface.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Open task ledger</button>",
+      "css": ".ds-btn-primary { min-height: 40px; padding: 8px 16px; color: #16140e; background: #f3b44a; border: 1px solid #e09f35; border-radius: 6px; font: 600 13.5px \"General Sans\", ui-sans-serif, sans-serif; cursor: pointer; transition: background 0.2s cubic-bezier(.2,.8,.2,1); } .ds-btn-primary:hover { background: #e09f35; } .ds-btn-primary:focus-visible { outline: 2px solid #16140e; outline-offset: 2px; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "A bordered secondary action that stays subordinate to the primary flow.",
+      "html": "<button class=\"ds-btn-quiet\" type=\"button\">Browse projects</button>",
+      "css": ".ds-btn-quiet { min-height: 40px; padding: 8px 14px; color: #16140e; background: transparent; border: 1px solid rgba(22, 20, 14, 0.32); border-radius: 6px; font: 600 13.5px \"General Sans\", ui-sans-serif, sans-serif; cursor: pointer; transition: background 0.2s cubic-bezier(.2,.8,.2,1); } .ds-btn-quiet:hover { background: rgba(22, 20, 14, 0.05); } .ds-btn-quiet:focus-visible { outline: 2px solid #f3b44a; outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "A compact ledger filter with high-contrast active state.",
+      "html": "<button class=\"ds-filter-chip\" type=\"button\" aria-pressed=\"true\">Needs attention</button>",
+      "css": ".ds-filter-chip { min-height: 32px; padding: 6px 12px; color: #4a463c; background: transparent; border: 1px solid rgba(22, 20, 14, 0.16); border-radius: 4px; font: 500 12.5px \"General Sans\", ui-sans-serif, sans-serif; cursor: pointer; } .ds-filter-chip:hover { color: #16140e; border-color: rgba(22, 20, 14, 0.32); } .ds-filter-chip[aria-pressed=\"true\"] { color: #f1eee6; background: #16140e; border-color: #16140e; }"
+    },
+    {
+      "name": "Planning Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A clean paper field with crisp hairline border and monospace helper support.",
+      "html": "<label class=\"ds-field\"><span>Task title</span><input type=\"text\" value=\"Prepare pilot decision note\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #4a463c; font: 500 12.5px \"General Sans\", ui-sans-serif, sans-serif; } .ds-field input { width: 100%; min-height: 40px; padding: 8px 12px; color: #16140e; background: #fbf7e6; border: 1px solid rgba(22, 20, 14, 0.32); border-radius: 5px; font: 400 14px \"General Sans\", ui-sans-serif, sans-serif; } .ds-field input:focus-visible { outline: 2px solid #f3b44a; outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-item",
+      "description": "Quiet route navigation marked by a high-contrast ink fill and amber bar.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary navigation\"><button type=\"button\" aria-current=\"page\">Tasks</button><button type=\"button\">Projects</button></nav>",
+      "css": ".ds-nav { display: flex; height: 56px; background: #f1eee6; border-bottom: 1px solid rgba(22, 20, 14, 0.16); } .ds-nav button { position: relative; padding: 0 16px; color: #4a463c; background: transparent; border: 0; font: 500 13.5px \"General Sans\", ui-sans-serif, sans-serif; cursor: pointer; } .ds-nav button:hover { color: #16140e; } .ds-nav button[aria-current=\"page\"] { color: #16140e; font-weight: 600; } .ds-nav button[aria-current=\"page\"]::after { content: \"\"; position: absolute; left: 16px; right: 16px; bottom: 0; height: 2px; background: #f3b44a; }"
+    },
+    {
+      "name": "Ledger Row",
+      "kind": "custom",
+      "refersTo": "ledger-row",
+      "description": "The primary dense work-reading unit with explicit project, due state, and provenance badge.",
+      "html": "<article class=\"ds-ledger-row\"><span class=\"ds-ledger-id\">AJ-T-041</span><span class=\"ds-ledger-title\"><strong>Review registration proposal</strong><small>Confirm trusted path and zero-write inspection</small></span><span class=\"ds-ledger-project\">AllJobs</span><span class=\"ds-ledger-due\">Today</span><span class=\"ds-badge-native\">Native</span><button type=\"button\" aria-label=\"Inspect Review registration proposal\">→</button></article>",
+      "css": ".ds-ledger-row { display: grid; grid-template-columns: 96px minmax(240px,1fr) minmax(118px,.3fr) minmax(96px,.2fr) auto 36px; gap: 12px; align-items: center; min-height: 64px; padding: 10px 14px; background: #fbf7e6; border-bottom: 1px solid rgba(22, 20, 14, 0.16); font-family: \"General Sans\", ui-sans-serif, sans-serif; transition: transform 0.2s cubic-bezier(.2,.8,.2,1), background 0.2s cubic-bezier(.2,.8,.2,1); } .ds-ledger-row:hover { transform: translateY(-2px); background: #ffffff; } .ds-ledger-id { color: #5e584d; font-family: \"IBM Plex Mono\", monospace; font-size: 11px; letter-spacing: 0.08em; } .ds-ledger-title strong { display: block; font-size: 14.5px; font-weight: 600; color: #16140e; } .ds-ledger-title small { display: block; margin-top: 2px; color: #4a463c; font-size: 12.5px; } .ds-badge-native { display: inline-block; padding: 2px 6px; background: #16140e; color: #f1eee6; font-family: \"IBM Plex Mono\", monospace; font-size: 10px; font-weight: 500; border-radius: 4px; text-transform: uppercase; }"
+    },
+    {
+      "name": "Workbench Surface",
+      "kind": "card",
+      "refersTo": "surface",
+      "description": "A flat paper container for ledgers, source facts, and roadmap bands.",
+      "html": "<section class=\"ds-surface\"><header><div><h2>Attention ledger</h2><p>Five active observations across four projects</p></div><span>FRESH</span></header><div class=\"ds-surface-body\">Planning content</div></section>",
+      "css": ".ds-surface { overflow: hidden; background: #fbf7e6; border: 1px solid rgba(22, 20, 14, 0.16); border-radius: 8px; } .ds-surface header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(22, 20, 14, 0.16); } .ds-surface h2 { margin: 0; font-size: 16.5px; font-weight: 600; color: #16140e; } .ds-surface p { margin: 2px 0 0; color: #4a463c; font-size: 12.5px; } .ds-surface header > span { color: #5e584d; font-family: \"IBM Plex Mono\", monospace; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; } .ds-surface-body { padding: 16px; }"
+    },
+    {
+      "name": "Warning Notice",
+      "kind": "custom",
+      "refersTo": "notice-warning",
+      "description": "An amber-toned recovery callout that never relies on color alone.",
+      "html": "<div class=\"ds-notice-warning\" role=\"status\"><div><strong>STALE_STATE</strong><span>The source changed. Re-inspect before applying.</span></div><button type=\"button\">Recover</button></div>",
+      "css": ".ds-notice-warning { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding: 12px 16px; background: #fdf2de; border: 1px solid #f3b44a; border-radius: 6px; color: #16140e; } .ds-notice-warning strong { display: block; font-size: 13.5px; font-weight: 600; } .ds-notice-warning span { display: block; margin-top: 2px; color: #4a463c; font-size: 12.5px; } .ds-notice-warning button { color: #16140e; background: transparent; border: 0; font-size: 12.5px; font-weight: 600; text-decoration: underline; cursor: pointer; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "纸面工作台 / The Paper Workbench",
+    "overview": "AllJobs behaves like an editorial planning workbench where Backlog and Task ledgers own the primary reading plane. Derived from the disciplined typography and tactile paper aesthetic of pleurat.com, it uses warm cream paper grounds, deep ink typography, and a signature amber provenance status bar. External read-only sources are marked with hatch fills; native writable objects are marked with solid ink fills. All decorative star atlases, celestial charts, and dashboard card walls are firmly rejected.",
+    "keyCharacteristics": [
+      "Ledger-first information density dominating the visual plane.",
+      "Warm cream paper tonal layers (#F1EEE6 / #FBF7E6) with crisp hairline rules.",
+      "Amber provenance status bar binding route, custody, digest, and freshness on every view.",
+      "General Sans for human discourse, IBM Plex Mono for technical coordinates and provenance.",
+      "Hatch pattern for external read-only projections, solid ink for native writable objects."
+    ],
+    "rules": [
+      { "name": "The Amber Provenance Rule", "body": "Amber is strictly reserved for the provenance status bar, primary confirmed actions, and active indicators; rust marks attention or failure, and every state requires explicit text.", "section": "colors" },
+      { "name": "The Dual-Type Rule", "body": "General Sans carries human narrative and work titles; IBM Plex Mono carries technical custody, file paths, hashes, and machine-verified states.", "section": "typography" },
+      { "name": "The Ledger-First Rule", "body": "Backlog and Task content receives the majority of available width and appears before provenance or roadmap context at every breakpoint.", "section": "layout" },
+      { "name": "The Tactile Workbench Rule", "body": "Surfaces rest flat with hairline rules; depth is established through tonal layering and a 2px hover lift; shadows are reserved for Human Gate modals.", "section": "elevation" },
+      { "name": "The Provenance Hatching Rule", "body": "Hatch patterns represent external read-only custody; solid fills represent AllJobs-native writable custody.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do make Backlog and Task ledgers the dominant visual plane on every screen.",
+      "Do bind every view to the amber provenance status bar showing exact source custody, revision, and digest.",
+      "Do distinguish external read-only projections (hatch fill / dashed badge) from native writable objects (solid fill).",
+      "Do preserve full copy, error reasons, and disabled explanations in text, not color alone.",
+      "Do provide smooth prefers-reduced-motion fallbacks for all transitions."
+    ],
+    "donts": [
+      "Don't include decorative star atlases, celestial charts, galaxy canvases, or dot-grid diagrams.",
+      "Don't use card grids or floating dashboard widgets that fragment linear reading.",
+      "Don't use gradient text, decorative glassmorphism, or dark nocturnal themes in revision 3.",
+      "Don't shrink desktop tables on mobile into horizontally unreadable clipping containers.",
+      "Don't execute canonical writes or bypass the explicit Human Gate confirmation boundary."
+    ]
+  }
+}

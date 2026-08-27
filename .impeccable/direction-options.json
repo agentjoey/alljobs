@@ -1,0 +1,60 @@
+{
+  "title": "选择 AllJobs 的视觉世界",
+  "question": "Task 1 会把所选方向发展成完整的非生产 mockup。请选择保留方案、采用备选、重新抽取，或指定偏好。",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "档案索引台",
+      "kicker": "建议方向",
+      "lineage": "archival finding aids, map drawers, custody labels",
+      "thesis": "把跨项目规划做成可查找的档案系统：层级是目录，来源是保管链，注意事项是醒目的索引签。",
+      "palette": ["#182127", "#EEF0EA", "#2F5DA8", "#D95D39"],
+      "materials": ["冷灰档案纸", "钴蓝索引签", "石墨保管链轨道"],
+      "viewport": "左侧是窄而稳定的项目抽屉索引；主体是一张连续的 portfolio finding aid，Roadmap 作为章节脊柱，Backlog 与 Task 以不同密度挂接；需要关注的工作用朱红索引签露出。",
+      "risk": "如果纸张与索引细节做得太复古，会削弱数字工作台的效率感。",
+      "sketch": ".impeccable/sketches/assigned.webp"
+    },
+    {
+      "id": "challenger-star-atlas",
+      "label": "星图坐标册",
+      "kicker": "备选方向",
+      "lineage": "celestial star atlas charts",
+      "thesis": "把项目与工作项绘成有坐标、有亮度层级和来源标记的可缩放规划星图。",
+      "case": "辨识度强，但编辑和密集扫描不如档案索引直观；适合作为 portfolio 导航，不宜支配全部工作表面。",
+      "palette": ["#08162E", "#EDF1E8", "#D99B4A", "#B74D55"],
+      "materials": ["深蓝坐标纸", "粉笔白星点", "夜视琥珀批注"],
+      "viewport": "portfolio 是一张带网格的项目星图，Roadmap 是淡线星座，任务亮度代表紧迫度，右侧索引把视线带回可操作列表。",
+      "risk": "空间隐喻可能让精准比较和键盘操作变得间接。",
+      "sketch": ".impeccable/sketches/challenger-star-atlas.webp",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas.webp"
+    },
+    {
+      "id": "challenger-industrial-label",
+      "label": "工业标签系统",
+      "kicker": "备选方向",
+      "lineage": "industrial stockroom labels and hazard grammar",
+      "thesis": "用直白标签、方向条纹和可拆索引签，让来源、状态与可写权限一眼可判。",
+      "case": "产品清晰度高，但必须严控橙色与斜纹，否则会违背日常规划需要的平静感。",
+      "palette": ["#111111", "#F2F1EA", "#FF5A1F", "#D8C43C"],
+      "materials": ["仓库白标签", "黑色尼龙底", "安全橙索引签"],
+      "viewport": "大面积白色清单被黑色标签骨架组织，当前焦点带一枚橙色可拆签，阻塞与禁用才使用窄幅斜纹。",
+      "risk": "过度执行会像活动视觉或警示面板，增加长时间使用疲劳。",
+      "sketch": ".impeccable/sketches/challenger-industrial-label.webp",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "canonCard": {
+    "label": "标准项目工作台",
+    "thesis": "用成熟的侧边导航、筛选栏、表格与状态徽章，把类别惯例做到完整可靠。",
+    "palette": ["#111827", "#F8FAFC", "#2563EB", "#DC2626"],
+    "materials": ["中性应用外壳", "紧凑数据表", "标准状态徽章"],
+    "viewport": "左侧导航、上方摘要、主体项目表与右侧 attention queue，所有操作遵循常见 SaaS 工作台习惯。",
+    "risk": "上手最快，但难以形成与 AllJobs 来源所有权机制绑定的记忆点。",
+    "sketch": ".impeccable/sketches/canon.webp"
+  },
+  "steer": true
+}

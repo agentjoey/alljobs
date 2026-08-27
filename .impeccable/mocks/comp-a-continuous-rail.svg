@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <pattern id="rules" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 7.5H8" stroke="#D8D3C7" stroke-width=".35"/></pattern>
+    <style>
+      .bg{fill:#F3F0E6}.ink{fill:#17150F}.paper{fill:#FAF8F1}.amber{fill:#EDB450}.rust{fill:#A84C35}.muted{fill:#8F897A}
+      .line{stroke:#BEB8AA;stroke-width:1;fill:none}.strong{stroke:#17150F;stroke-width:1.4;fill:none}.dash{stroke:#8F897A;stroke-width:1;stroke-dasharray:3 5;fill:none}
+      text{font-family:Arial,Helvetica,sans-serif;fill:#17150F}.micro{font-size:10px;letter-spacing:2px;text-transform:uppercase}.small{font-size:12px}.body{font-size:14px}.label{font-size:16px;font-weight:600}.title{font-size:34px;font-weight:600;letter-spacing:-1px}.dim{fill:#8F897A}.white{fill:#F7F3E9}
+    </style>
+  </defs>
+  <rect class="bg" width="1440" height="900"/><rect width="1440" height="900" fill="url(#rules)" opacity=".55"/>
+  <rect class="paper" x="24" y="20" width="1392" height="860"/><rect class="strong" x="24" y="20" width="1392" height="860"/>
+  <rect class="ink" x="24" y="20" width="1392" height="62"/>
+  <text class="white" x="52" y="59" font-size="23" font-weight="700">alljobs</text>
+  <g class="micro white"><text x="420" y="57">PORTFOLIO</text><text x="530" y="57" opacity=".55">PROJECTS</text><text x="628" y="57" opacity=".55">TASKS</text><text x="704" y="57" opacity=".55">REGISTER</text><text x="797" y="57" opacity=".55">ARCHIVED</text></g>
+  <circle class="amber" cx="433" cy="69" r="3"/><text class="micro white" x="1180" y="54">4 / 4 SOURCES</text><text class="small white" x="1180" y="69" opacity=".58">checked 2 min ago</text>
+  <path class="line" d="M252 82V880M1088 82V880"/>
+
+  <g transform="translate(24 82)">
+    <rect fill="#E6E1D4" width="228" height="798"/>
+    <text class="micro" x="24" y="34">01 · PROJECT INDEX</text>
+    <text class="micro dim" x="24" y="76">CODE</text>
+    <g transform="translate(12 91)"><rect class="ink" width="204" height="56"/><rect class="amber" width="5" height="56"/><text class="label white" x="20" y="24">AllJobs</text><text class="micro white" x="20" y="42" opacity=".58">FRESH · LOCAL</text><circle class="amber" cx="186" cy="26" r="4"/></g>
+    <g transform="translate(12 153)"><path class="line" d="M0 0H204V56H0Z"/><text class="label" x="20" y="24">TradeLinks</text><text class="micro dim" x="20" y="42">STALE · GIT</text><circle class="rust" cx="186" cy="26" r="4"/></g>
+    <g transform="translate(12 215)"><path class="line" d="M0 0H204V56H0Z"/><text class="label" x="20" y="24">GrandeGPT</text><text class="micro dim" x="20" y="42">FRESH · GIT</text><circle class="ink" cx="186" cy="26" r="4"/></g>
+    <text class="micro dim" x="24" y="312">BUSINESS</text>
+    <g transform="translate(12 327)"><path class="line" d="M0 0H204V62H0Z"/><text class="label" x="20" y="25">SEA Launch</text><text class="micro dim" x="20" y="45">NATIVE · 3 TASKS</text><rect class="amber" x="181" y="21" width="9" height="9"/></g>
+    <path class="line" d="M12 422H216"/><text class="micro dim" x="24" y="452">VIEWS</text><text class="body" x="24" y="485">Waiting &amp; blocked</text><text class="body" x="24" y="518">All native tasks</text><text class="body" x="24" y="551">Source issues</text>
+    <rect x="12" y="716" width="204" height="56" fill="#F3F0E6"/><text class="micro dim" x="24" y="739">SYNTHETIC PLANNING DATA</text><text class="small" x="24" y="757">Task 1 design evidence</text>
+  </g>
+
+  <g transform="translate(286 112)">
+    <text class="micro dim" x="0" y="0">PORTFOLIO / CURRENT FOCUS</text>
+    <text class="title" x="0" y="48">Move the work that needs attention.</text>
+    <text class="body dim" x="0" y="78">One planning rail across repo-owned roadmaps and AllJobs-native tasks.</text>
+    <g transform="translate(0 102)"><rect class="amber" width="142" height="30"/><text class="micro" x="14" y="20">FOCUS · ALLJOBS</text><text class="micro dim" x="158" y="20">WED 26 AUG · 4 ACTIVE PROJECTS</text></g>
+  </g>
+
+  <g transform="translate(286 274)">
+    <text class="micro dim" x="0" y="0">02 · CURRENT ROADMAP</text>
+    <line x1="28" y1="26" x2="28" y2="402" stroke="#17150F" stroke-width="3"/>
+    <circle class="amber" cx="28" cy="68" r="10"/><circle class="paper" cx="28" cy="194" r="7" stroke="#17150F"/><circle class="paper" cx="28" cy="337" r="7" stroke="#17150F"/>
+    <rect class="ink" x="54" y="40" width="446" height="58"/><text class="micro white" x="72" y="60">PHASE 01 · ACTIVE</text><text class="label white" x="72" y="84">Planning Core V1</text><text class="small white" x="406" y="75" opacity=".65">ROADMAP.md</text>
+    <path class="strong" d="M54 112H500V181H54Z"/><text class="micro dim" x="72" y="132">BACKLOG · REPO OWNED · READ ONLY</text><text class="body" x="72" y="158">AJ-B-014 · Registration and archive contracts</text><text class="small dim" x="72" y="176">P0 · proof issue in one sibling section</text><path class="dash" d="M64 112V181"/>
+    <path class="line" d="M54 198H500V249H54Z"/><rect class="amber" x="54" y="198" width="6" height="51"/><text class="micro dim" x="72" y="217">NATIVE TASK · WRITABLE</text><text class="body" x="72" y="239">Review registration proposal</text>
+    <rect fill="#E8E3D7" x="54" y="272" width="446" height="54"/><text class="micro dim" x="72" y="292">PHASE 02 · NEXT</text><text class="label" x="72" y="315">Provider projection</text><text class="small dim" x="406" y="307">2 items</text>
+    <path class="line" d="M54 340H500V391H54Z"/><text class="micro dim" x="72" y="359">EXTERNAL TASK · READ ONLY</text><text class="body" x="72" y="381">Repair BACKLOG metadata</text><path class="dash" d="M64 340V391"/>
+  </g>
+
+  <g transform="translate(810 274)">
+    <text class="micro dim" x="0" y="0">03 · ATTENTION QUEUE</text>
+    <path class="line" d="M0 25H246V99H0Z"/><rect class="rust" width="5" height="74" y="25"/><text class="micro dim" x="16" y="47">BLOCKED · TRADELINKS</text><text class="body" x="16" y="71">Confirm staging owner</text><text class="small dim" x="16" y="90">waiting on Joey · today</text>
+    <path class="line" d="M0 109H246V183H0Z"/><rect class="amber" width="5" height="74" y="109"/><text class="micro dim" x="16" y="131">WAITING · SEA LAUNCH</text><text class="body" x="16" y="155">Distributor shortlist</text><text class="small dim" x="16" y="174">follow up · 28 Aug</text>
+    <path class="line" d="M0 193H246V267H0Z"/><text class="micro dim" x="16" y="215">DUE · GRANDEGPT</text><text class="body" x="16" y="239">Review agent handoff</text><text class="small dim" x="16" y="258">external task · read only</text>
+    <text class="micro dim" x="0" y="308">04 · PORTFOLIO SIGNAL</text><text class="body" x="0" y="338">3 tasks need a decision</text><path class="strong" d="M0 354H246"/><path class="amber" d="M0 354H98V358H0Z"/>
+  </g>
+
+  <g transform="translate(1112 112)">
+    <text class="micro dim" x="0" y="0">05 · SOURCE LEDGER</text><text class="label" x="0" y="38">AllJobs</text><text class="small dim" x="0" y="60">code project · external planning</text>
+    <rect class="ink" x="0" y="82" width="272" height="80"/><text class="micro white" x="16" y="105">GIT-MARKDOWN · FRESH</text><text class="small white" x="16" y="128">7bc40e1 · main</text><text class="small white" x="16" y="149" opacity=".58">checked 10:42 SGT</text>
+    <text class="micro dim" x="0" y="194">DOCUMENTS</text><text class="body" x="0" y="222">docs/ROADMAP.md</text><text class="body" x="0" y="250">docs/BACKLOG.md</text><path class="line" d="M0 266H272"/>
+    <rect fill="#F0E2D9" x="0" y="286" width="272" height="100"/><text class="micro" x="16" y="309">PARTIAL VALIDITY</text><text class="body" x="16" y="337">AJ-B-015 · priority</text><text class="small dim" x="16" y="361">Invalid value. Healthy items retained.</text>
+    <text class="micro dim" x="0" y="426">WRITE AUTHORITY</text><text class="body" x="0" y="453">Roadmap / Backlog</text><text class="small dim" x="188" y="453">READ ONLY</text><text class="body" x="0" y="482">Native tasks</text><text class="small" x="196" y="482">WRITABLE</text>
+    <rect class="amber" x="0" y="520" width="272" height="42"/><text class="micro" x="18" y="546">REFRESH PROJECTION →</text>
+  </g>
+  <text class="micro dim" x="46" y="862">COMP A · CONTINUOUS PLANNING RAIL</text><text class="micro dim" x="1265" y="862">NORTH STAR / R1</text>
+</svg>
