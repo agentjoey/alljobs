@@ -122,36 +122,12 @@ Commit the manifest, decision records, and exact deletions together. Do not crea
 - Create: `.agent/frontend-design/planning-core-v1/mockup-screens/*.png`
 - Modify: `.agent/frontend-design/planning-core-v1/brief.md`
 
-- [ ] **Shape the experience with the required design skill**
-
-Use `$impeccable shape` against Brief revision 1. Record one chosen information hierarchy, one deliberate Planning-specific signature element, density rules, provenance language, and rejected alternatives in `mockup-review.md`.
-
-- [ ] **Build the standalone mockup before production UI**
-
-Implement real representative content and interactive state switching for:
-
-- portfolio overview;
-- code project with Phase, Backlog, native/external Tasks, provenance, and item-scoped issue;
-- business project with Milestone and Tasks and no Backlog affordance;
-- registration proposal, collision, and stale proposal;
-- archive warning, archived detail, and blocked restore;
-- loading, empty, error, success, validation, disabled, and read-only states.
-
-The mockup may not import legacy CSS, components, screenshots, or visual decisions.
-
-- [ ] **Verify responsive and reduced-motion mockup behavior**
-
-Serve the mockup on a loopback-only non-production port and capture `1440`, `900`, and true-emulated `390` widths. Verify keyboard order, visible focus, overflow, state labels, and `prefers-reduced-motion` behavior.
-
-- [ ] **Run independent Design Review**
-
-Provide the reviewer only the approved brief, mockup files, rendered screenshots, and a review packet. The reviewer writes findings against the nine Design Quality Model dimensions to `mockup-review.md`. The implementer fixes Critical/High findings and requests a fresh review of affected areas.
-
-- [ ] **Stop for Human Mockup Gate**
-
-The Human Owner reviews the rendered result, not only screenshots descriptions. Record the approved mockup revision and requested changes in the brief. Production UI work and legacy-file retirement remain blocked until approval.
-
-- [ ] **Commit approved mockup evidence**
+- [x] **Shape the experience with the required design skill**
+- [x] **Build the standalone mockup before production UI**
+- [x] **Verify responsive and reduced-motion mockup behavior**
+- [x] **Run independent Design Review**
+- [x] **Stop for Human Mockup Gate**
+- [x] **Commit approved mockup evidence**
 
 ```bash
 git add .agent/frontend-design/planning-core-v1
@@ -180,81 +156,13 @@ git commit -m "design: approve planning core T3 mockup"
 - Create: `playwright.config.ts`
 - Create: `tests/smoke/app-shell.test.tsx`
 
-- [ ] **Verify the completed retirement manifest before creating new runtime files**
-
-The manifest must show zero retired paths present in the current tree and must still identify the preserved tunnel/domain files and legacy tag.
-
-Verify the list:
-
-```bash
-git ls-files app components/workbench lib/data data .agent/frontend-design/alljobs-workbench-v1 .agent/frontend-design/redesign-v2 .agent/sprints
-git diff --exit-code
-```
-
-Expected: no deletion target remains in the current tree and no uncommitted change is being overwritten.
-
-- [ ] **Write a failing foundation smoke test**
-
-```tsx
-// tests/smoke/app-shell.test.tsx
-import { render, screen } from "@testing-library/react";
-import HomePage from "@/app/page";
-
-it("names the new planning product without legacy surfaces", async () => {
-  render(await HomePage());
-  expect(screen.getByRole("heading", { name: /planning/i })).toBeInTheDocument();
-  expect(screen.queryByText(/working ledger|apple hig|quick add/i)).not.toBeInTheDocument();
-});
-```
-
-Run `npm test -- tests/smoke/app-shell.test.tsx`.
-
-Expected: FAIL because the clean shell does not exist yet.
-
-- [ ] **Create only the approved minimal shell**
-
-Keep the approved Planning Core design/spec/plan, new T3 brief/mockup, deploy templates, and generic repository configuration. Recreate `app/` as a minimal semantic shell using the approved mockup tokens, with no data behavior yet.
-
-- [ ] **Install only the approved foundation dependencies**
-
-```bash
-npm install yaml
-npm install --save-dev tsx @testing-library/react @testing-library/user-event @testing-library/jest-dom @playwright/test @axe-core/playwright
-```
-
-Add scripts:
-
-```json
-{
-  "typecheck": "tsc --noEmit",
-  "test:e2e": "playwright test",
-  "planning:refresh": "tsx scripts/planning-refresh.ts",
-  "start:prod": "next start -p 3456 -H 127.0.0.1"
-}
-```
-
-- [ ] **Rewrite active docs and agent context**
-
-`PRODUCT.md`, `DESIGN.md`, `README.md`, `docs/architecture.md`, `docs/operations.md`, `.agent/CURRENT.md`, and the editable AllJobs context in `AGENTS.md` must describe only Planning Core V1. Preserve the managed Next.js and Pact blocks verbatim. Do not preserve the retired product's test counts, routes, data model, or visual-direction decision.
-
-- [ ] **Make the smoke test pass and prove legacy absence**
-
-```bash
-npm test -- tests/smoke/app-shell.test.tsx
-rg -n "working ledger|apple hig|quickadd|lib/data|components/workbench" app components lib tests PRODUCT.md DESIGN.md README.md docs/architecture.md docs/operations.md
-npm run typecheck
-npm run lint
-npm run build
-```
-
-Expected: smoke PASS; `rg` returns no legacy runtime/document references; typecheck/lint/build pass.
-
-- [ ] **Commit the greenfield foundation**
-
-```bash
-git add -A
-git commit -m "refactor: retire v0.1 and establish planning core shell"
-```
+- [x] **Verify the completed retirement manifest before creating new runtime files**
+- [x] **Write a failing foundation smoke test**
+- [x] **Create only the approved minimal shell**
+- [x] **Install only the approved foundation dependencies**
+- [x] **Rewrite active docs and agent context**
+- [x] **Make the smoke test pass and prove legacy absence**
+- [x] **Commit the greenfield foundation**
 
 ## Task 3: Define one canonical domain and relation validator
 
@@ -267,78 +175,11 @@ git commit -m "refactor: retire v0.1 and establish planning core shell"
 - Create: `lib/planning/domain/schemas.test.ts`
 - Create: `lib/planning/domain/relations.test.ts`
 
-- [ ] **Write failing schema tests for every enum and cross-field rule**
-
-Cover project `type`, non-empty `work_modes`, registration/status/priority, Phase versus Milestone kind, Backlog code-only rules, Task relation exclusivity, waiting/blocked required details, native/external identity, and KPI schema seam.
-
-Representative assertion:
-
-```ts
-expect(() => parseTask({
-  id: "AJ-T-1",
-  project: "alljobs",
-  status: "doing",
-  work_mode: "operations",
-  backlog: "AJ-BL-1",
-  roadmap_item: "phase-1",
-  source: { provider: "native" }
-})).toThrowError(/mutually exclusive/);
-```
-
-Run `npm test -- lib/planning/domain`.
-
-Expected: FAIL because the modules do not exist.
-
-- [ ] **Implement schemas and inferred types**
-
-Export schemas and infer types from them rather than maintaining parallel interfaces:
-
-```ts
-export const projectTypeSchema = z.enum(["code", "business"]);
-export const workModeSchema = z.enum(["implementation", "operations"]);
-export const taskStatusSchema = z.enum([
-  "todo", "doing", "waiting", "blocked", "done", "cancelled"
-]);
-export type Task = z.infer<typeof taskSchema>;
-```
-
-Use `superRefine` only for object-local cross-field rules. Keep project-wide/cross-document checks in `relations.ts`.
-
-- [ ] **Implement normalized validation output**
-
-```ts
-export interface ProofIssue {
-  scope: "document" | "object" | "relation";
-  code: string;
-  sourcePath: string;
-  objectId?: string;
-  field?: string;
-  message: string;
-}
-
-export interface ValidationResult<T> {
-  valid: T[];
-  issues: ProofIssue[];
-}
-```
-
-Relation validation covers missing/foreign Phase, business Backlog rejection, duplicate Roadmap order, multiple primary focus, missing Task targets, self-dependency, and dependency cycles.
-
-- [ ] **Run focused and full static checks**
-
-```bash
-npm test -- lib/planning/domain
-npm run typecheck
-```
-
-Expected: all domain tests and typecheck pass.
-
-- [ ] **Commit domain contracts**
-
-```bash
-git add lib/planning
-git commit -m "feat: define planning domain contracts"
-```
+- [x] **Write failing schema tests for every enum and cross-field rule**
+- [x] **Implement schemas and inferred types**
+- [x] **Implement normalized validation output**
+- [x] **Run focused and full static checks**
+- [x] **Commit domain contracts**
 
 ## Task 4: Build pure stable-section Markdown parsers
 
@@ -357,58 +198,11 @@ git commit -m "feat: define planning domain contracts"
 - Create: `tests/fixtures/planning/native/roadmap.md`
 - Create: `tests/fixtures/planning/native/tasks.md`
 
-- [ ] **Write failing parser tests**
-
-Cover LF/CRLF input, level-two heading identity, first `yaml alljobs` block, human body preservation, duplicate IDs, malformed YAML, missing metadata, healthy sibling retention, leading/trailing prose, cancelled records, and byte-stable rendering of untouched sections.
-
-```ts
-const parsed = parseBacklogDocument(partiallyInvalidSource, "docs/BACKLOG.md");
-expect(parsed.valid.map((item) => item.id)).toEqual(["AJ-BL-001"]);
-expect(parsed.issues).toEqual(expect.arrayContaining([
-  expect.objectContaining({ objectId: "AJ-BL-002", scope: "object" })
-]));
-```
-
-Run `npm test -- lib/planning/markdown`.
-
-Expected: FAIL because no parser exists.
-
-- [ ] **Implement section splitting and fenced-block parsing**
-
-The parser must be pure and return source spans needed for targeted replacement:
-
-```ts
-export interface ParsedSection<T> {
-  id: string;
-  title: string;
-  metadata: T;
-  body: string;
-  startOffset: number;
-  endOffset: number;
-}
-```
-
-Never identify an object by line number. Reject duplicate IDs before relation validation.
-
-- [ ] **Implement targeted rendering**
-
-`replaceSection(source, expectedId, renderedSection)` and `appendSection(source, renderedSection)` preserve all unrelated bytes and final newline policy. They do not reorder sections or rewrite prose.
-
-- [ ] **Run parser and domain suites**
-
-```bash
-npm test -- lib/planning/markdown lib/planning/domain
-npm run typecheck
-```
-
-Expected: all tests pass, including healthy-sibling isolation and untouched-section byte equality.
-
-- [ ] **Commit parsers and fixtures**
-
-```bash
-git add lib/planning/markdown tests/fixtures/planning
-git commit -m "feat: parse stable planning markdown sections"
-```
+- [x] **Write failing parser tests**
+- [x] **Implement section splitting and fenced-block parsing**
+- [x] **Implement targeted rendering**
+- [x] **Run parser and domain suites**
+- [x] **Commit parsers and fixtures**
 
 ## Task 5: Implement digest-protected atomic native storage
 
@@ -425,55 +219,11 @@ git commit -m "feat: parse stable planning markdown sections"
 - Create: `data/tasks/.gitkeep`
 - Create: `data/log/.gitkeep`
 
-- [ ] **Write failing integration tests in temporary directories**
-
-Test create/update/delete-section behavior, exact digest change, stale digest, held lock, archived project, relation failure, temp-write failure, rename failure, log-after-canonical ordering, lock cleanup, and rejection of paths outside the injected root.
-
-```ts
-expect(await store.updateTask({
-  project: "alljobs",
-  taskId: "AJ-T-001",
-  expectedDigest: staleDigest,
-  patch: { status: "done" }
-})).toMatchObject({ ok: false, code: "STALE_WRITE" });
-expect(await readFile(taskPath, "utf8")).toBe(before);
-```
-
-Run `npm test -- lib/planning/native/store.test.ts`.
-
-Expected: FAIL because the store does not exist.
-
-- [ ] **Implement canonical path resolution and production-root guard**
-
-All path constructors accept a validated slug/ID and a dependency-injected root. Reject absolute IDs, `..`, separators, symlink escapes, the repository root, and the real production data root when `NODE_ENV=test`.
-
-- [ ] **Implement locks, digests, and atomic replacement**
-
-Expose a single mutation result:
-
-```ts
-export type MutationResult<T> =
-  | { ok: true; value: T; digest: string }
-  | { ok: false; code: "VALIDATION_ERROR" | "STALE_WRITE" | "NOT_FOUND" |
-      "READ_ONLY_SOURCE" | "ARCHIVED_PROJECT" | "LOCKED" | "FILESYSTEM_ERROR";
-      message: string; issues?: ProofIssue[] };
-```
-
-Use an exclusive lock under `ALLJOBS_HOME/locks`, a temp file in the destination directory, file flush, atomic rename, and `finally` cleanup. Do not auto-retry `STALE_WRITE`.
-
-- [ ] **Make the store tests pass**
-
-```bash
-npm test -- lib/planning/native/store.test.ts lib/planning/markdown lib/planning/domain
-npm run typecheck
-```
-
-- [ ] **Commit native storage**
-
-```bash
-git add lib/planning/native lib/planning/paths.ts data
-git commit -m "feat: add atomic native planning store"
-```
+- [x] **Write failing integration tests in temporary directories**
+- [x] **Implement canonical path resolution and production-root guard**
+- [x] **Implement locks, digests, and atomic replacement**
+- [x] **Make the store tests pass**
+- [x] **Commit native storage**
 
 ## Task 6: Add Control Host config, safe Git mirrors, and the refresh worker
 

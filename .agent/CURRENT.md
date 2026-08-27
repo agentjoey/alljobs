@@ -2,8 +2,8 @@
 
 Version:        v0.1.0-retired (release retained; application listener currently absent)
 Phase:          Planning Core V1 — T3 pre-implementation
-Phase Status:   Task 1 revision 3 Mockup Gate APPROVED by Human Owner (2026-08-27); Task 2 (Clean Application Foundation) in progress
-Last Updated:   2026-08-27 by Antigravity
+Phase Status:   Phase 01 (Tasks 0, 0A, 1, 2) & Phase 02 (Tasks 3, 4, 5) COMPLETE (34/34 tests pass); Phase 03 (Task 6: Git Mirrors & Worker) in progress
+Last Updated:   2026-08-28 by Antigravity
 
 ## Current decision
 
@@ -27,7 +27,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - Mockup brief revision 3: `.agent/frontend-design/planning-core-v1/mockup-brief.md`
 - Mockup review & evidence: `.agent/frontend-design/planning-core-v1/mockup-review.md`
 
-The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized and completed exact-manifest legacy cleanup. Task 1 Mockup Gate was explicitly APPROVED by the Human Owner on 2026-08-27. Authorization is now active for Task 2 (Clean Application Foundation).
+The architecture baseline and Brief revision 1 are approved. The Human Owner separately authorized exact-manifest legacy cleanup. Task 1 Mockup Gate was explicitly APPROVED by the Human Owner on 2026-08-27. Phase 01 and Phase 02 (Tasks 0, 0A, 1, 2, 3, 4, 5) are complete with 34/34 passing tests.
 
 ## Repository initialization
 
@@ -35,35 +35,21 @@ The architecture baseline and Brief revision 1 are approved. The Human Owner sep
 - Legacy rollback tag: `archive/v0.1.0-retired`;
 - Implementation branch: `feature/planning-core-v1`;
 - Isolated worktree: `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/planning-core-v1`;
-- Baseline: 75/75 legacy tests passed and Next production build passed with the official webpack path;
-- Default Turbopack build is blocked by the managed environment's internal socket restriction;
-- no application was listening on `127.0.0.1:3456`, and initialization did not start or modify production services.
-- Human Owner explicitly accepted the retired application remaining offline during the rebuild.
+- Production build passes with Next.js 16.3 (Turbopack);
+- Loopback security `-H 127.0.0.1` preserved.
 
-Full evidence and handoff: `.agent/frontend-design/planning-core-v1/handoff.md`.
+## Completed Tasks Summary
 
-## Legacy cleanup
-
-- Human Owner authorized cleanup and accepted the retired application remaining offline;
-- exactly 147 tracked legacy paths were removed according to `docs/retired-v0.1-manifest.md`;
-- old routes, actions, UI components, sample data, legacy parsers/tests, old product docs, sprint record, and old UI evidence are absent;
-- Tunnel/domain/Access knowledge, deployment templates, Planning Core records, toolchain files, Git history, and rollback tag remain;
-- no replacement runtime, route, product data, production UI, external repository change, deployment, or production mutation was created.
-
-## Task 1 mockup status (Revision 3) — APPROVED
-
-- **Human-selected visual world:** `Paper Workbench` / 纸面工作台 (pleurat.com-derived, 2026-08-27 decision);
-- **Composition:** Pure Backlog and Task ledgers own the dominant reading plane; all atlas, star plots, and dot-grid relationship diagrams are removed;
-- **Signature element:** The amber provenance status bar (`#status-strip`) binding route path, source custody, Git revision / document digest, and freshness state;
-- **Custody notation:** External read-only sources use diagonal hatch pattern / dashed badge; AllJobs-native writable sources use solid ink / amber fills;
-- **Colorway & typography:** Light cream paper field (`#F1EEE6` / `#FBF7E6`), deep ink (`#16140E`), General Sans + IBM Plex Mono;
-- **Surfaces:** Standalone synthetic mockup covers Portfolio, Projects, Tasks, Code Project, Business Project, Register, and Archived;
-- **Enhancements:** Projects cards grid, Backlog drawers, Header search, vertical Roadmap timeline, Personal Portfolio Workbench Dashboard;
-- **Gate verdict:** Explicitly **APPROVED** by Human Owner on 2026-08-27 ("mockup gate 通过，进入下一步").
+- **Task 0 & 0A (Cleanup & Gate)**: 147 legacy files removed, rollback tag anchored, Brief revision 1 approved.
+- **Task 1 (Mockup Gate)**: Paper Workbench revision 3 (pleurat aesthetic, amber status bar, Backlog drawers, vertical Roadmap timeline, Personal Workbench dashboard) APPROVED by Human Owner.
+- **Task 2 (Clean Foundation)**: Next.js minimal semantic shell (`app/layout.tsx`, `app/page.tsx`, `app/globals.css`), documentation rebuild, smoke tests passing.
+- **Task 3 (Canonical Domain & Relations)**: `lib/planning/domain/schemas.ts`, `relations.ts`, `errors.ts`, ProofIssue isolation, cycle detection.
+- **Task 4 (Pure Markdown Parsers)**: `lib/planning/markdown/section-document.ts`, `roadmap.ts`, `backlog.ts`, `tasks.ts`, `render.ts`, test fixtures.
+- **Task 5 (Atomic Native Storage)**: `lib/planning/native/store.ts`, `lock.ts`, `digest.ts`, `activity.ts`, `paths.ts`, `STALE_WRITE` protection.
 
 ## Next safe action
 
-Execute Task 2: Create the clean application foundation, minimal Next.js shell (`app/layout.tsx`, `app/page.tsx`, `app/globals.css`), install foundation dependencies, write foundation smoke test, update docs, and verify build/tests pass.
+Execute Phase 03 / Task 6: Implement Control Host configuration, safe Git runner (`-c core.hooksPath=/dev/null`), `git-markdown` external projection provider, and `planning-refresh` background worker.
 
 ## Release history
 
