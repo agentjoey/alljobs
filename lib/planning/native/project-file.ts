@@ -1,12 +1,12 @@
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { parseProjectRegistry } from "../domain/schemas";
 import type { ProjectRegistryEntry } from "../domain/types";
 import { computeDigest } from "./digest";
-import { withProjectLock } from "./lock";
+import { withProjectLockGuard } from "./lock";
 import { recordActivity } from "./activity";
 import { getProjectFilePath } from "../paths";
-import type { MutationResult } from "./store";
+import { atomicWriteFile, type MutationResult } from "./store";
 
 export async function setProjectArchivedState(
   slug: string,
@@ -19,7 +19,7 @@ export async function setProjectArchivedState(
     return { ok: false, code: "NOT_FOUND", message: `Project "${slug}" not found` };
   }
 
-  return withProjectLock(
+  return withProjectLockGuard(
     slug,
     async () => {
       const content = await readFile(filePath, "utf8");
@@ -42,7 +42,15 @@ export async function setProjectArchivedState(
 
       parsed.archived = archived;
       const updatedJson = `${JSON.stringify(parsed, null, 2)}\n`;
-      await writeFile(filePath, updatedJson, "utf8");
+      try {
+        await atomicWriteFile(filePath, updatedJson);
+      } catch (err: any) {
+        return {
+          ok: false,
+          code: "FILESYSTEM_ERROR",
+          message: `Failed to write project registry: ${err.message}`
+        };
+      }
       const newDigest = computeDigest(updatedJson.trim());
 
       await recordActivity(

@@ -26,7 +26,7 @@ export function PortfolioOverview({ data }: { data: PortfolioOverviewData }) {
         </div>
         <div className="metric-card">
           <div className="metric-label">Ongoing Work</div>
-          <div className="metric-value" style={{ color: "var(--amber-ink)" }}>{kpis.ongoingWork}</div>
+          <div className="metric-value">{kpis.ongoingWork}</div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Attention Required</div>
@@ -36,7 +36,7 @@ export function PortfolioOverview({ data }: { data: PortfolioOverviewData }) {
         </div>
         <div className="metric-card">
           <div className="metric-label">Completed Recent</div>
-          <div className="metric-value" style={{ color: "var(--green)" }}>{kpis.completedRecent}</div>
+          <div className="metric-value" style={{ color: kpis.completedRecent > 0 ? "var(--green)" : "inherit" }}>{kpis.completedRecent}</div>
         </div>
       </div>
 
@@ -113,23 +113,23 @@ export function PortfolioOverview({ data }: { data: PortfolioOverviewData }) {
             <tbody>
               {ongoingTasks.map(t => (
                 <tr key={t.id}>
-                  <td style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: "12px" }}>
+                  <td data-label="Task ID" style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: "12px" }}>
                     {t.id}
                   </td>
-                  <td>
+                  <td data-label="Title">
                     <Link href={`/projects/${t.project}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 500 }}>
                       {t.title}
                     </Link>
                   </td>
-                  <td>
+                  <td data-label="Project">
                     <span className="badge badge--active">{t.project}</span>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`badge badge--${t.status}`}>
                       {t.status.toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ fontSize: "12px", color: "var(--ink-faint)" }}>
+                  <td data-label="Details" style={{ fontSize: "12px", color: "var(--ink-faint)" }}>
                     {t.blocked_reason ? `Blocked: ${t.blocked_reason}` : t.waiting_on ? `Waiting on: ${t.waiting_on}` : t.due ? `Due: ${t.due}` : "—"}
                   </td>
                 </tr>

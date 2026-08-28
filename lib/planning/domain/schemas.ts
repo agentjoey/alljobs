@@ -8,14 +8,31 @@ export const backlogStatusSchema = z.enum(["idea", "ready", "doing", "blocked", 
 export const prioritySchema = z.enum(["P0", "P1", "P2"]);
 export const taskStatusSchema = z.enum(["todo", "doing", "waiting", "blocked", "done", "cancelled"]);
 
+// IDs become markdown headings (`## id: title`) and file anchors, so they are
+// restricted to a safe single-line charset (consistent with paths.ts slug rules).
+const idSchema = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
+    "ID must start with a letter or digit and contain only letters, digits, hyphens, and underscores"
+  );
+
+// Titles are rendered into `## id: title` headings; a line break would inject
+// new sections or code fences into the document.
+const titleSchema = (label: string) =>
+  z
+    .string()
+    .min(1, `${label} is required`)
+    .regex(/^[^\r\n]+$/, `${label} must be a single line (no CR/LF)`);
+
 export const taskSourceSchema = z.object({
   provider: z.string().min(1),
   ref: z.string().optional()
 }).default({ provider: "native" });
 
 export const roadmapItemSchema = z.object({
-  id: z.string().min(1, "RoadmapItem ID is required"),
-  title: z.string().min(1, "RoadmapItem title is required"),
+  id: idSchema,
+  title: titleSchema("RoadmapItem title"),
   kind: roadmapItemKindSchema,
   status: roadmapItemStatusSchema,
   order: z.number().int(),
@@ -26,8 +43,8 @@ export const roadmapItemSchema = z.object({
 });
 
 export const backlogItemSchema = z.object({
-  id: z.string().min(1, "BacklogItem ID is required"),
-  title: z.string().min(1, "BacklogItem title is required"),
+  id: idSchema,
+  title: titleSchema("BacklogItem title"),
   work_mode: workModeSchema,
   phase: z.string().optional(),
   status: backlogStatusSchema,
@@ -47,8 +64,8 @@ export const backlogItemSchema = z.object({
 });
 
 export const taskSchema = z.object({
-  id: z.string().min(1, "Task ID is required"),
-  title: z.string().min(1, "Task title is required"),
+  id: idSchema,
+  title: titleSchema("Task title"),
   project: z.string().min(1, "Project slug is required"),
   status: taskStatusSchema,
   work_mode: workModeSchema.optional(),

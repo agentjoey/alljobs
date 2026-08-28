@@ -164,5 +164,66 @@ describe("domain schemas", () => {
         source: { provider: "native" }
       })).toThrowError(/declare work_mode explicitly/);
     });
+
+    it("rejects task id with unsafe characters or line breaks", () => {
+      expect(() => parseTask({
+        id: "bad id",
+        title: "Ok",
+        project: "alljobs",
+        status: "todo",
+        work_mode: "operations",
+        source: { provider: "native" }
+      })).toThrowError(/ID must start with a letter or digit/);
+
+      expect(() => parseTask({
+        id: "bad\nid",
+        title: "Ok",
+        project: "alljobs",
+        status: "todo",
+        work_mode: "operations",
+        source: { provider: "native" }
+      })).toThrowError(/ID must start with a letter or digit/);
+    });
+
+    it("rejects task title containing line breaks (markdown structure injection)", () => {
+      expect(() => parseTask({
+        id: "AJ-T-045",
+        title: "Legit\n\n## injected: Evil Section\n\n```yaml alljobs",
+        project: "alljobs",
+        status: "todo",
+        work_mode: "operations",
+        source: { provider: "native" }
+      })).toThrowError(/must be a single line/);
+    });
+  });
+
+  describe("markdown injection hardening", () => {
+    it("rejects roadmap item id/title containing line breaks", () => {
+      expect(() => parseRoadmapItem({
+        id: "phase-1\n## evil: x",
+        title: "Ok",
+        kind: "phase",
+        status: "active",
+        order: 10
+      })).toThrowError(/ID must start with a letter or digit/);
+
+      expect(() => parseRoadmapItem({
+        id: "phase-1",
+        title: "Ok\r\n## evil: x",
+        kind: "phase",
+        status: "active",
+        order: 10
+      })).toThrowError(/must be a single line/);
+    });
+
+    it("rejects backlog item title containing line breaks", () => {
+      expect(() => parseBacklogItem({
+        id: "AJ-B-010",
+        title: "Line one\n## forged: Section",
+        work_mode: "operations",
+        status: "idea",
+        priority: "P2"
+      })).toThrowError(/must be a single line/);
+    });
   });
 });

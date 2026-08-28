@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -55,5 +55,67 @@ describe("getProjectDetail", () => {
     expect(detail.tasks.length).toBe(1);
     expect(detail.metrics.activeTasks).toBe(1);
     expect(detail.metrics.doneCount).toBe(0);
+  });
+
+  it("resolves the projection cache from control-host config when no options are given (H1)", async () => {
+    await store.createProject({
+      slug: "code-proj",
+      name: "Code Project",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      archived: false
+    });
+
+    await writeFile(
+      join(tempHome, "config.json"),
+      JSON.stringify({ trustedCodeRoots: [tempHome], refreshIntervalSeconds: 300 }),
+      "utf8"
+    );
+    await mkdir(join(tempHome, "cache"), { recursive: true });
+    await writeFile(
+      join(tempHome, "cache", "code-proj.json"),
+      JSON.stringify({
+        project: "code-proj",
+        revision: "abc1234",
+        fetchedAt: new Date().toISOString(),
+        freshness: "fresh",
+        roadmap: [
+          { id: "phase-1", title: "Core", kind: "phase", status: "active", order: 10 }
+        ],
+        backlog: [],
+        tasks: [],
+        issues: [],
+        provenance: []
+      }),
+      "utf8"
+    );
+
+    // Web pages call getProjectDetail(slug) with no options at all
+    process.env.ALLJOBS_DATA_ROOT = tempHome;
+    process.env.ALLJOBS_HOME = tempHome;
+    try {
+      const detail = await getProjectDetail("code-proj");
+      expect(detail).not.toBeNull();
+      expect(detail?.roadmap.length).toBe(1);
+      expect(detail?.roadmap[0].id).toBe("phase-1");
+    } finally {
+      delete process.env.ALLJOBS_DATA_ROOT;
+      delete process.env.ALLJOBS_HOME;
+    }
+  });
+
+  it("surfaces relation issues for native roadmap and tasks (M8)", async () => {
+    await store.createRoadmapItem("biz-project", {
+      id: "m-2",
+      title: "Conflicting order",
+      kind: "milestone",
+      status: "planned",
+      order: 10
+    });
+
+    const detail = await getProjectDetail("biz-project", { root: tempHome });
+    expect(detail).not.toBeNull();
+    expect(detail?.issues.some(i => i.code === "DUPLICATE_ROADMAP_ORDER")).toBe(true);
   });
 });

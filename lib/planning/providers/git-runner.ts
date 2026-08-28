@@ -28,10 +28,17 @@ export class NodeGitRunner implements GitRunner {
     // Invariant: Always disable repository hooks
     const finalArgs = ["-c", "core.hooksPath=/dev/null", ...args];
 
+    // Strip inherited GIT_* variables (GIT_DIR, GIT_WORK_TREE, GIT_SSH_COMMAND,
+    // ...) so a poisoned environment cannot redirect repository operations
+    const baseEnv: NodeJS.ProcessEnv = { ...process.env };
+    for (const key of Object.keys(baseEnv)) {
+      if (key.startsWith("GIT_")) delete baseEnv[key];
+    }
+
     try {
       const { stdout, stderr } = await execFileAsync(this.gitBinary, finalArgs, {
         cwd,
-        env: { ...process.env, ...env },
+        env: { ...baseEnv, ...env },
         timeout: timeoutMs,
         maxBuffer: 10 * 1024 * 1024 // 10MB
       });

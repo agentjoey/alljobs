@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createTaskAction } from "@/app/actions/native-planning";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function NativeTaskForm({
   projectSlug,
@@ -24,6 +27,36 @@ export function NativeTaskForm({
   const [due, setDue] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Dialog behavior: Esc closes, Tab stays trapped inside the dialog.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && (active === first || !dialogRef.current.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !dialogRef.current.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +103,10 @@ export function NativeTaskForm({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="native-task-form-title"
         style={{
           background: "var(--paper-raised)",
           border: "1px solid var(--hairline-strong)",
@@ -81,10 +118,10 @@ export function NativeTaskForm({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--ink)" }}>
+          <h2 id="native-task-form-title" style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--ink)" }}>
             Create Native Task ({projectSlug})
           </h2>
-          <button type="button" onClick={onClose} className="btn" style={{ padding: "4px 8px" }}>
+          <button type="button" onClick={onClose} className="btn" style={{ padding: "4px 8px" }} aria-label="Close dialog">
             ✕
           </button>
         </div>
@@ -97,12 +134,14 @@ export function NativeTaskForm({
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
+            <label htmlFor="ntf-task-id" style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
               Task ID (e.g. AJ-T-042) *
             </label>
             <input
+              id="ntf-task-id"
               type="text"
               required
+              autoFocus
               placeholder="AJ-T-042"
               value={taskId}
               onChange={e => setTaskId(e.target.value)}
@@ -155,6 +194,19 @@ export function NativeTaskForm({
                 <option value="operations">Operations</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="ntf-due" style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
+              Due Date (optional)
+            </label>
+            <input
+              id="ntf-due"
+              type="date"
+              value={due}
+              onChange={e => setDue(e.target.value)}
+              style={{ width: "100%", padding: "8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline-strong)", fontFamily: "var(--font-mono)" }}
+            />
           </div>
 
           {backlog && (

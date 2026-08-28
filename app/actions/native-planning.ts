@@ -3,7 +3,20 @@
 import { revalidatePath } from "next/cache";
 import type { Task, RoadmapItem, TaskStatus, WorkMode } from "@/lib/planning/domain/types";
 import { NativePlanningStore } from "@/lib/planning/native/store";
-import { errorResult, successResult, type ActionResult } from "./action-result";
+import { errorResult, mutationErrorResult, successResult, type ActionResult } from "./action-result";
+
+// Fields a client may patch on an existing task — everything else (notably
+// `source`, which would flip a native task to read-only) is stripped.
+const TASK_PATCH_WHITELIST = new Set([
+  "status",
+  "title",
+  "due",
+  "waiting_on",
+  "blocked_reason",
+  "work_mode",
+  "backlog",
+  "roadmap_item"
+]);
 
 export async function createTaskAction(
   formData: FormData
@@ -39,11 +52,12 @@ export async function createTaskAction(
   });
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
   revalidatePath("/");
   revalidatePath("/tasks");
+  revalidatePath("/projects");
   revalidatePath(`/projects/${project}`);
 
   return successResult(result.value, `Task "${id}" created successfully`);
@@ -56,21 +70,25 @@ export async function updateTaskAction(input: {
   expectedDigest?: string;
 }): Promise<ActionResult<Task>> {
   const { project, taskId, patch, expectedDigest } = input;
+  const safePatch = Object.fromEntries(
+    Object.entries(patch).filter(([key]) => TASK_PATCH_WHITELIST.has(key))
+  ) as Partial<Task>;
   const store = new NativePlanningStore();
 
   const result = await store.updateTask({
     project,
     taskId,
-    patch,
+    patch: safePatch,
     expectedDigest
   });
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
   revalidatePath("/");
   revalidatePath("/tasks");
+  revalidatePath("/projects");
   revalidatePath(`/projects/${project}`);
 
   return successResult(result.value, `Task "${taskId}" updated successfully`);
@@ -101,9 +119,11 @@ export async function createRoadmapItemAction(
   });
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
+  revalidatePath("/");
+  revalidatePath("/projects");
   revalidatePath(`/projects/${project}`);
 
   return successResult(result.value, `Milestone "${id}" created successfully`);

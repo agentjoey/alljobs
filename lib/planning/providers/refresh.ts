@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ControlHostResolvedPaths } from "../config";
 import type { ProjectRegistryEntry } from "../domain/types";
@@ -7,7 +7,7 @@ import { withProjectLock } from "../native/lock";
 import type { NativePlanningStore } from "../native/store";
 import type { ExternalProjection } from "./contracts";
 import { GitMarkdownProvider } from "./git-markdown";
-import type { GitRunner } from "./git-runner";
+import type { GitResult, GitRunner } from "./git-runner";
 
 export async function getCachedProjection(
   slug: string,
@@ -66,8 +66,15 @@ export async function refreshProject(
 
     // 1. Initialize bare mirror if absent
     if (!existsSync(mirrorPath)) {
-      const source = project.git_remote || project.trusted_path;
-      if (!source) {
+      // Try git_remote first, then fall back to trusted_path if the remote
+      // is unusable (e.g. not a valid URL) but the local path exists
+      const sources: string[] = [];
+      if (project.git_remote) sources.push(project.git_remote);
+      if (project.trusted_path && project.trusted_path !== project.git_remote) {
+        sources.push(project.trusted_path);
+      }
+
+      if (sources.length === 0) {
         return {
           project: project.slug,
           revision: "unknown",
@@ -88,15 +95,26 @@ export async function refreshProject(
         };
       }
 
-      const cloneRes = await gitRunner.run([
-        "clone",
-        "--bare",
-        "--no-checkout",
-        source,
-        mirrorPath
-      ]);
+      let cloneRes: GitResult | null = null;
+      let cloneSource = "";
+      for (const source of sources) {
+        if (source === project.trusted_path && !existsSync(source)) continue;
+        const attempt = await gitRunner.run([
+          "clone",
+          "--bare",
+          "--no-checkout",
+          "--",
+          source,
+          mirrorPath
+        ]);
+        cloneRes = attempt;
+        cloneSource = source;
+        if (attempt.exitCode === 0) break;
+        // A failed clone may leave a partial mirror behind; clean before retry
+        await rm(mirrorPath, { recursive: true, force: true });
+      }
 
-      if (cloneRes.exitCode !== 0) {
+      if (!cloneRes || cloneRes.exitCode !== 0) {
         return {
           project: project.slug,
           revision: "unknown",
@@ -109,8 +127,8 @@ export async function refreshProject(
             {
               scope: "document",
               code: "GIT_CLONE_FAILED",
-              sourcePath: source,
-              message: `Failed to initialize bare mirror for "${project.slug}": ${cloneRes.stderr}`
+              sourcePath: cloneSource,
+              message: `Failed to initialize bare mirror for "${project.slug}": ${cloneRes?.stderr || "no usable source"}`
             }
           ],
           provenance: []

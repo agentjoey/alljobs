@@ -159,14 +159,18 @@ export function replaceSection(
   targetId: string,
   renderedReplacement: string
 ): string {
-  const parsed = parseSectionDocument(source);
+  // parseSectionDocument computes offsets on LF-normalized text, so the
+  // original source must be normalized before slicing or CRLF documents
+  // drift by one byte per preceding line ending.
+  const normalizedSource = source.replace(/\r\n/g, "\n");
+  const parsed = parseSectionDocument(normalizedSource);
   const target = parsed.sections.find(s => s.id === targetId);
   if (!target) {
     throw new Error(`Section "${targetId}" not found in document`);
   }
 
-  const before = source.slice(0, target.startOffset);
-  const after = source.slice(target.endOffset);
+  const before = normalizedSource.slice(0, target.startOffset);
+  const after = normalizedSource.slice(target.endOffset);
   const trimmedReplacement = renderedReplacement.trimEnd();
 
   return `${before}${trimmedReplacement}\n\n${after.trimStart()}`;

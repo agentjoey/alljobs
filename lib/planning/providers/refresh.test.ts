@@ -96,6 +96,45 @@ describe("refreshProject", () => {
     expect(projection.backlog.length).toBe(1);
     expect(projection.issues).toEqual([]);
   });
+
+  it("falls back to trusted_path when git_remote is unusable", async () => {
+    const paths: ControlHostResolvedPaths = {
+      homeDir: tempHome,
+      configPath: resolve(tempHome, "config.json"),
+      mirrorsDir: resolve(tempHome, "mirrors"),
+      logsDir: resolve(tempHome, "logs"),
+      cacheDir: resolve(tempHome, "cache"),
+      config: {
+        trustedCodeRoots: [dirname(tempRepo)],
+        refreshIntervalSeconds: 300
+      }
+    };
+
+    await mkdir(paths.mirrorsDir, { recursive: true });
+    await mkdir(paths.cacheDir, { recursive: true });
+    await mkdir(paths.logsDir, { recursive: true });
+
+    const store = new NativePlanningStore(tempHome);
+
+    const project: ProjectRegistryEntry = {
+      slug: "sample-code",
+      name: "Sample Code",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      // Not a valid clone URL (the production data bug); must fall back
+      git_remote: "github.com/agentjoey/nonexistent",
+      git_branch: "main",
+      trusted_path: tempRepo,
+      archived: false
+    };
+
+    const projection = await refreshProject(project, { paths, gitRunner: runner, store });
+
+    expect(projection.freshness).toBe("fresh");
+    expect(projection.roadmap.length).toBe(1);
+    expect(projection.backlog.length).toBe(1);
+  });
 });
 
 function dirname(p: string) {

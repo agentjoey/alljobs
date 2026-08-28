@@ -37,7 +37,7 @@ export function ProjectList({ projects }: { projects: ProjectDetailView[] }) {
               >
                 <div>
                   <div className="project-card__header">
-                    <span className={`badge ${isCode ? "badge--p1" : "badge--active"}`}>
+                    <span className={`badge ${isCode ? "badge--type" : "badge--active"}`}>
                       {p.project.type.toUpperCase()}
                     </span>
                     <span className={isCode ? "custody-badge custody-badge--repo" : "custody-badge custody-badge--native"}>

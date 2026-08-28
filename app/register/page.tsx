@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import React, { startTransition, useEffect, useState } from "react";
 import { applyRegistrationAction, inspectProjectAction, listTrustedWorkspacesAction } from "@/app/actions/projects";
+import type { WorkMode } from "@/lib/planning/domain/types";
 import { createSlugFieldState, updateSlugFromName, updateSlugManually } from "@/lib/planning/registry/slug";
 import type { RegistrationProposal } from "@/lib/planning/registry/proposal";
 import type { TrustedWorkspace } from "@/lib/planning/registry/trusted-workspaces";
@@ -18,7 +19,9 @@ export default function RegisterPage() {
   const [workspaceLoadError, setWorkspaceLoadError] = useState<string | null>(null);
   const [gitRemote, setGitRemote] = useState("");
   const [gitBranch, setGitBranch] = useState("main");
-  const [workModes] = useState<string[]>(["implementation"]);
+  // Business initiatives run in AllJobs-native custody (operations work mode);
+  // code repositories default to implementation.
+  const workModes: WorkMode[] = type === "business" ? ["operations"] : ["implementation"];
 
   const [proposal, setProposal] = useState<RegistrationProposal | null>(null);
   const [confirmationSlug, setConfirmationSlug] = useState("");

@@ -6,19 +6,19 @@ import type { WorkMode } from "@/lib/planning/domain/types";
 import { NativePlanningStore } from "@/lib/planning/native/store";
 import { NodeGitRunner } from "@/lib/planning/providers/git-runner";
 import { applyRegistration } from "@/lib/planning/registry/apply";
-import { applyArchive, proposeArchive } from "@/lib/planning/registry/archive";
+import { applyArchive } from "@/lib/planning/registry/archive";
 import { inspectCandidate } from "@/lib/planning/registry/inspect";
-import type { RegistrationProposal } from "@/lib/planning/registry/proposal";
+import type { LifecycleProposal, RegistrationProposal } from "@/lib/planning/registry/proposal";
 import { applyRestore, proposeRestore } from "@/lib/planning/registry/restore";
 import { listTrustedWorkspaces, type TrustedWorkspace } from "@/lib/planning/registry/trusted-workspaces";
-import { errorResult, successResult, type ActionResult } from "./action-result";
+import { errorResult, internalErrorResult, mutationErrorResult, successResult, type ActionResult } from "./action-result";
 
 export async function listTrustedWorkspacesAction(): Promise<ActionResult<TrustedWorkspace[]>> {
   try {
     const paths = loadControlHostConfig();
     return successResult(listTrustedWorkspaces(paths.config), "Trusted workspaces loaded");
   } catch (err: unknown) {
-    return errorResult(err instanceof Error ? err.message : "Unable to load trusted workspaces", "CONFIG_ERROR");
+    return internalErrorResult(err, "CONFIG_ERROR");
   }
 }
 
@@ -44,7 +44,7 @@ export async function inspectProjectAction(
   try {
     paths = loadControlHostConfig();
   } catch (err: any) {
-    return errorResult(err.message, "CONFIG_ERROR");
+    return internalErrorResult(err, "CONFIG_ERROR");
   }
 
   const store = new NativePlanningStore();
@@ -66,7 +66,7 @@ export async function inspectProjectAction(
 
     return successResult(proposal, "Candidate inspected successfully");
   } catch (err: any) {
-    return errorResult(err.message, "INSPECT_ERROR");
+    return internalErrorResult(err, "INSPECT_ERROR");
   }
 }
 
@@ -93,7 +93,7 @@ export async function applyRegistrationAction(
   try {
     paths = loadControlHostConfig();
   } catch (err: any) {
-    return errorResult(err.message, "CONFIG_ERROR");
+    return internalErrorResult(err, "CONFIG_ERROR");
   }
 
   const store = new NativePlanningStore();
@@ -106,7 +106,7 @@ export async function applyRegistrationAction(
   });
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
   revalidatePath("/");
@@ -129,7 +129,7 @@ export async function archiveProjectAction(
   const result = await applyArchive(slug, expectedDigest, store);
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
   revalidatePath("/");
@@ -138,6 +138,25 @@ export async function archiveProjectAction(
   revalidatePath("/archived");
 
   return successResult({ slug }, `Project "${slug}" archived successfully`);
+}
+
+export async function proposeRestoreAction(
+  slug: string
+): Promise<ActionResult<LifecycleProposal>> {
+  let paths;
+  try {
+    paths = loadControlHostConfig();
+  } catch (err: any) {
+    return internalErrorResult(err, "CONFIG_ERROR");
+  }
+
+  const store = new NativePlanningStore();
+  try {
+    const proposal = await proposeRestore(slug, store, paths.config);
+    return successResult(proposal, "Restore proposal prepared");
+  } catch (err: any) {
+    return internalErrorResult(err, "PROPOSE_ERROR");
+  }
 }
 
 export async function restoreProjectAction(
@@ -153,7 +172,7 @@ export async function restoreProjectAction(
   try {
     paths = loadControlHostConfig();
   } catch (err: any) {
-    return errorResult(err.message, "CONFIG_ERROR");
+    return internalErrorResult(err, "CONFIG_ERROR");
   }
 
   const store = new NativePlanningStore();
@@ -163,7 +182,7 @@ export async function restoreProjectAction(
   });
 
   if (!result.ok) {
-    return errorResult(result.message, result.code);
+    return mutationErrorResult(result);
   }
 
   revalidatePath("/");

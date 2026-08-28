@@ -5,7 +5,7 @@ import { loadControlHostConfig } from "@/lib/planning/config";
 import { NativePlanningStore } from "@/lib/planning/native/store";
 import { NodeGitRunner } from "@/lib/planning/providers/git-runner";
 import { refreshProject } from "@/lib/planning/providers/refresh";
-import { errorResult, successResult, type ActionResult } from "./action-result";
+import { errorResult, internalErrorResult, successResult, type ActionResult } from "./action-result";
 
 export async function refreshProjectAction(
   slug: string
@@ -14,7 +14,7 @@ export async function refreshProjectAction(
   try {
     paths = loadControlHostConfig();
   } catch (err: any) {
-    return errorResult(err.message, "CONFIG_ERROR");
+    return internalErrorResult(err, "CONFIG_ERROR");
   }
 
   const store = new NativePlanningStore();
@@ -23,6 +23,9 @@ export async function refreshProjectAction(
   const project = await store.getProject(slug);
   if (!project) {
     return errorResult(`Project "${slug}" not found`, "NOT_FOUND");
+  }
+  if (project.archived) {
+    return errorResult(`Project "${slug}" is archived; provider refresh is disabled`, "ARCHIVED_PROJECT");
   }
 
   try {
@@ -35,6 +38,6 @@ export async function refreshProjectAction(
       `Project "${slug}" refreshed (${projection.freshness})`
     );
   } catch (err: any) {
-    return errorResult(err.message, "REFRESH_ERROR");
+    return internalErrorResult(err, "REFRESH_ERROR");
   }
 }

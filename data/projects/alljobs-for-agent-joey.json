@@ -1,0 +1,13 @@
+{
+  "slug": "alljobs-for-agent-joey",
+  "name": "AllJobs for Agent Joey",
+  "type": "code",
+  "work_modes": [
+    "implementation"
+  ],
+  "execution_locations": [],
+  "git_remote": "github.com/agentjoey/alljobs",
+  "git_branch": "main",
+  "trusted_path": "/Users/xtation/AgentWorks/GPT_Workspace/alljobs",
+  "archived": false
+}

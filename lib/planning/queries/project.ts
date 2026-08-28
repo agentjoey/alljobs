@@ -5,6 +5,8 @@ import type {
   RoadmapItem,
   Task
 } from "../domain/types";
+import { loadControlHostConfig } from "../config";
+import { validateProjectRelations } from "../domain/relations";
 import { NativePlanningStore } from "../native/store";
 import type { SourceProvenance } from "../providers/contracts";
 import { getCachedProjection } from "../providers/refresh";
@@ -27,6 +29,21 @@ export interface ProjectDetailView {
   provenance: SourceProvenance[];
   metrics: ProjectDetailMetrics;
   digest: string;
+}
+
+/**
+ * Resolves where the refresh worker's projections live. Web callers pass no
+ * options, so fall back to the control-host config; if it is missing the
+ * projection simply stays null instead of throwing.
+ */
+function resolveCacheDir(options: { root?: string; cacheDir?: string }): string | undefined {
+  if (options.cacheDir) return options.cacheDir;
+  if (options.root) return `${options.root}/cache`;
+  try {
+    return loadControlHostConfig().cacheDir;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getProjectDetail(
@@ -58,7 +75,7 @@ export async function getProjectDetail(
     });
   } else {
     // Code project: load cached projection
-    const cacheDir = options.cacheDir || (options.root ? `${options.root}/cache` : undefined);
+    const cacheDir = resolveCacheDir(options);
     if (cacheDir) {
       projection = await getCachedProjection(slug, cacheDir);
       if (projection) {
@@ -72,6 +89,22 @@ export async function getProjectDetail(
 
   // Combine tasks
   const allTasks = [...nativeTasks];
+
+  // Native roadmap/tasks never went through the git provider's relation
+  // validation; run it here and merge (deduped) issues into the detail result
+  const relationResult = validateProjectRelations({
+    project,
+    roadmapItems: roadmap,
+    backlogItems: backlog,
+    tasks: allTasks,
+    sourcePath: project.type === "business" ? `data/roadmaps/${slug}.md` : "native"
+  });
+  for (const issue of relationResult.issues) {
+    const duplicate = issues.some(
+      i => i.code === issue.code && i.objectId === issue.objectId && i.field === issue.field
+    );
+    if (!duplicate) issues.push(issue);
+  }
 
   const attention = deriveAttentionItems({
     project: slug,

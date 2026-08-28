@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-08-28 by Antigravity
+Last Updated:   2026-08-28 by Antigravity; 同日 Kimi Code 完成全量 code review + 修复发布（fbe7f46，见 `.agent/frontend-design/code-review-2026-08-28.md`）
 
 ## Current decision
 

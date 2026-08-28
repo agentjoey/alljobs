@@ -86,4 +86,41 @@ describe("inspectCandidate", () => {
 
     expect(proposal.blockers.some(b => b.code === "UNTRUSTED_CODE_ROOT")).toBe(true);
   });
+
+  it("blocks unusable git_remote formats at inspect time", async () => {
+    const store = new NativePlanningStore(tempHome);
+    const config: ControlHostConfig = {
+      trustedCodeRoots: [tempRoot],
+      refreshIntervalSeconds: 300
+    };
+
+    const base = {
+      slug: "my-code",
+      name: "My Code",
+      type: "code" as const,
+      workModes: ["implementation" as const],
+      candidatePath: tempRepo,
+      config,
+      store,
+      gitRunner: runner
+    };
+
+    // Bare hostname without scheme — the production data bug
+    const bare = await inspectCandidate({ ...base, gitRemote: "github.com/agentjoey/alljobs" });
+    expect(bare.blockers.some(b => b.code === "INVALID_GIT_REMOTE")).toBe(true);
+
+    // Leading dash could be parsed as a git option downstream
+    const dashed = await inspectCandidate({ ...base, gitRemote: "-upload-pack=/bin/sh" });
+    expect(dashed.blockers.some(b => b.code === "INVALID_GIT_REMOTE")).toBe(true);
+
+    // Supported forms pass
+    for (const gitRemote of [
+      "https://github.com/agentjoey/alljobs.git",
+      "ssh://git@github.com/agentjoey/alljobs.git",
+      "git@github.com:agentjoey/alljobs.git"
+    ]) {
+      const ok = await inspectCandidate({ ...base, gitRemote });
+      expect(ok.blockers).toEqual([]);
+    }
+  });
 });

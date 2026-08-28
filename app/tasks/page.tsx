@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { TaskList } from "@/components/planning/task-list";
 import { getUniversalTasks } from "@/lib/planning/queries/tasks";
+
+export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
   const tasks = await getUniversalTasks();

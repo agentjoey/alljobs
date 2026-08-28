@@ -44,10 +44,10 @@ export function ProjectDetail({
   return (
     <div>
       {/* Project Header */}
-      <div className="view-header" style={{ alignItems: "center" }}>
+      <div className="view-header view-header--center">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-            <span className={`badge ${isCode ? "badge--p1" : "badge--active"}`}>
+            <span className={`badge ${isCode ? "badge--type" : "badge--active"}`}>
               {project.type.toUpperCase()}
             </span>
             <span className={isCode ? "custody-badge custody-badge--repo" : "custody-badge custody-badge--native"}>
@@ -63,7 +63,7 @@ export function ProjectDetail({
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="view-header__actions">
           {isCode && (
             <button
               type="button"
@@ -97,87 +97,62 @@ export function ProjectDetail({
 
       {/* Tabs Navigation */}
       <div
+        role="tablist"
+        aria-label="Project sections"
         style={{
           display: "flex",
           borderBottom: "1px solid var(--hairline)",
           gap: "8px",
-          marginBottom: "20px"
+          marginBottom: "20px",
+          overflowX: "auto"
         }}
       >
-        <button
-          type="button"
-          className="btn"
-          style={{
-            border: 0,
-            borderBottom: activeTab === "roadmap" ? "2px solid var(--amber)" : "none",
-            borderRadius: 0,
-            background: "transparent",
-            fontWeight: activeTab === "roadmap" ? 700 : 500
-          }}
-          onClick={() => setActiveTab("roadmap")}
-        >
-          Roadmap ({roadmap.length})
-        </button>
-
-        {isCode && (
-          <button
-            type="button"
-            className="btn"
-            style={{
-              border: 0,
-              borderBottom: activeTab === "backlog" ? "2px solid var(--amber)" : "none",
-              borderRadius: 0,
-              background: "transparent",
-              fontWeight: activeTab === "backlog" ? 700 : 500
-            }}
-            onClick={() => setActiveTab("backlog")}
-          >
-            Backlog ({backlog.length})
-          </button>
-        )}
-
-        <button
-          type="button"
-          className="btn"
-          style={{
-            border: 0,
-            borderBottom: activeTab === "tasks" ? "2px solid var(--amber)" : "none",
-            borderRadius: 0,
-            background: "transparent",
-            fontWeight: activeTab === "tasks" ? 700 : 500
-          }}
-          onClick={() => setActiveTab("tasks")}
-        >
-          Tasks ({tasks.length})
-        </button>
-
-        <button
-          type="button"
-          className="btn"
-          style={{
-            border: 0,
-            borderBottom: activeTab === "provenance" ? "2px solid var(--amber)" : "none",
-            borderRadius: 0,
-            background: "transparent",
-            fontWeight: activeTab === "provenance" ? 700 : 500
-          }}
-          onClick={() => setActiveTab("provenance")}
-        >
-          Provenance ({provenance.length})
-        </button>
+        {(
+          [
+            { key: "roadmap", label: `Roadmap (${roadmap.length})`, show: true },
+            { key: "backlog", label: `Backlog (${backlog.length})`, show: isCode },
+            { key: "tasks", label: `Tasks (${tasks.length})`, show: true },
+            { key: "provenance", label: `Provenance (${provenance.length})`, show: true }
+          ] as const
+        )
+          .filter(tab => tab.show)
+          .map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              id={`tab-${tab.key}`}
+              aria-selected={activeTab === tab.key}
+              aria-controls={`tabpanel-${tab.key}`}
+              className="btn"
+              style={{
+                border: 0,
+                borderBottom: activeTab === tab.key ? "2px solid var(--amber)" : "none",
+                borderRadius: 0,
+                background: "transparent",
+                fontWeight: activeTab === tab.key ? 700 : 500,
+                whiteSpace: "nowrap"
+              }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
       </div>
 
       {/* Active Tab View */}
-      {activeTab === "roadmap" && <RoadmapView items={roadmap} isCodeProject={isCode} />}
-      {activeTab === "backlog" && isCode && (
-        <BacklogView
-          items={backlog}
-          projectSlug={project.slug}
-          onCreateTaskForBacklog={handleCreateTaskForBacklog}
-        />
-      )}
-      {activeTab === "tasks" && <TaskList tasks={tasks} filterProject={project.slug} />}
-      {activeTab === "provenance" && <ProvenancePanel provenance={provenance} />}
+      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        {activeTab === "roadmap" && <RoadmapView items={roadmap} isCodeProject={isCode} />}
+        {activeTab === "backlog" && isCode && (
+          <BacklogView
+            items={backlog}
+            projectSlug={project.slug}
+            onCreateTaskForBacklog={handleCreateTaskForBacklog}
+          />
+        )}
+        {activeTab === "tasks" && <TaskList tasks={tasks} filterProject={project.slug} digest={detail.digest} />}
+        {activeTab === "provenance" && <ProvenancePanel provenance={provenance} />}
+      </div>
 
       {/* Task Creation Modal */}
       {showTaskModal && (

@@ -77,6 +77,22 @@ describe("section-document", () => {
     expect(updated).toContain("Some leading documentation and instructions.");
   });
 
+  it("replaces a section in CRLF documents without corrupting other sections", () => {
+    const crlfDoc = sampleDoc.replace(/\n/g, "\r\n");
+    const replacement = `## item-1: Updated First Item\n\n\`\`\`yaml alljobs\nid: item-1\nstatus: done\norder: 10\n\`\`\`\n\nUpdated body.`;
+    const updated = replaceSection(crlfDoc, "item-1", replacement);
+
+    const reparsed = parseSectionDocument(updated, "test-crlf.md");
+    expect(reparsed.issues).toEqual([]);
+    expect(reparsed.sections.length).toBe(2);
+    expect(reparsed.sections[0].id).toBe("item-1");
+    expect(reparsed.sections[0].body).toBe("Updated body.");
+    // Second section must survive byte-for-byte (no "ody one." style drift)
+    expect(reparsed.sections[1].id).toBe("item-2");
+    expect(reparsed.sections[1].body).toBe("Body text for second item.");
+    expect(updated).toContain("Some leading documentation and instructions.");
+  });
+
   it("appends a section cleanly", () => {
     const newSection = `## item-3: Third Item\n\n\`\`\`yaml alljobs\nid: item-3\nstatus: planned\n\`\`\``;
     const updated = appendSection(sampleDoc, newSection);

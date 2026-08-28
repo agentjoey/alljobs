@@ -1,7 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getNativeTasksFilePath, getProjectFilePath } from "../paths";
 import { NativePlanningStore } from "./store";
 
 describe("NativePlanningStore", () => {
@@ -145,5 +146,80 @@ describe("NativePlanningStore", () => {
     expect(codeResult.ok).toBe(false);
     if (codeResult.ok) return;
     expect(codeResult.code).toBe("READ_ONLY_SOURCE");
+  });
+
+  it("rejects createTask when a malformed section already carries the id (M2)", async () => {
+    await store.createProject({
+      slug: "sea-launch",
+      name: "SEA Launch",
+      type: "business",
+      work_modes: ["operations"],
+      execution_locations: [],
+      archived: false
+    });
+
+    // Two schema-invalid sections (missing `status`) sharing the same id:
+    // both are dropped from parsed.valid, leaving only parse issues behind.
+    const filePath = getNativeTasksFilePath("sea-launch", testRoot);
+    await writeFile(
+      filePath,
+      [
+        "# Tasks",
+        "",
+        "## dup-id: First Broken",
+        "",
+        "```yaml alljobs",
+        "id: dup-id",
+        "project: sea-launch",
+        "```",
+        "",
+        "## dup-id: Second Broken",
+        "",
+        "```yaml alljobs",
+        "id: dup-id",
+        "project: sea-launch",
+        "```",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const { tasks, issues } = await store.readTasks("sea-launch");
+    expect(tasks).toEqual([]);
+    expect(issues.some(i => i.code === "INVALID_TASK_SCHEMA")).toBe(true);
+
+    const result = await store.createTask("sea-launch", {
+      id: "dup-id",
+      title: "Fresh Task",
+      project: "sea-launch",
+      status: "todo",
+      work_mode: "operations",
+      source: { provider: "native" }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("VALIDATION_ERROR");
+    expect(result.message).toContain("already exists");
+
+    // And nothing was appended
+    const after = await store.readTasks("sea-launch");
+    expect(after.tasks).toEqual([]);
+  });
+
+  it("throws on corrupted project registry instead of returning null (L2)", async () => {
+    await store.createProject({
+      slug: "sea-launch",
+      name: "SEA Launch",
+      type: "business",
+      work_modes: ["operations"],
+      execution_locations: [],
+      archived: false
+    });
+
+    await writeFile(getProjectFilePath("sea-launch", testRoot), "{ not json", "utf8");
+
+    await expect(store.getProject("sea-launch")).rejects.toThrowError(/corrupted/);
+    await expect(store.getProject("missing-project")).resolves.toBeNull();
   });
 });

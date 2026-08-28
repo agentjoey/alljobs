@@ -42,9 +42,13 @@ async function main() {
     process.exit(0);
   }
 
-  // Continuous loop
-  await cycle();
-  setInterval(cycle, paths.config.refreshIntervalSeconds * 1000);
+  // Continuous loop: schedule the next cycle only after the current one
+  // completes, so slow cycles can never overlap (setInterval would)
+  async function loop(): Promise<void> {
+    await cycle();
+    setTimeout(loop, paths.config.refreshIntervalSeconds * 1000);
+  }
+  await loop();
 }
 
 main().catch(err => {

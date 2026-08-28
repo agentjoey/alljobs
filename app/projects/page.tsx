@@ -2,6 +2,8 @@ import { ProjectList } from "@/components/planning/project-list";
 import { NativePlanningStore } from "@/lib/planning/native/store";
 import { getProjectDetail, type ProjectDetailView } from "@/lib/planning/queries/project";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProjectsPage() {
   const store = new NativePlanningStore();
   const rawProjects = await store.listProjects();

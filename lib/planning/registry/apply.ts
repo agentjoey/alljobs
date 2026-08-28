@@ -7,8 +7,9 @@ import {
   getNativeRoadmapFilePath,
   getNativeTasksFilePath
 } from "../paths";
+import { ProjectLockError, withProjectLock } from "../native/lock";
 import type { NativePlanningStore, MutationResult } from "../native/store";
-import type { GitRunner } from "../providers/git-runner";
+import type { GitResult, GitRunner } from "../providers/git-runner";
 import { inspectCandidate, type InspectCandidateInput } from "./inspect";
 import type { RegistrationProposal } from "./proposal";
 
@@ -61,19 +62,46 @@ export async function applyRegistration(
     return createResult;
   }
 
-  // 3. For code projects, stage bare mirror
+  // Anything failing after this point rolls back the registry entry
+  // (best-effort) so registration stays all-or-nothing.
+  const rollback = async () => {
+    try {
+      await store.removeProject(project.slug);
+    } catch {
+      // Best-effort compensation
+    }
+  };
+
+  // 3. For code projects, stage bare mirror — serialized with the refresh
+  // worker via the same per-project lock (same slug + homeDir namespace)
   if (project.type === "code") {
     const mirrorPath = resolve(paths.mirrorsDir, `${project.slug}.git`);
     const source = project.git_remote || project.trusted_path;
     if (source && !existsSync(mirrorPath)) {
-      const cloneRes = await gitRunner.run([
-        "clone",
-        "--bare",
-        "--no-checkout",
-        source,
-        mirrorPath
-      ]);
+      let cloneRes: GitResult;
+      try {
+        cloneRes = await withProjectLock(
+          project.slug,
+          () =>
+            gitRunner.run([
+              "clone",
+              "--bare",
+              "--no-checkout",
+              "--",
+              source,
+              mirrorPath
+            ]),
+          paths.homeDir
+        );
+      } catch (err) {
+        if (err instanceof ProjectLockError) {
+          await rollback();
+          return { ok: false, code: "LOCKED", message: err.message };
+        }
+        throw err;
+      }
       if (cloneRes.exitCode !== 0) {
+        await rollback();
         return {
           ok: false,
           code: "FILESYSTEM_ERROR",
@@ -82,15 +110,26 @@ export async function applyRegistration(
       }
     }
   } else {
-    // 4. For business projects, initialize native files if missing
-    const roadmapPath = getNativeRoadmapFilePath(project.slug, paths.homeDir);
-    if (!existsSync(roadmapPath)) {
-      await writeFile(roadmapPath, `# Roadmap — ${project.name}\n\n`, "utf8");
-    }
+    // 4. For business projects, initialize native files under the SAME data
+    // root the store reads from (not the control-host home)
+    const dataRoot = store.root;
+    try {
+      const roadmapPath = getNativeRoadmapFilePath(project.slug, dataRoot);
+      if (!existsSync(roadmapPath)) {
+        await writeFile(roadmapPath, `# Roadmap — ${project.name}\n\n`, "utf8");
+      }
 
-    const tasksPath = getNativeTasksFilePath(project.slug, paths.homeDir);
-    if (!existsSync(tasksPath)) {
-      await writeFile(tasksPath, `# Tasks — ${project.name}\n\n`, "utf8");
+      const tasksPath = getNativeTasksFilePath(project.slug, dataRoot);
+      if (!existsSync(tasksPath)) {
+        await writeFile(tasksPath, `# Tasks — ${project.name}\n\n`, "utf8");
+      }
+    } catch (err: any) {
+      await rollback();
+      return {
+        ok: false,
+        code: "FILESYSTEM_ERROR",
+        message: `Failed to initialize native planning files: ${err.message}`
+      };
     }
   }
 

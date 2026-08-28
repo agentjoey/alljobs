@@ -1,6 +1,17 @@
 import YAML from "yaml";
 import type { BacklogItem, RoadmapItem, Task } from "../domain/types";
 
+/**
+ * Free-text bodies are appended after the yaml fence; a line starting with
+ * `## ` or a code fence would let a body inject new sections or fake
+ * metadata blocks into the document.
+ */
+function assertSafeBody(body: string, label: string): void {
+  if (/^##\s/m.test(body) || /^```/m.test(body)) {
+    throw new Error(`${label} must not contain markdown section headings or code fences`);
+  }
+}
+
 export function renderRoadmapItem(item: RoadmapItem): string {
   const metadata: Record<string, unknown> = {
     id: item.id,
@@ -11,6 +22,8 @@ export function renderRoadmapItem(item: RoadmapItem): string {
   if (item.focus) metadata.focus = item.focus;
   if (item.start) metadata.start = item.start;
   if (item.target) metadata.target = item.target;
+
+  if (item.summary) assertSafeBody(item.summary, "RoadmapItem summary");
 
   const yamlStr = YAML.stringify(metadata).trim();
   const summaryStr = item.summary ? `\n\n${item.summary.trim()}` : "";
@@ -31,6 +44,8 @@ export function renderBacklogItem(item: BacklogItem): string {
     metadata.dependencies = item.dependencies;
   }
   if (item.done_when) metadata.done_when = item.done_when;
+
+  if (item.body) assertSafeBody(item.body, "BacklogItem body");
 
   const yamlStr = YAML.stringify(metadata).trim();
   const bodyStr = item.body ? `\n\n${item.body.trim()}` : "";

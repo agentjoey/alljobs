@@ -58,6 +58,33 @@ body {
   min-height: 100vh;
 }
 
+/* Global focus visibility — component-specific focus styles with higher
+   specificity (e.g. .universal-search input:focus) still win. */
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Skip link: visually hidden until keyboard focus */
+.skip-link {
+  position: absolute;
+  top: -48px;
+  left: 16px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: top 0.15s var(--ease);
+}
+
+.skip-link:focus-visible {
+  top: 8px;
+}
+
 /* Header */
 .app-header {
   height: 58px;
@@ -84,6 +111,12 @@ body {
   font-size: 17px;
   letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand svg {
+  flex-shrink: 0;
+  display: block;
 }
 
 .primary-nav {
@@ -175,18 +208,84 @@ body {
   pointer-events: none;
 }
 
-/* Status Strip */
-.status-strip {
-  height: 34px;
-  background: var(--amber-soft);
-  border-bottom: 1px solid var(--amber-border);
-  color: var(--amber-ink);
+/* Search Results Dropdown */
+.search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(22, 20, 14, 0.14);
+  padding: 6px;
+}
+
+.search-results__hint {
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.search-results__group + .search-results__group {
+  margin-top: 4px;
+  border-top: 1px solid var(--hairline-faint);
+  padding-top: 4px;
+}
+
+.search-results__heading {
+  padding: 4px 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.search-results__item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.search-results__item:hover,
+.search-results__item:focus-visible {
+  background: var(--amber-soft);
+}
+
+.search-results__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.search-results__meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+/* Status Strip — solid amber provenance bar per DESIGN.md status-strip */
+.status-strip {
+  min-height: 32px;
+  background: var(--amber);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 6px 16px;
 }
 
 .status-strip__segment {
@@ -267,6 +366,32 @@ body {
   color: var(--ink-faint);
 }
 
+.badge--todo {
+  background: var(--paper-recessed);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-muted);
+}
+
+.badge--doing {
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-border);
+  color: #7a4f00;
+}
+
+.badge--cancelled {
+  background: var(--paper-recessed);
+  border: 1px solid var(--hairline);
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+/* Neutral project-type badge (type is not a priority) */
+.badge--type {
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-muted);
+}
+
 /* Custody Hatches */
 .custody-badge {
   display: inline-flex;
@@ -292,6 +417,12 @@ body {
   color: var(--amber-ink);
 }
 
+.custody-badge--mixed {
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-muted);
+}
+
 /* Main Layout */
 .main-content {
   max-width: 1280px;
@@ -305,6 +436,17 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.view-header__actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Desktop-only vertical centering; the ≤720px rule below re-stretches. */
+.view-header--center {
+  align-items: center;
 }
 
 .view-title {
@@ -487,6 +629,70 @@ body {
   background: var(--amber-hover);
 }
 
+@media (max-width: 720px) {
+  /* View headers stack; action buttons become full-width 44px targets */
+  .view-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .view-header .btn,
+  .view-header__actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  .view-header__actions {
+    flex-direction: column;
+  }
+
+  /* Ledger tables recompose into stacked multi-line cards (no h-scroll) */
+  .ledger-table {
+    display: block;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .ledger-table thead {
+    display: none;
+  }
+  .ledger-table tbody {
+    display: block;
+  }
+  .ledger-table tr {
+    display: block;
+    background: var(--paper-raised);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    padding: 4px 0;
+    box-shadow: 0 1px 2px rgba(22, 20, 14, 0.04);
+  }
+  .ledger-table td {
+    display: block;
+    width: 100%;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--hairline-faint);
+    overflow-wrap: anywhere;
+  }
+  .ledger-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+  }
+  .ledger-table tr td:last-child {
+    border-bottom: 0;
+  }
+  .ledger-table select,
+  .ledger-table .btn {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 900px) {
   .metrics-row {
     grid-template-columns: repeat(2, 1fr);
@@ -516,14 +722,24 @@ body {
     padding-bottom: 2px;
   }
   .status-strip {
-    height: auto;
     padding: 6px 12px;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    font-size: 11px;
+    font-size: 10px;
   }
   .main-content {
     padding: 16px 12px 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

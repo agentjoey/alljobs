@@ -1,3 +1,4 @@
+import Link from "next/link";
 import React from "react";
 import type { ProofIssue } from "@/lib/planning/domain/types";
 
@@ -55,9 +56,9 @@ export function StatePanel({
       )}
 
       {actionText && actionHref && (
-        <a href={actionHref} className="btn btn--primary" style={{ marginTop: "12px" }}>
+        <Link href={actionHref} className="btn btn--primary" style={{ marginTop: "12px" }}>
           {actionText}
-        </a>
+        </Link>
       )}
     </div>
   );

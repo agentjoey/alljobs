@@ -16,11 +16,12 @@ import {
   getNativeRoadmapFilePath,
   getNativeTasksFilePath,
   getProjectFilePath,
-  getProjectsDir
+  getProjectsDir,
+  resolveDataRoot
 } from "../paths";
 import { recordActivity } from "./activity";
 import { computeDigest } from "./digest";
-import { withProjectLock } from "./lock";
+import { withProjectLockGuard } from "./lock";
 
 export type MutationResult<T> =
   | { ok: true; value: T; digest: string }
@@ -38,7 +39,7 @@ export type MutationResult<T> =
       issues?: ProofIssue[];
     };
 
-async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+export async function atomicWriteFile(filePath: string, content: string): Promise<void> {
   const tmpPath = `${filePath}.tmp.${randomUUID()}`;
   try {
     await writeFile(tmpPath, content, "utf8");
@@ -53,8 +54,29 @@ async function atomicWriteFile(filePath: string, content: string): Promise<void>
   }
 }
 
+/**
+ * Collects ids from valid items AND from sections dropped at parse time
+ * (their ids surface as issue.objectId), so a malformed section carrying a
+ * duplicate id cannot be silently shadowed by a new entry.
+ */
+function collectExistingIds(parsed: {
+  valid: { id: string }[];
+  issues: ProofIssue[];
+}): Set<string> {
+  const ids = new Set(parsed.valid.map(item => item.id));
+  for (const issue of parsed.issues) {
+    if (issue.objectId) ids.add(issue.objectId);
+  }
+  return ids;
+}
+
 export class NativePlanningStore {
   constructor(private readonly customRoot?: string) {}
+
+  /** Resolved data root backing this store (see resolveDataRoot). */
+  get root(): string {
+    return resolveDataRoot(this.customRoot);
+  }
 
   // -------------------------------------------------------------
   // Project Registry
@@ -83,7 +105,7 @@ export class NativePlanningStore {
       };
     }
 
-    return withProjectLock(
+    return withProjectLockGuard(
       parsed.slug,
       async () => {
         const jsonContent = JSON.stringify(parsed, null, 2);
@@ -113,15 +135,28 @@ export class NativePlanningStore {
     );
   }
 
+  /**
+   * Removes a project registry entry. Best-effort compensation for
+   * failed registration flows; missing files are ignored.
+   */
+  async removeProject(slug: string): Promise<void> {
+    const filePath = getProjectFilePath(slug, this.customRoot);
+    try {
+      await unlink(filePath);
+    } catch (err: any) {
+      if (err.code !== "ENOENT") throw err;
+    }
+  }
+
   async getProject(slug: string): Promise<ProjectRegistryEntry | null> {
     const filePath = getProjectFilePath(slug, this.customRoot);
     if (!existsSync(filePath)) return null;
 
+    const content = await readFile(filePath, "utf8");
     try {
-      const content = await readFile(filePath, "utf8");
       return parseProjectRegistry(JSON.parse(content));
-    } catch {
-      return null;
+    } catch (err: any) {
+      throw new Error(`Project registry "${slug}" at ${filePath} is corrupted: ${err.message}`);
     }
   }
 
@@ -187,7 +222,7 @@ export class NativePlanningStore {
       return { ok: false, code: "VALIDATION_ERROR", message: err.message };
     }
 
-    return withProjectLock(
+    return withProjectLockGuard(
       slug,
       async () => {
         const filePath = getNativeTasksFilePath(slug, this.customRoot);
@@ -195,9 +230,11 @@ export class NativePlanningStore {
           ? await readFile(filePath, "utf8")
           : `# Tasks — ${project.name}\n`;
 
-        // Check ID uniqueness
+        // Check ID uniqueness against valid tasks AND sections dropped at
+        // parse time (their ids surface as issue.objectId), so a malformed
+        // duplicate section cannot make a new task silently invisible.
         const parsed = parseTasksDocument(existingContent, filePath, slug);
-        if (parsed.valid.some(t => t.id === task.id)) {
+        if (collectExistingIds(parsed).has(task.id)) {
           return {
             ok: false,
             code: "VALIDATION_ERROR",
@@ -253,7 +290,7 @@ export class NativePlanningStore {
       };
     }
 
-    return withProjectLock(
+    return withProjectLockGuard(
       slug,
       async () => {
         const filePath = getNativeTasksFilePath(slug, this.customRoot);
@@ -372,7 +409,7 @@ export class NativePlanningStore {
       return { ok: false, code: "VALIDATION_ERROR", message: err.message };
     }
 
-    return withProjectLock(
+    return withProjectLockGuard(
       slug,
       async () => {
         const filePath = getNativeRoadmapFilePath(slug, this.customRoot);
@@ -381,7 +418,7 @@ export class NativePlanningStore {
           : `# Roadmap — ${project.name}\n`;
 
         const parsed = parseRoadmapDocument(existingContent, filePath, "milestone");
-        if (parsed.valid.some(i => i.id === item.id)) {
+        if (collectExistingIds(parsed).has(item.id)) {
           return {
             ok: false,
             code: "VALIDATION_ERROR",
@@ -389,8 +426,13 @@ export class NativePlanningStore {
           };
         }
 
-        const rendered = renderRoadmapItem(item);
-        const newContent = appendSection(existingContent, rendered);
+        let newContent: string;
+        try {
+          const rendered = renderRoadmapItem(item);
+          newContent = appendSection(existingContent, rendered);
+        } catch (err: any) {
+          return { ok: false, code: "VALIDATION_ERROR", message: err.message };
+        }
 
         try {
           await atomicWriteFile(filePath, newContent);

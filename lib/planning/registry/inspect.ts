@@ -88,6 +88,23 @@ export async function inspectCandidate(
     });
   }
 
+  // 2b. git_remote must be a usable remote URL — bare hostnames like
+  // "github.com/org/repo" fail every clone cycle, and leading "-" values
+  // could be parsed as git options
+  if (gitRemote) {
+    const trimmedRemote = gitRemote.trim();
+    const hasSupportedForm =
+      trimmedRemote.startsWith("https://") ||
+      trimmedRemote.startsWith("ssh://") ||
+      trimmedRemote.startsWith("git@");
+    if (!hasSupportedForm || trimmedRemote.startsWith("-")) {
+      blockers.push({
+        code: "INVALID_GIT_REMOTE",
+        message: `git_remote "${gitRemote}" is not a supported remote URL (expected https://, ssh://, or git@... form)`
+      });
+    }
+  }
+
   if (type === "code") {
     // 3. Trusted root containment for code projects
     if (!candidatePath && !gitRemote) {
@@ -112,13 +129,15 @@ export async function inspectCandidate(
 
     // 4. Read-only Git Inspection
     if (resolvedPath && existsSync(resolvedPath)) {
-      const revRes = await gitRunner.run(["rev-parse", gitBranch], { cwd: resolvedPath });
+      // `--end-of-options` keeps user-influenced revisions from being parsed
+      // as git options (plain `--` would switch the parser to pathspec mode)
+      const revRes = await gitRunner.run(["rev-parse", "--verify", "--end-of-options", gitBranch], { cwd: resolvedPath });
       if (revRes.exitCode === 0) {
         inspectedRevision = revRes.stdout.trim();
 
         // Check for docs/ROADMAP.md
         const roadmapRes = await gitRunner.run(
-          ["show", `${gitBranch}:docs/ROADMAP.md`],
+          ["show", "--end-of-options", `${gitBranch}:docs/ROADMAP.md`],
           { cwd: resolvedPath }
         );
         if (roadmapRes.exitCode === 0) {
@@ -132,7 +151,7 @@ export async function inspectCandidate(
 
         // Check for docs/BACKLOG.md
         const backlogRes = await gitRunner.run(
-          ["show", `${gitBranch}:docs/BACKLOG.md`],
+          ["show", "--end-of-options", `${gitBranch}:docs/BACKLOG.md`],
           { cwd: resolvedPath }
         );
         if (backlogRes.exitCode === 0) {

@@ -50,8 +50,9 @@ export class GitMarkdownProvider implements PlanningProvider {
       };
     }
 
-    // Get current revision commit hash
-    const revResult = await this.gitRunner.run(["rev-parse", ref], { cwd });
+    // Get current revision commit hash (`--end-of-options`: ref may be
+    // user-influenced and must not be parsed as a git option)
+    const revResult = await this.gitRunner.run(["rev-parse", "--verify", "--end-of-options", ref], { cwd });
     const revision = revResult.exitCode === 0 ? revResult.stdout.trim() : "unknown";
 
     if (revResult.exitCode !== 0) {
@@ -81,7 +82,7 @@ export class GitMarkdownProvider implements PlanningProvider {
     // Read docs/ROADMAP.md from git tree
     let roadmapItems: RoadmapItem[] = [];
     const roadmapResult = await this.gitRunner.run(
-      ["show", `${ref}:docs/ROADMAP.md`],
+      ["show", "--end-of-options", `${ref}:docs/ROADMAP.md`],
       { cwd }
     );
 
@@ -111,7 +112,7 @@ export class GitMarkdownProvider implements PlanningProvider {
     // Read docs/BACKLOG.md from git tree
     let backlogItems: BacklogItem[] = [];
     const backlogResult = await this.gitRunner.run(
-      ["show", `${ref}:docs/BACKLOG.md`],
+      ["show", "--end-of-options", `${ref}:docs/BACKLOG.md`],
       { cwd }
     );
 

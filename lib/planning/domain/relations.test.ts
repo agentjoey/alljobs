@@ -138,4 +138,22 @@ describe("validateProjectRelations", () => {
     expect(result.issues.some(i => i.code === "MISSING_TASK_BACKLOG_TARGET")).toBe(true);
     expect(result.issues.some(i => i.code === "MISSING_TASK_ROADMAP_TARGET")).toBe(true);
   });
+
+  it("filters valid objects by (collection, id), not id alone (L4)", () => {
+    const result = validateProjectRelations({
+      project: codeProject,
+      roadmapItems: [{ id: "T1", title: "Phase One", kind: "phase", status: "active", order: 10 }],
+      backlogItems: [],
+      tasks: [
+        // Task issue with objectId equal to the roadmap item's id must not
+        // exclude that roadmap item from the valid set
+        { id: "T1", title: "Broken task", project: "alljobs", status: "todo", roadmap_item: "P-MISSING", source: { provider: "native" } }
+      ]
+    });
+
+    expect(result.issues.some(i => i.code === "MISSING_TASK_ROADMAP_TARGET")).toBe(true);
+    expect(result.valid[0].roadmapItems.length).toBe(1);
+    expect(result.valid[0].roadmapItems[0].id).toBe("T1");
+    expect(result.valid[0].tasks.length).toBe(0);
+  });
 });
