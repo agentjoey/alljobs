@@ -41,3 +41,20 @@ Always validate modified planning documents before committing or applying:
 ```bash
 npm run planning:skill:validate
 ```
+
+---
+
+## 4. Importing Non-Standard Backlogs
+
+Code repositories that still keep a "bullet-style" backlog (`## ` group headings,
+`### ID — Title` item headings, `- **Field**: value` bullets) can be converted to
+the canonical section format with:
+```bash
+npm run planning:convert -- <input.md> [--out <path>] [--roadmap-out <path>]
+```
+- If the input already parses as canonical, the command prints `already canonical` and exits 0.
+- Otherwise it maps legacy Status/Priority values onto the canonical enums, binds items to
+  phases via `**范围**`/`**Scope**` lists (unbound items go to a `maintenance` phase), writes
+  canonical backlog sections to `--out` (default: stdout) and roadmap sections to `--roadmap-out`.
+- The command exits non-zero if any item is unmappable; review its summary before committing
+  the result to the owning repository.
