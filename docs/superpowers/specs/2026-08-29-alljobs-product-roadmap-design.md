@@ -1,6 +1,6 @@
 # AllJobs Product Roadmap
 
-**Status:** Draft for written review; roadmap direction approved section-by-section by the Human Owner
+**Status:** Approved by the Human Owner on 2026-08-29
 **Date:** 2026-08-29
 **Scope:** Product roadmap after Planning Core V1
 **Implementation authorization:** None. Each phase requires its own approved design, plan, and release gate.
