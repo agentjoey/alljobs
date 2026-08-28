@@ -10,7 +10,17 @@ import { applyArchive, proposeArchive } from "@/lib/planning/registry/archive";
 import { inspectCandidate } from "@/lib/planning/registry/inspect";
 import type { RegistrationProposal } from "@/lib/planning/registry/proposal";
 import { applyRestore, proposeRestore } from "@/lib/planning/registry/restore";
+import { listTrustedWorkspaces, type TrustedWorkspace } from "@/lib/planning/registry/trusted-workspaces";
 import { errorResult, successResult, type ActionResult } from "./action-result";
+
+export async function listTrustedWorkspacesAction(): Promise<ActionResult<TrustedWorkspace[]>> {
+  try {
+    const paths = loadControlHostConfig();
+    return successResult(listTrustedWorkspaces(paths.config), "Trusted workspaces loaded");
+  } catch (err: unknown) {
+    return errorResult(err instanceof Error ? err.message : "Unable to load trusted workspaces", "CONFIG_ERROR");
+  }
+}
 
 export async function inspectProjectAction(
   formData: FormData

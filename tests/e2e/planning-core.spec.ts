@@ -20,7 +20,7 @@ test.describe("Planning Core UI Journeys", () => {
     // Navigate to Register via primary navigation
     await page.locator("nav.primary-nav").getByRole("link", { name: "Register" }).click();
     await expect(page).toHaveURL(/.*\/register/);
-    await expect(page.getByRole("heading", { name: "Register Project" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add Project" })).toBeVisible();
   });
 
   test("navigates to Tasks and displays status filter chips", async ({ page }) => {

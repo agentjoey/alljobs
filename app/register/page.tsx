@@ -1,25 +1,50 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
-import { applyRegistrationAction, inspectProjectAction } from "@/app/actions/projects";
+import React, { startTransition, useEffect, useState } from "react";
+import { applyRegistrationAction, inspectProjectAction, listTrustedWorkspacesAction } from "@/app/actions/projects";
+import { createSlugFieldState, updateSlugFromName, updateSlugManually } from "@/lib/planning/registry/slug";
 import type { RegistrationProposal } from "@/lib/planning/registry/proposal";
+import type { TrustedWorkspace } from "@/lib/planning/registry/trusted-workspaces";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<"form" | "proposal">("form");
-  const [slug, setSlug] = useState("");
+  const [slugField, setSlugField] = useState(createSlugFieldState);
   const [name, setName] = useState("");
   const [type, setType] = useState<"code" | "business">("code");
   const [candidatePath, setCandidatePath] = useState("");
+  const [workspaces, setWorkspaces] = useState<TrustedWorkspace[]>([]);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState<string | null>(null);
   const [gitRemote, setGitRemote] = useState("");
   const [gitBranch, setGitBranch] = useState("main");
-  const [workModes, setWorkModes] = useState<string[]>(["implementation"]);
+  const [workModes] = useState<string[]>(["implementation"]);
 
   const [proposal, setProposal] = useState<RegistrationProposal | null>(null);
   const [confirmationSlug, setConfirmationSlug] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const slug = slugField.value;
+
+  useEffect(() => {
+    let mounted = true;
+
+    startTransition(() => {
+      void listTrustedWorkspacesAction().then(result => {
+        if (!mounted) return;
+        if (result.status === "success") {
+          setWorkspaces(result.data);
+          return;
+        }
+        setWorkspaceLoadError(result.message);
+      });
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleInspect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +105,8 @@ export default function RegisterPage() {
     <div style={{ maxWidth: "680px", margin: "0 auto" }}>
       <div className="view-header">
         <div>
-          <h1 className="view-title">Register Project</h1>
-          <p className="view-subtitle">Two-phase human-gated registration: inspect candidate proposal then confirm.</p>
+          <h1 className="view-title">Add Project</h1>
+          <p className="view-subtitle">Connect a local repository or create a business project in AllJobs.</p>
         </div>
       </div>
 
@@ -106,6 +131,24 @@ export default function RegisterPage() {
         >
           <div>
             <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
+              Project Name *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. AllJobs Planning Core"
+              value={name}
+              onChange={e => {
+                const projectName = e.target.value;
+                setName(projectName);
+                setSlugField(current => updateSlugFromName(current, projectName));
+              }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline-strong)" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
               Project Slug (lowercase alphanumeric & hyphens) *
             </label>
             <input
@@ -114,21 +157,7 @@ export default function RegisterPage() {
               pattern="^[a-z0-9-]+$"
               placeholder="e.g. alljobs or sea-launch"
               value={slug}
-              onChange={e => setSlug(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline-strong)" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
-              Project Name *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. AllJobs Planning Core"
-              value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={e => setSlugField(current => updateSlugManually(current, e.target.value))}
               style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline-strong)" }}
             />
           </div>
@@ -151,15 +180,23 @@ export default function RegisterPage() {
             <>
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px" }}>
-                  Local Candidate Path (must be direct child of configured trustedCodeRoots)
+                  Repository / Workspace
                 </label>
-                <input
-                  type="text"
-                  placeholder="/Users/xtation/AgentWorks/CodeSpace/my-repo"
+                <select
                   value={candidatePath}
                   onChange={e => setCandidatePath(e.target.value)}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--hairline-strong)", fontFamily: "var(--font-mono)" }}
-                />
+                >
+                  <option value="">Choose Repository…</option>
+                  {workspaces.map(workspace => (
+                    <option key={workspace.candidatePath} value={workspace.candidatePath}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+                <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--ink-faint)" }}>
+                  {workspaceLoadError || "Only direct children of configured trusted workspaces are available."}
+                </p>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
@@ -191,7 +228,7 @@ export default function RegisterPage() {
           )}
 
           <button type="submit" className="btn btn--primary" style={{ marginTop: "8px" }} disabled={isPending}>
-            {isPending ? "Inspecting..." : "Step 1: Inspect Candidate →"}
+            {isPending ? "Checking project…" : "Review Project"}
           </button>
         </form>
       ) : (
@@ -208,7 +245,7 @@ export default function RegisterPage() {
             }}
           >
             <div style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "12px" }}>
-              <span className="badge badge--active">Step 2: Review Proposal</span>
+              <span className="badge badge--active">Step 2: Review Project</span>
               <h2 style={{ margin: "8px 0 4px", fontSize: "20px" }}>{proposal.project.name}</h2>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-faint)" }}>
                 Proposal Digest: <code>{proposal.proposalDigest}</code>
@@ -218,7 +255,7 @@ export default function RegisterPage() {
             {/* Blockers */}
             {proposal.blockers.length > 0 && (
               <div style={{ background: "var(--rust-soft)", border: "1px solid var(--rust-border)", padding: "14px", borderRadius: "var(--radius-md)" }}>
-                <strong style={{ color: "var(--rust)", fontSize: "13px" }}>Active Blockers (Cannot Register):</strong>
+                <strong style={{ color: "var(--rust)", fontSize: "13px" }}>Issues to Resolve:</strong>
                 <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "13px", color: "var(--rust)" }}>
                   {proposal.blockers.map((b, i) => (
                     <li key={i}>[{b.code}] {b.message}</li>
@@ -241,7 +278,7 @@ export default function RegisterPage() {
 
             {/* Proposed Writes */}
             <div>
-              <strong style={{ fontSize: "13px", color: "var(--ink)" }}>Proposed Local Writes:</strong>
+              <strong style={{ fontSize: "13px", color: "var(--ink)" }}>Changes AllJobs Will Make:</strong>
               <ul style={{ margin: "8px 0 0", paddingLeft: "20px", fontSize: "12.5px", fontFamily: "var(--font-mono)", color: "var(--ink-muted)" }}>
                 {proposal.writes.map((w, i) => (
                   <li key={i}>
@@ -267,7 +304,7 @@ export default function RegisterPage() {
 
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <button type="button" className="btn" onClick={() => setStep("form")}>
-                    ← Back to Edit
+                    ← Edit Details
                   </button>
                   <button
                     type="button"
@@ -275,7 +312,7 @@ export default function RegisterPage() {
                     disabled={confirmationSlug !== proposal.project.slug || isPending}
                     onClick={handleApply}
                   >
-                    {isPending ? "Registering..." : "Confirm & Apply Registration"}
+                    {isPending ? "Adding project…" : "Add Project"}
                   </button>
                 </div>
               </div>
