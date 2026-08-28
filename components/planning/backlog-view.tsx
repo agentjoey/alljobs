@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { BacklogItem } from "@/lib/planning/domain/types";
+import { InlineMarkdown, Markdown } from "./markdown";
 import { StatePanel } from "./state-panel";
 
 export function BacklogView({
@@ -69,7 +70,7 @@ export function BacklogView({
                 </span>
                 <span className={`badge ${priorityBadge}`}>{item.priority}</span>
                 <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--ink)" }}>
-                  {item.title}
+                  <InlineMarkdown text={item.title} />
                 </span>
               </div>
 
@@ -99,7 +100,7 @@ export function BacklogView({
               >
                 {item.body && (
                   <div style={{ marginBottom: "16px", fontSize: "13.5px", color: "var(--ink)", lineHeight: 1.6 }}>
-                    {item.body}
+                    <Markdown text={item.body} />
                   </div>
                 )}
 
@@ -134,7 +135,9 @@ export function BacklogView({
                 {item.done_when && (
                   <div style={{ marginBottom: "16px", fontSize: "12.5px" }}>
                     <strong style={{ color: "var(--ink)" }}>Definition of Done:</strong>
-                    <div style={{ color: "var(--ink-muted)", marginTop: "4px" }}>{item.done_when}</div>
+                    <div style={{ color: "var(--ink-muted)", marginTop: "4px" }}>
+                      <InlineMarkdown text={item.done_when} />
+                    </div>
                   </div>
                 )}
 

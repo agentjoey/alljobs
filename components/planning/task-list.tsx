@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import type { Task, TaskStatus } from "@/lib/planning/domain/types";
 import { updateTaskAction } from "@/app/actions/native-planning";
+import { InlineMarkdown } from "./markdown";
 import { StatePanel } from "./state-panel";
 
 export function TaskList({
@@ -125,8 +126,8 @@ export function TaskList({
                 </td>
                 <td data-label="Relation / Context" style={{ fontSize: "12px", color: "var(--ink-faint)" }}>
                   {t.backlog ? `Backlog: ${t.backlog}` : t.roadmap_item ? `Phase: ${t.roadmap_item}` : t.work_mode || "—"}
-                  {t.blocked_reason && <div style={{ color: "var(--rust)" }}>{t.blocked_reason}</div>}
-                  {t.waiting_on && <div style={{ color: "var(--amber-ink)" }}>Waiting: {t.waiting_on}</div>}
+                  {t.blocked_reason && <div style={{ color: "var(--rust)" }}><InlineMarkdown text={t.blocked_reason} /></div>}
+                  {t.waiting_on && <div style={{ color: "var(--amber-ink)" }}>Waiting: <InlineMarkdown text={t.waiting_on} /></div>}
                 </td>
                 <td data-label="Actions">
                   {t.source?.provider === "native" ? (

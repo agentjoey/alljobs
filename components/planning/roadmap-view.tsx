@@ -1,5 +1,6 @@
 import React from "react";
 import type { RoadmapItem } from "@/lib/planning/domain/types";
+import { InlineMarkdown, Markdown } from "./markdown";
 import { StatePanel } from "./state-panel";
 
 export function RoadmapView({
@@ -84,7 +85,7 @@ export function RoadmapView({
                       #{item.order}
                     </span>
                     <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "var(--ink)" }}>
-                      {item.title}
+                      <InlineMarkdown text={item.title} />
                     </h3>
                     {item.focus === "primary" && (
                       <span className="badge badge--active">PRIMARY FOCUS</span>
@@ -96,9 +97,9 @@ export function RoadmapView({
                 </div>
 
                 {item.summary && (
-                  <p style={{ margin: "0 0 10px", fontSize: "13.5px", color: "var(--ink-muted)", lineHeight: 1.5 }}>
-                    {item.summary}
-                  </p>
+                  <div style={{ margin: "0 0 10px", fontSize: "13.5px", color: "var(--ink-muted)", lineHeight: 1.5 }}>
+                    <Markdown text={item.summary} />
+                  </div>
                 )}
 
                 <div style={{ display: "flex", gap: "16px", fontSize: "11.5px", fontFamily: "var(--font-mono)", color: "var(--ink-faint)" }}>

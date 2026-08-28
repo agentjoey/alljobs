@@ -32,6 +32,7 @@ This skill governs how agents interact with project planning across the federate
 - **For Code Repositories**: Read [references/code-project.md](references/code-project.md)
 - **For Business / Native Projects**: Read [references/business-project.md](references/business-project.md)
 - **For Schema Specifications**: Read [references/contracts.md](references/contracts.md)
+- **To Onboard Another Repo**: Paste [references/repo-agent-prompt.md](references/repo-agent-prompt.md) into that repo's CLAUDE.md/AGENTS.md so its agents maintain `docs/ROADMAP.md` / `docs/BACKLOG.md` in canonical format.
 
 ---
 
