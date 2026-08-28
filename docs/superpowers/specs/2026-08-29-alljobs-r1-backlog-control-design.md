@@ -1,6 +1,6 @@
 # AllJobs R1 — Backlog Control Design
 
-**Status:** Draft for written review; design approved section-by-section by the Human Owner
+**Status:** Approved by the Human Owner on 2026-08-29
 **Date:** 2026-08-29
 **Parent roadmap:** `docs/superpowers/specs/2026-08-29-alljobs-product-roadmap-design.md`
 **Tier:** T3 — introduces a consequential repository write path and a new core Backlog management journey
