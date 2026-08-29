@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AllJobs — R1 Backlog Control Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#backlog-mockup">Skip mockup navigation</a>
+    <header class="app-header">
+      <a class="brand" href="#backlog-mockup" aria-label="AllJobs Planning mockup home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="M3 9h6" /></svg><span>AllJobs <span class="brand__suffix">/ Planning</span></span></a>
+      <nav class="primary-nav" aria-label="Main navigation"><a href="#backlog-mockup">Portfolio</a><a href="#backlog-mockup" aria-current="page">Projects</a><a href="#backlog-mockup">Tasks</a><a href="#backlog-mockup">Register</a><a href="#backlog-mockup">Archived</a></nav>
+      <div class="header-search"><div class="universal-search"><input type="search" aria-label="Search planning records" placeholder="Universal search (projects, tasks, backlog)..." /><kbd>⌘K</kbd></div></div>
+    </header>
+    <div class="source-strip" id="source-strip" role="status" aria-live="polite"></div>
+    <nav class="state-nav" aria-label="Mockup states">
+      <span class="state-nav__label">Rendered states</span>
+      <div class="state-nav__buttons">
+        <button data-state="unranked" type="button">Unranked</button>
+        <button data-state="editing" type="button">Editing</button>
+        <button data-state="review" type="button">One-item review</button>
+        <button data-state="renumber" type="button">Renumber review</button>
+        <button data-state="stale" type="button">Stale write</button>
+        <button data-state="invalid" type="button">Invalid local</button>
+        <button data-state="readonly" type="button">Read only</button>
+        <button data-state="cached" type="button">Cached read only</button>
+        <button data-state="loading" type="button">Loading</button>
+        <button data-state="empty" type="button">Empty</button>
+        <button data-state="applying" type="button">Applying</button>
+        <button data-state="success" type="button">Applied</button>
+        <button data-state="locked" type="button">Locked</button>
+        <button data-state="unavailable" type="button">Unavailable</button>
+        <button data-state="handoff" type="button">New-item handoff</button>
+      </div>
+      <label class="motion-toggle"><input id="reduced-motion" type="checkbox" /> Reduced motion</label>
+    </nav>
+    <main id="backlog-mockup" data-state="unranked" tabindex="-1"></main>
+    <script src="app.js"></script>
+  </body>
+</html>
