@@ -67,6 +67,37 @@ describe("domain schemas", () => {
   });
 
   describe("backlogItemSchema", () => {
+    it("accepts an optional positive integer rank while preserving legacy Backlogs", () => {
+      expect(parseBacklogItem({
+        id: "AJ-B-001",
+        title: "Ranked",
+        work_mode: "implementation",
+        phase: "phase-1",
+        status: "ready",
+        priority: "P0",
+        rank: 100
+      }).rank).toBe(100);
+
+      expect(parseBacklogItem({
+        id: "AJ-B-002",
+        title: "Legacy",
+        work_mode: "implementation",
+        phase: "phase-1",
+        status: "ready",
+        priority: "P0"
+      }).rank).toBeUndefined();
+
+      expect(() => parseBacklogItem({
+        id: "AJ-B-003",
+        title: "Invalid rank",
+        work_mode: "implementation",
+        phase: "phase-1",
+        status: "ready",
+        priority: "P0",
+        rank: 0
+      })).toThrow();
+    });
+
     it("parses implementation backlog item with phase", () => {
       const item = parseBacklogItem({
         id: "AJ-B-001",

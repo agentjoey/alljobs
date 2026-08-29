@@ -49,6 +49,7 @@ export const backlogItemSchema = z.object({
   phase: z.string().optional(),
   status: backlogStatusSchema,
   priority: prioritySchema,
+  rank: z.number().int().positive().optional(),
   owner: z.string().optional(),
   dependencies: z.array(z.string()).default([]),
   done_when: z.string().optional(),
