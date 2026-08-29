@@ -29,6 +29,7 @@ work_mode: implementation
 phase: phase-1
 status: ready
 priority: P0
+rank: 100
 owner: joey
 dependencies: []
 done_when: All parser tests pass cleanly.
@@ -36,6 +37,12 @@ done_when: All parser tests pass cleanly.
 
 Task requirements and implementation guidelines.
 ```
+
+## 2.1 Backlog ownership and ordering boundary
+
+`rank` is a positive integer and must be unique within a `phase` + `priority` lane; it defines the order after Phase and Priority. A validated local working tree takes precedence over a mirror, remote commit, or cache projection. If the local source is invalid, it remains visible and non-writable rather than falling back to older content.
+
+AllJobs may directly change only `priority` and `rank` on existing items, through an explicit proposal and Human Gate. It does not create Backlog items, change other fields, or run Git operations. New or substantive items require a repository agent to inspect the repository, choose a stable ID, verify Phase/dependencies, edit `docs/BACKLOG.md`, validate the project, and report the resulting diff and commit.
 
 ## 3. Task
 

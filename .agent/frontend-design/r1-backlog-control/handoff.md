@@ -51,3 +51,19 @@ Execute only approved Task 1 using tests first. Do not push, merge, deploy, or e
 ## Next safe action
 
 Execute only approved Task 7 after Human Owner authorization. Do not push, merge, deploy, or select a real write-back pilot.
+
+## Task 7 repository-agent handoff continuation
+
+**Workflow / task / role:** 3.3 · R1 Task 7 — non-persistent repository-agent Backlog proposal · Primary Agent
+**Tier / reason:** T3 continuation — an approved core Backlog journey gains a new-item, copy-only interaction; it has no persistence or write authority.
+**Branch / worktree / base:** `codex/r1-backlog-control` · `.worktrees/r1-backlog-control` · `015919a50cd938a28c16c018ea46fe5cc390ad8a`.
+
+- `BacklogProposalForm` collects required request facts, keeps optional planning hints explicit, and produces only Markdown text. It shows `detail.backlogControl.source` HEAD/digest facts when they are available and provides keyboard-accessible validation, a readonly output field, and copy feedback.
+- `buildRepoAgentBacklogProposal()` instructs the repository agent to inspect the current repository, choose a stable ID, verify Phase/dependencies/priority/Done When, edit `docs/BACKLOG.md`, validate it, and report the diff and commit. It explicitly says that AllJobs did not edit the repository, start an agent, or run Git.
+- Task 6 ordering controls remain unchanged. The new handoff section is composed beneath the existing Backlog view; no save action, repository mutation, AllJobs-native write, AI call, Git operation, or agent start was added.
+- Focused handoff/form tests, skill validation, typecheck, lint, `git diff --check`, Webpack production build, and the Impeccable detector were run. The normal Turbopack build was blocked by the managed environment's port-binding restriction; Webpack completed successfully. Existing lint warnings remain outside Task 7.
+- The isolated worktree has no registered `alljobs` project, so `/projects/alljobs` returns 404 under the temporary loopback build and cannot provide a truthful final rendered form screenshot. Do not fabricate project data; Task 9 final verification should use an owner-approved real, non-production source state.
+
+## Next safe action
+
+Run Task 8's isolated browser-to-filesystem tests, then include this copy-only form in Task 9's independent final review and verification. Do not push, merge, deploy, select a write-back pilot, or permit the UI to write a new Backlog item.

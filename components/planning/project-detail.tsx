@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { refreshProjectAction } from "@/app/actions/refresh";
 import type { ProjectDetailView } from "@/lib/planning/queries/project";
+import { BacklogProposalForm } from "./backlog-proposal-form";
 import { BacklogView } from "./backlog-view";
 import { NativeTaskForm } from "./native-task-form";
 import { ProvenancePanel } from "./provenance-panel";
@@ -144,12 +145,15 @@ export function ProjectDetail({
       <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "roadmap" && <RoadmapView items={roadmap} isCodeProject={isCode} />}
         {activeTab === "backlog" && isCode && (
-          <BacklogView
-            items={backlog}
-            projectSlug={project.slug}
-            control={detail.backlogControl}
-            onCreateTaskForBacklog={handleCreateTaskForBacklog}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <BacklogView
+              items={backlog}
+              projectSlug={project.slug}
+              control={detail.backlogControl}
+              onCreateTaskForBacklog={handleCreateTaskForBacklog}
+            />
+            <BacklogProposalForm projectSlug={project.slug} source={detail.backlogControl?.source} />
+          </div>
         )}
         {activeTab === "tasks" && <TaskList tasks={tasks} filterProject={project.slug} digest={detail.digest} />}
         {activeTab === "provenance" && <ProvenancePanel provenance={provenance} />}
