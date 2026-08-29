@@ -28,6 +28,22 @@ async function reviewAndApply(page: Page) {
   await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
 }
 
+async function tabUntilFocused(page: Page, target: ReturnType<Page["getByRole"]>, label: string) {
+  for (let step = 0; step < 24; step += 1) {
+    await page.keyboard.press("Tab");
+    if (await target.evaluate((element) => document.activeElement === element)) {
+      await expect(target, `${label} receives keyboard focus`).toBeFocused();
+      return;
+    }
+  }
+  const diagnostics = await page.evaluate(() => ({
+    active: document.activeElement?.outerHTML,
+    focusable: [...document.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')]
+      .map((element) => element.getAttribute("aria-label") ?? element.textContent?.trim())
+  }));
+  throw new Error(`${label} was not reachable with Tab: ${JSON.stringify(diagnostics)}`);
+}
+
 function itemSection(source: string, itemId: string) {
   const start = source.indexOf(`## ${itemId}:`);
   if (start < 0) throw new Error(`Missing fixture section ${itemId}`);
@@ -164,23 +180,32 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
 
   test("supports keyboard-only ordering", async ({ page }) => {
     resetR1Backlog("ranked");
-    await openBacklog(page);
-
+    expect(readR1Backlog()).toContain("rank: 200");
+    await page.goto("/projects/sample-code");
+    const backlogTab = page.getByRole("tab", { name: /^Backlog \(/ });
+    await tabUntilFocused(page, backlogTab, "Backlog tab");
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { name: "Backlog ledger" })).toBeVisible();
+    await expect(page.getByText("Rank 200", { exact: true })).toBeVisible();
     const manage = page.getByRole("button", { name: "Manage ordering" });
-    await manage.focus();
+    await tabUntilFocused(page, manage, "Manage ordering");
     await page.keyboard.press("Enter");
     const move = page.getByRole("button", { name: "Move AJ-B-002 up" });
-    await move.focus();
+    await tabUntilFocused(page, move, "Move Up");
     await page.keyboard.press("Enter");
     const review = page.getByRole("button", { name: "Review changes" });
-    await review.focus();
+    await tabUntilFocused(page, review, "Review changes");
     await page.keyboard.press("Enter");
     const apply = page.getByRole("button", { name: "Confirm and apply" });
-    await apply.focus();
+    await tabUntilFocused(page, page.getByRole("button", { name: "Back to draft" }), "Back to draft");
+    await page.keyboard.press("Tab");
+    await expect(apply, "Confirm and apply receives keyboard focus").toBeFocused();
     await page.keyboard.press("Enter");
 
     await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
-    await page.getByRole("button", { name: "Continue reading" }).click();
+    const continueReading = page.getByRole("button", { name: "Continue reading" });
+    await tabUntilFocused(page, continueReading, "Continue reading");
+    await page.keyboard.press("Enter");
     await expect(page.getByText("Rank 50", { exact: true })).toBeVisible();
     expect(scalar(readR1Backlog(), "AJ-B-002", "rank")).toBe("50");
   });

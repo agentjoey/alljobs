@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -7,10 +8,13 @@ import {
   rmSync,
   writeFileSync
 } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const FIXTURE_PREFIX = "alljobs-r1-e2e-";
+const FIXTURE_SENTINEL = ".alljobs-r1-e2e-fixture.json";
+const FIXTURE_TOKEN_ENV = "ALLJOBS_R1_E2E_TOKEN";
 
 const ROADMAP = `# Sample Code Roadmap
 
@@ -134,6 +138,20 @@ interface R1Fixture {
   cleanup: () => void;
 }
 
+function requireOwnedDirectory(path: string, label: string) {
+  const entry = lstatSync(path);
+  if (!entry.isDirectory() || entry.isSymbolicLink() || realpathSync(path) !== path) {
+    throw new Error(`Refusing to use unsafe R1 fixture ${label}: ${path}`);
+  }
+}
+
+function requireOwnedFile(path: string, label: string) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || realpathSync(path) !== path) {
+    throw new Error(`Refusing to use unsafe R1 fixture ${label}: ${path}`);
+  }
+}
+
 function runGit(cwd: string, args: string[]): string {
   return execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
     cwd,
@@ -160,7 +178,7 @@ function writeProject(dataDir: string, input: {
 }
 
 export function createR1Fixture(): R1Fixture {
-  if (process.env.ALLJOBS_R1_E2E_BACKLOG) {
+  if (process.env.TEST_WORKER_INDEX !== undefined) {
     const { rootDir, repositoryDir, backlogPath } = getR1FixturePaths();
     return {
       rootDir,
@@ -171,9 +189,9 @@ export function createR1Fixture(): R1Fixture {
       cleanup: () => undefined
     };
   }
-
   const temporaryParent = realpathSync(tmpdir());
   const rootDir = realpathSync(mkdtempSync(join(temporaryParent, FIXTURE_PREFIX)));
+  const token = randomUUID();
   const homeDir = join(rootDir, "home");
   const dataDir = join(rootDir, "data");
   const workspacesDir = join(rootDir, "workspaces");
@@ -194,6 +212,7 @@ export function createR1Fixture(): R1Fixture {
   ]) {
     mkdirSync(directory, { recursive: true });
   }
+  writeFileSync(join(rootDir, FIXTURE_SENTINEL), `${JSON.stringify({ token, ownerPid: process.pid })}\n`, "utf8");
 
   writeFileSync(join(homeDir, "config.json"), `${JSON.stringify({
     trustedCodeRoots: [workspacesDir],
@@ -286,22 +305,23 @@ export function createR1Fixture(): R1Fixture {
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
-    if (dirname(rootDir) !== temporaryParent || !basename(rootDir).startsWith(FIXTURE_PREFIX)) {
-      throw new Error(`Refusing to clean unexpected R1 fixture root: ${rootDir}`);
-    }
-    rmSync(rootDir, { recursive: true, force: true });
+    const owned = getR1FixturePaths();
+    if (owned.rootDir !== rootDir) throw new Error(`Refusing to clean another R1 fixture root: ${owned.rootDir}`);
+    rmSync(owned.rootDir, { recursive: true, force: true });
   };
 
-  // Playwright evaluates its config in worker processes too. Publishing the
-  // exact fixture path makes those workers reuse the server owner's fixture
-  // instead of creating a second repository that the server cannot see.
+  // The config runner owns fixture creation. Workers inherit both the exact
+  // path and an unguessable sentinel token, then re-validate every path.
   process.env.ALLJOBS_R1_E2E_BACKLOG = backlogPath;
+  process.env[FIXTURE_TOKEN_ENV] = token;
   return { rootDir, homeDir, dataDir, repositoryDir, backlogPath, cleanup };
 }
 
 export function getR1FixturePaths() {
   const configuredBacklog = process.env.ALLJOBS_R1_E2E_BACKLOG;
   if (!configuredBacklog) throw new Error("ALLJOBS_R1_E2E_BACKLOG is required for isolated R1 tests.");
+  const token = process.env[FIXTURE_TOKEN_ENV];
+  if (!token) throw new Error("ALLJOBS_R1_E2E_TOKEN is required for isolated R1 tests.");
 
   const backlogPath = resolve(configuredBacklog);
   const repositoryDir = dirname(dirname(backlogPath));
@@ -314,6 +334,19 @@ export function getR1FixturePaths() {
     !basename(rootDir).startsWith(FIXTURE_PREFIX)
   ) {
     throw new Error(`Refusing to use unexpected R1 fixture path: ${backlogPath}`);
+  }
+
+  requireOwnedDirectory(rootDir, "root");
+  requireOwnedDirectory(workspacesDir, "workspace root");
+  requireOwnedDirectory(repositoryDir, "repository");
+  requireOwnedDirectory(join(repositoryDir, "docs"), "docs directory");
+  requireOwnedFile(backlogPath, "Backlog");
+  requireOwnedFile(join(rootDir, FIXTURE_SENTINEL), "sentinel");
+  const sentinel = JSON.parse(readFileSync(join(rootDir, FIXTURE_SENTINEL), "utf8")) as { token?: string; ownerPid?: number };
+  const isOwner = sentinel.ownerPid === process.pid;
+  const isWorker = process.env.TEST_WORKER_INDEX !== undefined && sentinel.ownerPid === process.ppid;
+  if (sentinel.token !== token || (!isOwner && !isWorker)) {
+    throw new Error("Refusing to use an R1 fixture with an unowned sentinel.");
   }
 
   return { rootDir, repositoryDir, backlogPath };
