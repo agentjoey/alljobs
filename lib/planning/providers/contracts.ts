@@ -26,6 +26,23 @@ export interface ExternalProjection {
   provenance: SourceProvenance[];
 }
 
+export interface PlanningSourceState {
+  mode: "local-working-tree" | "remote-commit" | "cached";
+  writable: boolean;
+  reason?: string;
+  headRevision?: string;
+  roadmapDigest?: string;
+  backlogDigest?: string;
+  roadmapModified?: boolean;
+  backlogModified?: boolean;
+  readAt: string;
+}
+
+export interface ResolvedCodePlanning {
+  projection: ExternalProjection;
+  source: PlanningSourceState;
+}
+
 export interface PlanningProvider {
   readonly name: string;
   projectRoadmap(

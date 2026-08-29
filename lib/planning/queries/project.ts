@@ -5,11 +5,13 @@ import type {
   RoadmapItem,
   Task
 } from "../domain/types";
-import { loadControlHostConfig } from "../config";
+import { loadControlHostConfig, type ControlHostResolvedPaths } from "../config";
 import { validateProjectRelations } from "../domain/relations";
 import { NativePlanningStore } from "../native/store";
-import type { SourceProvenance } from "../providers/contracts";
+import type { PlanningSourceState, SourceProvenance } from "../providers/contracts";
+import { NodeGitRunner } from "../providers/git-runner";
 import { getCachedProjection } from "../providers/refresh";
+import { resolveCodePlanning } from "../providers/source-resolver";
 import { deriveAttentionItems, type AttentionItem } from "./attention";
 
 export interface ProjectDetailMetrics {
@@ -27,6 +29,8 @@ export interface ProjectDetailView {
   issues: ProofIssue[];
   attention: AttentionItem[];
   provenance: SourceProvenance[];
+  planningSource?: PlanningSourceState;
+  backlogDigest?: string;
   metrics: ProjectDetailMetrics;
   digest: string;
 }
@@ -60,6 +64,8 @@ export async function getProjectDetail(
   let backlog: BacklogItem[] = [];
   const issues: ProofIssue[] = [...taskIssues];
   let provenance: SourceProvenance[] = [];
+  let planningSource: PlanningSourceState | undefined;
+  let backlogDigest: string | undefined;
   let projection = null;
 
   if (project.type === "business") {
@@ -74,16 +80,33 @@ export async function getProjectDetail(
       fetchedAt: new Date().toISOString()
     });
   } else {
-    // Code project: load cached projection
-    const cacheDir = resolveCacheDir(options);
-    if (cacheDir) {
-      projection = await getCachedProjection(slug, cacheDir);
-      if (projection) {
-        roadmap = projection.roadmap;
-        backlog = projection.backlog;
-        issues.push(...projection.issues);
-        provenance = projection.provenance;
+    let resolvedPaths: ControlHostResolvedPaths | undefined;
+    try {
+      resolvedPaths = loadControlHostConfig(options.root);
+    } catch {
+      // Preserve the existing cache-only read behavior when the host config is
+      // unavailable to this caller; direct local reads always require config.
+      const cacheDir = resolveCacheDir(options);
+      if (cacheDir) {
+        projection = await getCachedProjection(slug, cacheDir);
+        if (projection) {
+          roadmap = projection.roadmap;
+          backlog = projection.backlog;
+          issues.push(...projection.issues);
+          provenance = projection.provenance;
+        }
       }
+    }
+    if (resolvedPaths) {
+      const paths = options.cacheDir ? { ...resolvedPaths, cacheDir: options.cacheDir } : resolvedPaths;
+      const resolved = await resolveCodePlanning({ project, paths, gitRunner: new NodeGitRunner() });
+      projection = resolved.projection;
+      planningSource = resolved.source;
+      backlogDigest = resolved.source.backlogDigest;
+      roadmap = projection.roadmap;
+      backlog = projection.backlog;
+      issues.push(...projection.issues);
+      provenance = projection.provenance;
     }
   }
 
@@ -125,6 +148,8 @@ export async function getProjectDetail(
     issues,
     attention,
     provenance,
+    planningSource,
+    backlogDigest,
     metrics: {
       activeTasks,
       totalBacklog: backlog.length,

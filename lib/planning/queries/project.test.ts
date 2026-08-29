@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NativePlanningStore } from "../native/store";
+import { NodeGitRunner } from "../providers/git-runner";
 import { getProjectDetail } from "./project";
 
 describe("getProjectDetail", () => {
@@ -103,6 +104,42 @@ describe("getProjectDetail", () => {
       delete process.env.ALLJOBS_DATA_ROOT;
       delete process.env.ALLJOBS_HOME;
     }
+  });
+
+  it("prefers the registered local working tree and exposes its source facts", async () => {
+    const trustedRoot = join(tempHome, "trusted");
+    const repository = join(trustedRoot, "code-proj");
+    const runner = new NodeGitRunner();
+    await mkdir(join(repository, "docs"), { recursive: true });
+    await runner.run(["init", "-b", "main"], { cwd: repository });
+    await runner.run(["config", "user.name", "Test User"], { cwd: repository });
+    await runner.run(["config", "user.email", "test@example.com"], { cwd: repository });
+    await writeFile(join(repository, "docs", "ROADMAP.md"), `# Roadmap\n\n## phase-1: Core\n\n\`\`\`yaml alljobs\nid: phase-1\nkind: phase\nstatus: active\norder: 10\n\`\`\`\n`, "utf8");
+    await writeFile(join(repository, "docs", "BACKLOG.md"), `# Backlog\n\n## AJ-B-001: Local item\n\n\`\`\`yaml alljobs\nid: AJ-B-001\nwork_mode: implementation\nphase: phase-1\nstatus: ready\npriority: P1\ndependencies: []\n\`\`\`\n`, "utf8");
+    await runner.run(["add", "docs"], { cwd: repository });
+    await runner.run(["commit", "-m", "initial planning"], { cwd: repository });
+    await writeFile(join(repository, "docs", "BACKLOG.md"), `# Backlog\n\n## AJ-B-001: Local item\n\n\`\`\`yaml alljobs\nid: AJ-B-001\nwork_mode: implementation\nphase: phase-1\nstatus: ready\npriority: P0\ndependencies: []\n\`\`\`\n`, "utf8");
+
+    await store.createProject({
+      slug: "code-proj",
+      name: "Code Project",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      trusted_path: repository,
+      archived: false
+    });
+    await writeFile(
+      join(tempHome, "config.json"),
+      JSON.stringify({ trustedCodeRoots: [trustedRoot], refreshIntervalSeconds: 300 }),
+      "utf8"
+    );
+
+    const detail = await getProjectDetail("code-proj", { root: tempHome });
+
+    expect(detail?.planningSource).toMatchObject({ mode: "local-working-tree", writable: true, backlogModified: true });
+    expect(detail?.backlogDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(detail?.backlog[0].priority).toBe("P0");
   });
 
   it("surfaces relation issues for native roadmap and tasks (M8)", async () => {
