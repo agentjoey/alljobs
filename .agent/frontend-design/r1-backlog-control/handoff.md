@@ -40,3 +40,14 @@ Execute only approved Task 1 using tests first. Do not push, merge, deploy, or e
 ## Task 5 server-action boundary
 
 - Next.js Server Actions are directly reachable POST endpoints. The R1 ordering actions therefore accept only the validated Task 1 intent union and a digest-bound proposal; they do not accept a client file path, Markdown source, or arbitrary field patch.
+
+## Task 6 UI continuation note
+
+- The approved Paper Workbench Backlog surface is now a Phase → Priority → Rank single-column card stream. History is folded; local, invalid local, remote, and cached source states stay textual and explicit.
+- Ordering remains a page-local intent until the owner selects Review changes. Keyboard and narrow layouts retain Move Up, Move Down, and Change Priority; native drag is desktop-only progressive enhancement.
+- The review panel exposes only affected priority/rank values, local modified/clean state, HEAD, and shortened complete-file/proposal digests. Applying disables duplicate submission; success refreshes the route; stale and unexpected action failures retain a recoverable error state without exposing internals.
+- Task 6 evidence: focused component tests, typecheck, lint (existing warnings only), webpack production build, and final loopback screenshots at 1440 and true CDP-emulated 390px. The current local sample has no Backlog rows, so rich-card and review journeys are covered by rendered component interaction tests; no project data was changed to fabricate a visual state.
+
+## Next safe action
+
+Execute only approved Task 7 after Human Owner authorization. Do not push, merge, deploy, or select a real write-back pilot.

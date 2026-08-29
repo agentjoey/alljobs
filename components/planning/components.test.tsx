@@ -84,11 +84,13 @@ describe("planning UI components", () => {
         custody="REPO: GIT-MIRROR"
         revision="6656480d19"
         freshness="fresh"
+        source={{ mode: "local-working-tree", writable: true, backlogModified: true, readAt: "2026-08-29T00:00:00.000Z" }}
       />
     );
 
     expect(screen.getByText("/projects/alljobs")).toBeInTheDocument();
     expect(screen.getByText("REPO: GIT-MIRROR")).toBeInTheDocument();
     expect(screen.getByText("FRESH")).toBeInTheDocument();
+    expect(screen.getByText("LOCAL WORKING TREE · MODIFIED")).toBeInTheDocument();
   });
 });

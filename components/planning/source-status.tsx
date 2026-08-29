@@ -1,4 +1,5 @@
 import React from "react";
+import type { PlanningSourceState } from "@/lib/planning/providers/contracts";
 
 export interface SourceStatusProps {
   routePath?: string;
@@ -6,6 +7,16 @@ export interface SourceStatusProps {
   revision?: string;
   digest?: string;
   freshness?: "fresh" | "stale" | "unavailable";
+  source?: PlanningSourceState;
+}
+
+export function planningSourceLabel(source: PlanningSourceState) {
+  if (source.mode === "local-working-tree") {
+    return source.writable
+      ? `LOCAL WORKING TREE · ${source.backlogModified ? "MODIFIED" : "CLEAN"}`
+      : "LOCAL SOURCE INVALID · READ ONLY";
+  }
+  return source.mode === "remote-commit" ? "REMOTE COMMIT · READ ONLY" : "CACHE SNAPSHOT · READ ONLY";
 }
 
 export function SourceStatus({
@@ -13,7 +24,8 @@ export function SourceStatus({
   custody,
   revision,
   digest,
-  freshness
+  freshness,
+  source
 }: SourceStatusProps) {
   // Only render provenance facts that are actually known; never fabricate.
   const shortId = revision && revision !== "native" && revision !== "unknown"
@@ -31,6 +43,12 @@ export function SourceStatus({
   return (
     <div className="status-strip" role="region" aria-label="Planning Source Provenance">
       <div className="status-strip__segment">
+        {source && (
+          <span className="status-strip__item">
+            <strong>SOURCE</strong> <span>{planningSourceLabel(source)}</span>
+          </span>
+        )}
+        {source && <span className="status-strip__sep">/</span>}
         <span className="status-strip__item">
           <strong>PATH</strong> {routePath ?? "—"}
         </span>

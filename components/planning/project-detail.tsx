@@ -15,7 +15,7 @@ export function ProjectDetail({
 }: {
   detail: ProjectDetailView;
 }) {
-  const { project, roadmap, backlog, tasks, issues, provenance, metrics } = detail;
+  const { project, roadmap, backlog, tasks, provenance } = detail;
   const isCode = project.type === "code";
   const [activeTab, setActiveTab] = useState<"roadmap" | "backlog" | "tasks" | "provenance">("roadmap");
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -147,6 +147,7 @@ export function ProjectDetail({
           <BacklogView
             items={backlog}
             projectSlug={project.slug}
+            control={detail.backlogControl}
             onCreateTaskForBacklog={handleCreateTaskForBacklog}
           />
         )}
