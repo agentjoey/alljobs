@@ -26,7 +26,8 @@ const INTERNAL_ERROR_MESSAGES: Record<string, string> = {
   INSPECT_ERROR: "Failed to inspect the candidate project",
   PROPOSE_ERROR: "Failed to prepare the change proposal",
   REFRESH_ERROR: "Failed to refresh project data",
-  FILESYSTEM_ERROR: "Failed to write changes to disk"
+  FILESYSTEM_ERROR: "Failed to write changes to disk",
+  WRITE_FAILED: "Failed to write changes to disk"
 };
 
 export function internalErrorResult(err: unknown, code: string): ActionResult<never> {

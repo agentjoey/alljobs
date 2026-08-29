@@ -100,6 +100,12 @@ describe("getProjectDetail", () => {
       expect(detail).not.toBeNull();
       expect(detail?.roadmap.length).toBe(1);
       expect(detail?.roadmap[0].id).toBe("phase-1");
+      expect(detail?.backlogControl).toMatchObject({
+        source: { mode: "cached", writable: false },
+        ordering: "initialized",
+        writable: false
+      });
+      expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "SOURCE_NOT_WRITABLE" }));
     } finally {
       delete process.env.ALLJOBS_DATA_ROOT;
       delete process.env.ALLJOBS_HOME;
@@ -140,6 +146,41 @@ describe("getProjectDetail", () => {
     expect(detail?.planningSource).toMatchObject({ mode: "local-working-tree", writable: true, backlogModified: true });
     expect(detail?.backlogDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(detail?.backlog[0].priority).toBe("P0");
+    expect(detail?.backlogControl).toMatchObject({
+      source: { mode: "local-working-tree", writable: true, backlogModified: true },
+      ordering: "uninitialized",
+      writable: true
+    });
+    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "ORDERING_NOT_INITIALIZED" }));
+    expect(detail?.digest).not.toBe(detail?.backlogDigest);
+  });
+
+  it("exposes an invalid local source as a non-writable Backlog control state", async () => {
+    const trustedRoot = join(tempHome, "trusted");
+    const repository = join(trustedRoot, "invalid-code-proj");
+    await mkdir(repository, { recursive: true });
+    await store.createProject({
+      slug: "invalid-code-proj",
+      name: "Invalid Code Project",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      trusted_path: repository,
+      archived: false
+    });
+    await writeFile(
+      join(tempHome, "config.json"),
+      JSON.stringify({ trustedCodeRoots: [trustedRoot], refreshIntervalSeconds: 300 }),
+      "utf8"
+    );
+
+    const detail = await getProjectDetail("invalid-code-proj", { root: tempHome });
+
+    expect(detail?.backlogControl).toMatchObject({
+      source: { mode: "local-working-tree", writable: false },
+      writable: false
+    });
+    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "PLANNING_DIRECTORY_MISSING" }));
   });
 
   it("surfaces relation issues for native roadmap and tasks (M8)", async () => {

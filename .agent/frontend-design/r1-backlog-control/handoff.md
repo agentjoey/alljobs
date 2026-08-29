@@ -36,3 +36,7 @@
 ## Next safe action
 
 Execute only approved Task 1 using tests first. Do not push, merge, deploy, or enter Task 2 without further Human Owner direction.
+
+## Task 5 server-action boundary
+
+- Next.js Server Actions are directly reachable POST endpoints. The R1 ordering actions therefore accept only the validated Task 1 intent union and a digest-bound proposal; they do not accept a client file path, Markdown source, or arbitrary field patch.
