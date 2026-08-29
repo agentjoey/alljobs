@@ -136,7 +136,7 @@ function defaultDependencies(): BacklogMutationDependencies {
   const paths = loadControlHostConfig();
   return {
     paths,
-    store: new NativePlanningStore(paths.homeDir),
+    store: new NativePlanningStore(),
     gitRunner: new NodeGitRunner()
   };
 }

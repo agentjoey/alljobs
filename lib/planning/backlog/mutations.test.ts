@@ -190,4 +190,35 @@ describe("Backlog ordering mutations", () => {
       .resolves.toMatchObject({ ok: false, code: "SOURCE_NOT_WRITABLE" });
     expect(await readFile(backlogPath, "utf8")).toBe(before);
   });
+
+  it("uses ALLJOBS_DATA_ROOT for default mutation project lookup", async () => {
+    const dataRoot = join(tempHome, "separate-data-root");
+    const isolatedStore = new NativePlanningStore(dataRoot);
+    const isolatedProject: ProjectRegistryEntry = {
+      slug: "isolated-data",
+      name: "Isolated data root",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      trusted_path: repository,
+      git_branch: "main",
+      archived: false
+    };
+    await isolatedStore.createProject(isolatedProject);
+    await writeFile(paths.configPath, `${JSON.stringify(paths.config, null, 2)}\n`, "utf8");
+
+    const previousHome = process.env.ALLJOBS_HOME;
+    const previousDataRoot = process.env.ALLJOBS_DATA_ROOT;
+    process.env.ALLJOBS_HOME = tempHome;
+    process.env.ALLJOBS_DATA_ROOT = dataRoot;
+    try {
+      await expect(proposeBacklogOrderingChange({ projectSlug: "isolated-data", intent }))
+        .resolves.toMatchObject({ ok: true });
+    } finally {
+      if (previousHome === undefined) delete process.env.ALLJOBS_HOME;
+      else process.env.ALLJOBS_HOME = previousHome;
+      if (previousDataRoot === undefined) delete process.env.ALLJOBS_DATA_ROOT;
+      else process.env.ALLJOBS_DATA_ROOT = previousDataRoot;
+    }
+  });
 });

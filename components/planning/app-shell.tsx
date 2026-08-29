@@ -123,7 +123,7 @@ export function AppShell({ children, statusProps }: AppShellProps) {
             <path d="M3 9h6" />
           </svg>
           <span className="brand__text">
-            AllJobs <span style={{ opacity: 0.5, fontWeight: 400 }}>/ Planning</span>
+            AllJobs <span style={{ color: "var(--ink-muted)", fontWeight: 400 }}>/ Planning</span>
           </span>
         </Link>
 
