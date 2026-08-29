@@ -125,6 +125,15 @@ describe("Backlog ordering mutations", () => {
     expect(await readFile(backlogPath, "utf8")).toBe(staleContent);
   });
 
+  it("rejects malformed UTF-8 before proposal and preserves every source byte", async () => {
+    const malformed = Buffer.concat([Buffer.from(backlog("Human UTF-8 note: 你好."), "utf8"), Buffer.from([0xff])]);
+    await writeFile(backlogPath, malformed);
+
+    await expect(proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps))
+      .resolves.toMatchObject({ ok: false, code: "INVALID_BACKLOG" });
+    expect(await readFile(backlogPath)).toEqual(malformed);
+  });
+
   it("keeps bytes unchanged for archived, locked, write-failure, tampered, invalid, and symlink cases", async () => {
     const before = await readFile(backlogPath, "utf8");
     const project = await store.getProject("sample");

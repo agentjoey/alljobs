@@ -12,7 +12,7 @@ export interface GitResult {
 export interface GitRunner {
   run(
     args: readonly string[],
-    options?: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }
+    options?: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number; denyExternalCommands?: boolean }
   ): Promise<GitResult>;
 }
 
@@ -21,12 +21,19 @@ export class NodeGitRunner implements GitRunner {
 
   async run(
     args: readonly string[],
-    options: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number } = {}
+    options: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number; denyExternalCommands?: boolean } = {}
   ): Promise<GitResult> {
-    const { cwd, env, timeoutMs = 30000 } = options;
+    const { cwd, env, timeoutMs = 30000, denyExternalCommands = false } = options;
 
-    // Invariant: Always disable repository hooks
-    const finalArgs = ["-c", "core.hooksPath=/dev/null", ...args];
+    const denyExternalCommandConfig = denyExternalCommands ? [
+      "-c", "core.fsmonitor=false",
+      "-c", "core.hooksPath=/dev/null",
+      "-c", "core.pager=cat",
+      "-c", "pager.status=false",
+      "-c", "interactive.diffFilter=",
+      "-c", "submodule.recurse=false"
+    ] : ["-c", "core.hooksPath=/dev/null"];
+    const finalArgs = ["--no-pager", ...denyExternalCommandConfig, ...args];
 
     // Strip inherited GIT_* variables (GIT_DIR, GIT_WORK_TREE, GIT_SSH_COMMAND,
     // ...) so a poisoned environment cannot redirect repository operations
@@ -38,7 +45,17 @@ export class NodeGitRunner implements GitRunner {
     try {
       const { stdout, stderr } = await execFileAsync(this.gitBinary, finalArgs, {
         cwd,
-        env: { ...baseEnv, ...env },
+        env: {
+          ...baseEnv,
+          ...env,
+          ...(denyExternalCommands ? {
+            GIT_OPTIONAL_LOCKS: "0",
+            GIT_NO_LAZY_FETCH: "1",
+            GIT_PAGER: "cat",
+            GIT_EXTERNAL_DIFF: "",
+            GIT_TERMINAL_PROMPT: "0"
+          } : {})
+        },
         timeout: timeoutMs,
         maxBuffer: 10 * 1024 * 1024 // 10MB
       });

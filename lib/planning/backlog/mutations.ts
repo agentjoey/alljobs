@@ -5,7 +5,7 @@ import { chmod, lstat, readFile, rename, stat, unlink, writeFile } from "node:fs
 import { dirname, join } from "node:path";
 import { loadControlHostConfig, type ControlHostResolvedPaths } from "../config";
 import type { ProjectRegistryEntry } from "../domain/types";
-import { computeDigest } from "../native/digest";
+import { computeDigest, decodeUtf8 } from "../native/digest";
 import { ProjectLockError, withProjectLock } from "../native/lock";
 import { BACKLOG_ORDERING_APPLIED, recordActivity } from "../native/activity";
 import { NativePlanningStore } from "../native/store";
@@ -169,10 +169,16 @@ async function buildProposal(
   if (!localPaths.ok) {
     return failure("INVALID_BACKLOG", localPaths.message);
   }
-  const source = await readFile(localPaths.backlogPath, "utf8");
-  const expectedFileDigest = computeDigest(source);
+  const sourceBytes = await readFile(localPaths.backlogPath);
+  const expectedFileDigest = computeDigest(sourceBytes);
   if (resolved.source.backlogDigest !== expectedFileDigest) {
     return failure("STALE_WRITE", "Backlog changed while the proposal source was being inspected.");
+  }
+  let source: string;
+  try {
+    source = decodeUtf8(sourceBytes);
+  } catch {
+    return failure("INVALID_BACKLOG", "Backlog must contain valid UTF-8; no write was made.");
   }
 
   const ordering = analyzeBacklogOrdering(resolved.projection.backlog);
@@ -233,9 +239,15 @@ export async function applyBacklogOrderingChange(
       if (!project) return failure("NOT_FOUND", "Project was not found.");
       const localPaths = await resolveLocalPlanningPaths(project, deps.paths.config);
       if (!localPaths.ok) return failure("INVALID_BACKLOG", localPaths.message);
-      const current = await readFile(localPaths.backlogPath, "utf8");
-      if (computeDigest(current) !== proposal.expectedFileDigest) {
+      const currentBytes = await readFile(localPaths.backlogPath);
+      if (computeDigest(currentBytes) !== proposal.expectedFileDigest) {
         return failure("STALE_WRITE", "Backlog changed after review; no write was made.");
+      }
+      let current: string;
+      try {
+        current = decodeUtf8(currentBytes);
+      } catch {
+        return failure("INVALID_BACKLOG", "Backlog must contain valid UTF-8; no write was made.");
       }
       const patched = patchBacklogFields(current, rebuilt.proposal.changes);
       if (!patched.ok) return failure(patched.code, patched.message);

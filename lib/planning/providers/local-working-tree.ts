@@ -5,7 +5,7 @@ import { validateProjectRelations } from "../domain/relations";
 import type { ProjectRegistryEntry, ProofIssue, RoadmapItem } from "../domain/types";
 import { parseBacklogDocument } from "../markdown/backlog";
 import { parseRoadmapDocument } from "../markdown/roadmap";
-import { computeDigest } from "../native/digest";
+import { computeDigest, decodeUtf8 } from "../native/digest";
 import type { ControlHostConfig } from "../config";
 import type { ExternalProjection, ResolvedCodePlanning, SourceProvenance } from "./contracts";
 import type { GitRunner } from "./git-runner";
@@ -34,11 +34,28 @@ export async function readLocalWorkingTreePlanning(input: {
   if (!paths.ok) throw new Error(`Cannot read local planning source: ${paths.code}`);
 
   const readAt = new Date().toISOString();
-  const [backlogContent, roadmapContent] = await Promise.all([
-    readFile(paths.backlogPath, "utf8"),
-    project.work_modes.includes("implementation") ? readFile(paths.roadmapPath, "utf8") : Promise.resolve("")
+  const [backlogBytes, roadmapBytes] = await Promise.all([
+    readFile(paths.backlogPath),
+    project.work_modes.includes("implementation") ? readFile(paths.roadmapPath) : Promise.resolve(Buffer.alloc(0))
   ]);
   const issues: ProofIssue[] = [];
+  let backlogContent = "";
+  let roadmapContent = "";
+  for (const [bytes, path, assign] of [
+    [backlogBytes, paths.backlogPath, (value: string) => { backlogContent = value; }],
+    [roadmapBytes, paths.roadmapPath, (value: string) => { roadmapContent = value; }]
+  ] as const) {
+    try {
+      assign(decodeUtf8(bytes));
+    } catch {
+      issues.push({
+        scope: "document",
+        code: "INVALID_UTF8",
+        sourcePath: path,
+        message: "Planning documents must contain valid UTF-8; no direct write is allowed."
+      });
+    }
+  }
   const roadmapResult = project.work_modes.includes("implementation")
     ? parseRoadmapDocument(roadmapContent, paths.roadmapPath, "phase")
     : { valid: [] as RoadmapItem[], issues: [] as ProofIssue[] };
@@ -66,8 +83,11 @@ export async function readLocalWorkingTreePlanning(input: {
   issues.push(...relationResult.issues);
 
   const [headResult, statusResult] = await Promise.all([
-    gitRunner.run(["rev-parse", "--verify", "HEAD"], { cwd: paths.workspacePath }),
-    gitRunner.run(["status", "--porcelain=v1", "--", "docs/ROADMAP.md", "docs/BACKLOG.md"], { cwd: paths.workspacePath })
+    gitRunner.run(["rev-parse", "--verify", "HEAD"], { cwd: paths.workspacePath, denyExternalCommands: true }),
+    gitRunner.run(["status", "--porcelain=v1", "--untracked-files=all", "--no-renames", "--", "docs/ROADMAP.md", "docs/BACKLOG.md"], {
+      cwd: paths.workspacePath,
+      denyExternalCommands: true
+    })
   ]);
   if (headResult.exitCode !== 0) {
     issues.push({
@@ -88,8 +108,8 @@ export async function readLocalWorkingTreePlanning(input: {
 
   const modified = statusResult.exitCode === 0 ? modifiedPaths(statusResult.stdout) : new Set<string>();
   const revision = headResult.exitCode === 0 ? headResult.stdout.trim() : "unknown";
-  const roadmapDigest = roadmapContent ? computeDigest(roadmapContent) : undefined;
-  const backlogDigest = computeDigest(backlogContent);
+  const roadmapDigest = roadmapBytes.length ? computeDigest(roadmapBytes) : undefined;
+  const backlogDigest = computeDigest(backlogBytes);
   const provenance: SourceProvenance[] = [
     ...(roadmapDigest ? [{ provider: "local-working-tree", location: "docs/ROADMAP.md", revision, digest: roadmapDigest, fetchedAt: readAt }] : []),
     { provider: "local-working-tree", location: "docs/BACKLOG.md", revision, digest: backlogDigest, fetchedAt: readAt }

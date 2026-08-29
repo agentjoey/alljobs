@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -95,5 +95,34 @@ describe("readLocalWorkingTreePlanning", () => {
     expect(result.source.mode).toBe("local-working-tree");
     expect(result.source.writable).toBe(false);
     expect(result.projection.issues.some((issue) => issue.code === "MALFORMED_YAML")).toBe(true);
+  });
+
+  it("does not execute commands selected by repository configuration while reading", async () => {
+    const marker = join(tempRoot, "repository-command-ran");
+    const command = join(tempRoot, "repository-command.sh");
+    await writeFile(command, `#!/bin/sh\nprintf executed > "${marker}"\n`, "utf8");
+    await chmod(command, 0o755);
+    await gitRunner.run(["config", "core.fsmonitor", command], { cwd: repository });
+    await gitRunner.run(["config", "filter.untrusted.smudge", command], { cwd: repository });
+    await gitRunner.run(["config", "diff.untrusted.command", command], { cwd: repository });
+    await gitRunner.run(["config", "core.pager", command], { cwd: repository });
+
+    const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
+
+    expect(result.source.headRevision).toMatch(/^[0-9a-f]{40}$/);
+    await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("hashes raw Backlog bytes and rejects malformed UTF-8 as non-writable", async () => {
+    const backlogPath = join(repository, "docs", "BACKLOG.md");
+    const malformed = Buffer.concat([Buffer.from(backlog("P1"), "utf8"), Buffer.from([0xff])]);
+    await writeFile(backlogPath, malformed);
+
+    const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
+
+    expect(result.source.backlogDigest).toBe(computeDigest(malformed));
+    expect(result.source.writable).toBe(false);
+    expect(result.projection.issues).toContainEqual(expect.objectContaining({ code: "INVALID_UTF8" }));
+    expect(await readFile(backlogPath)).toEqual(malformed);
   });
 });
