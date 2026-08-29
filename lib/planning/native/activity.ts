@@ -2,6 +2,8 @@ import { appendFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getLogDir } from "../paths";
 
+export const BACKLOG_ORDERING_APPLIED = "BACKLOG_ORDERING_APPLIED";
+
 export interface ActivityEvent {
   timestamp?: string;
   type: string;
