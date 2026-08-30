@@ -1,9 +1,10 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
-  makeUnrelatedR1Edit,
+  readR1Activity,
   readR1Backlog,
   readR1GitHead,
   readR1GitStatus,
@@ -21,15 +22,8 @@ async function enterOrdering(page: Page) {
   await expect(page.getByRole("heading", { name: "Manage ordering" })).toBeVisible();
 }
 
-async function reviewAndApply(page: Page) {
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await expect(page.getByRole("heading", { name: "Review the exact field changes" })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm and apply" }).click();
-  await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
-}
-
 async function tabUntilFocused(page: Page, target: ReturnType<Page["getByRole"]>, label: string) {
-  for (let step = 0; step < 24; step += 1) {
+  for (let step = 0; step < 48; step += 1) {
     await page.keyboard.press("Tab");
     if (await target.evaluate((element) => document.activeElement === element)) {
       await expect(target, `${label} receives keyboard focus`).toBeFocused();
@@ -42,17 +36,6 @@ async function tabUntilFocused(page: Page, target: ReturnType<Page["getByRole"]>
       .map((element) => element.getAttribute("aria-label") ?? element.textContent?.trim())
   }));
   throw new Error(`${label} was not reachable with Tab: ${JSON.stringify(diagnostics)}`);
-}
-
-function itemSection(source: string, itemId: string) {
-  const start = source.indexOf(`## ${itemId}:`);
-  if (start < 0) throw new Error(`Missing fixture section ${itemId}`);
-  const next = source.indexOf("\n## ", start + 1);
-  return source.slice(start, next < 0 ? source.length : next);
-}
-
-function scalar(source: string, itemId: string, field: "priority" | "rank") {
-  return new RegExp(`^${field}:\\s*(\\S+)`, "m").exec(itemSection(source, itemId))?.[1];
 }
 
 async function expectNoWcagAaViolations(page: Page, state: string) {
@@ -96,9 +79,13 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await expect(page.getByText("Committed backlog title", { exact: true })).toHaveCount(0);
   });
 
-  test("initializes ranks through review and changes only rank lines on disk", async ({ page }) => {
+  test("prepares and copies an initialize handoff without writing Backlog or activity", async ({ page, context }) => {
     const before = readR1Backlog();
     const headBefore = readR1GitHead();
+    const statusBefore = readR1GitStatus();
+    const activityBefore = readR1Activity();
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3465" });
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     await openBacklog(page);
     await enterOrdering(page);
@@ -108,50 +95,47 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-001" })).toContainText("rank absent → 100");
     await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-002" })).toContainText("rank absent → 200");
     await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-003" })).toContainText("rank absent → 100");
+    await expect(page.getByRole("button", { name: "Confirm and apply" })).toHaveCount(0);
+
+    const handoff = page.getByRole("textbox", { name: "Backlog application handoff" });
+    await expect(handoff).toHaveValue(/Project: sample-code/);
+    await expect(handoff).toHaveValue(new RegExp(`HEAD: ${headBefore}`));
+    await expect(handoff).toHaveValue(/Full Backlog file digest \(SHA-256\): [a-f0-9]{64}/);
+    await expect(handoff).toHaveValue(/Proposal digest \(SHA-256\): [a-f0-9]{64}/);
+    await expect(handoff).toHaveValue(/Field-only diff:[\s\S]*AJ-B-002:[\s\S]*rank absent -> 200/);
+    await expect(handoff).toHaveValue(/AllJobs did not write to docs\/BACKLOG\.md/);
+    await page.getByRole("button", { name: "Copy application handoff" }).click();
+    await expect(page.getByRole("status")).toHaveText("Application handoff copied to clipboard.");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("Application owner: repository agent or Human Owner");
+    const desktopEvidence = resolve(tmpdir(), "alljobs-r1b-copy-only-1440.png");
+    await page.screenshot({ path: desktopEvidence, fullPage: true });
+    expect(existsSync(desktopEvidence)).toBe(true);
+
     expect(readR1Backlog()).toBe(before);
-
-    await page.getByRole("button", { name: "Confirm and apply" }).click();
-    await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
-
-    const after = readR1Backlog();
-    expect(after.replace(/^rank: \d+\r?\n/gm, "")).toBe(before);
-    expect(scalar(after, "AJ-B-001", "rank")).toBe("100");
-    expect(scalar(after, "AJ-B-002", "rank")).toBe("200");
-    expect(scalar(after, "AJ-B-003", "rank")).toBe("100");
-    expect(scalar(after, "AJ-B-004", "rank")).toBeUndefined();
+    expect(readR1Activity()).toBe(activityBefore);
     expect(readR1GitHead()).toBe(headBefore);
-    expect(readR1GitStatus()).toBe("M docs/BACKLOG.md");
+    expect(readR1GitStatus()).toBe(statusBefore);
   });
 
-  test("writes expected scalar values for Move Up and Change Priority", async ({ page }) => {
+  test("keeps the exact move diff copy-only", async ({ page }) => {
     resetR1Backlog("ranked");
+    const before = readR1Backlog();
+    const activityBefore = readR1Activity();
     await openBacklog(page);
     await enterOrdering(page);
 
     await page.getByRole("button", { name: "Move AJ-B-002 up" }).click();
-    await reviewAndApply(page);
-    const afterMove = readR1Backlog();
-    expect(scalar(afterMove, "AJ-B-002", "rank")).toBe("50");
-    expect(scalar(afterMove, "AJ-B-002", "priority")).toBe("P0");
-
-    await page.getByRole("button", { name: "Continue reading" }).click();
-    await expect(page.getByText("Rank 50", { exact: true })).toBeVisible();
-    await enterOrdering(page);
-    await page.getByRole("combobox", { name: "Change priority for AJ-B-001" }).selectOption("P2");
-    await reviewAndApply(page);
-    await page.getByRole("button", { name: "Continue reading" }).click();
-    await expect(page.locator('[data-item-id="AJ-B-001"] .badge--p2')).toBeVisible();
-
-    const afterPriority = readR1Backlog();
-    expect(scalar(afterPriority, "AJ-B-001", "priority")).toBe("P2");
-    expect(scalar(afterPriority, "AJ-B-001", "rank")).toBe("100");
-    expect(scalar(afterPriority, "AJ-B-002", "rank")).toBe("50");
-    expect(afterPriority.replace("priority: P2\nrank: 100", "priority: P0\nrank: 100")).toBe(afterMove);
+    await page.getByRole("button", { name: "Review changes" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-002" })).toContainText("rank 200 → 50");
+    await expect(page.getByRole("textbox", { name: "Backlog application handoff" })).toHaveValue(/AJ-B-002: priority P0 -> P0; rank 200 -> 50/);
+    expect(readR1Backlog()).toBe(before);
+    expect(readR1Activity()).toBe(activityBefore);
   });
 
-  test("repairs the later lane that actually contains duplicate ranks", async ({ page }) => {
+  test("prepares a later-lane repair without writing it", async ({ page }) => {
     resetR1Backlog("conflict");
     const before = readR1Backlog();
+    const activityBefore = readR1Activity();
     await openBacklog(page);
     await enterOrdering(page);
 
@@ -159,31 +143,9 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await page.getByRole("button", { name: "Review changes" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-002" })).toContainText("rank 100 → 100");
     await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-003" })).toContainText("rank 100 → 200");
-    await page.getByRole("button", { name: "Confirm and apply" }).click();
-    await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
-
-    const after = readR1Backlog();
-    expect(scalar(after, "AJ-B-001", "rank")).toBe("100");
-    expect(scalar(after, "AJ-B-002", "rank")).toBe("100");
-    expect(scalar(after, "AJ-B-003", "rank")).toBe("200");
-    expect(after.replace("rank: 200\ndependencies: []", "rank: 100\ndependencies: []")).toBe(before);
-  });
-
-  test("rejects a stale reviewed proposal and preserves an unrelated external edit", async ({ page }) => {
-    resetR1Backlog("ranked");
-    await openBacklog(page);
-    await enterOrdering(page);
-    await page.getByRole("button", { name: "Move AJ-B-002 up" }).click();
-    await page.getByRole("button", { name: "Review changes" }).click();
-    await expect(page.getByRole("heading", { name: "Review the exact field changes" })).toBeVisible();
-
-    const externallyEdited = makeUnrelatedR1Edit();
-    await page.getByRole("button", { name: "Confirm and apply" }).click();
-
-    await expect(page.locator(".backlog-error-state")).toContainText("STALE_WRITE");
-    await expect(page.getByText("Prior intent (reference only)")).toBeVisible();
-    expect(readR1Backlog()).toBe(externallyEdited);
-    expect(scalar(readR1Backlog(), "AJ-B-002", "rank")).toBe("200");
+    await expect(page.getByRole("button", { name: "Copy application handoff" })).toBeVisible();
+    expect(readR1Backlog()).toBe(before);
+    expect(readR1Activity()).toBe(activityBefore);
   });
 
   test("keeps remote commits and cache snapshots read-only", async ({ page }) => {
@@ -198,9 +160,11 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     }
   });
 
-  test("supports keyboard-only ordering", async ({ page }) => {
+  test("supports keyboard-only proposal copying without a write", async ({ page, context }) => {
     resetR1Backlog("ranked");
-    expect(readR1Backlog()).toContain("rank: 200");
+    const before = readR1Backlog();
+    const activityBefore = readR1Activity();
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3465" });
     await page.goto("/projects/sample-code");
     const backlogTab = page.getByRole("tab", { name: /^Backlog \(/ });
     await tabUntilFocused(page, backlogTab, "Backlog tab");
@@ -216,21 +180,19 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     const review = page.getByRole("button", { name: "Review changes" });
     await tabUntilFocused(page, review, "Review changes");
     await page.keyboard.press("Enter");
-    const apply = page.getByRole("button", { name: "Confirm and apply" });
     await tabUntilFocused(page, page.getByRole("button", { name: "Back to draft" }), "Back to draft");
     await page.keyboard.press("Tab");
-    await expect(apply, "Confirm and apply receives keyboard focus").toBeFocused();
+    const copy = page.getByRole("button", { name: "Copy application handoff" });
+    await expect(copy, "Copy application handoff receives keyboard focus").toBeFocused();
     await page.keyboard.press("Enter");
 
-    await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
-    const continueReading = page.getByRole("button", { name: "Continue reading" });
-    await tabUntilFocused(page, continueReading, "Continue reading");
-    await page.keyboard.press("Enter");
-    await expect(page.getByText("Rank 50", { exact: true })).toBeVisible();
-    expect(scalar(readR1Backlog(), "AJ-B-002", "rank")).toBe("50");
+    await expect(page.getByRole("status")).toHaveText("Application handoff copied to clipboard.");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("AJ-B-002: priority P0 -> P0; rank 200 -> 50");
+    expect(readR1Backlog()).toBe(before);
+    expect(readR1Activity()).toBe(activityBefore);
   });
 
-  test("has no horizontal page scroll at 390px while reading or editing", async ({ page }) => {
+  test("keeps the copy path usable without horizontal page scroll at 390px", async ({ page }) => {
     resetR1Backlog("ranked");
     await page.setViewportSize({ width: 390, height: 844 });
     await openBacklog(page);
@@ -240,9 +202,17 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await expect(page.getByRole("button", { name: "Move AJ-B-002 up" })).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Change priority for AJ-B-002" })).toBeVisible();
     await expectNoHorizontalPageScroll(page, "editing");
+    await page.getByRole("button", { name: "Move AJ-B-002 up" }).click();
+    await page.getByRole("button", { name: "Review changes" }).click();
+    await expect(page.getByRole("textbox", { name: "Backlog application handoff" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy application handoff" })).toBeVisible();
+    await expectNoHorizontalPageScroll(page, "copy-only review");
+    const mobileEvidence = resolve(tmpdir(), "alljobs-r1b-copy-only-390.png");
+    await page.screenshot({ path: mobileEvidence, fullPage: true });
+    expect(existsSync(mobileEvidence)).toBe(true);
   });
 
-  test("has no WCAG AA violations in reading, editing, review, stale, and invalid states", async ({ page }) => {
+  test("has no WCAG AA violations in reading, editing, review, copied, and invalid states", async ({ page }) => {
     resetR1Backlog("ranked");
     await openBacklog(page);
     await expectNoWcagAaViolations(page, "reading");
@@ -255,10 +225,9 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await expect(page.getByRole("heading", { name: "Review the exact field changes" })).toBeVisible();
     await expectNoWcagAaViolations(page, "review");
 
-    makeUnrelatedR1Edit();
-    await page.getByRole("button", { name: "Confirm and apply" }).click();
-    await expect(page.locator(".backlog-error-state")).toContainText("STALE_WRITE");
-    await expectNoWcagAaViolations(page, "stale");
+    await page.getByRole("button", { name: "Copy application handoff" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+    await expectNoWcagAaViolations(page, "copied");
 
     resetR1Backlog("invalid");
     await page.reload();

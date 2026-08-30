@@ -5,16 +5,12 @@ import type { BacklogItem } from "@/lib/planning/domain/types";
 import type { BacklogControlState } from "@/lib/planning/queries/project";
 
 const mocks = vi.hoisted(() => ({
-  propose: vi.fn(),
-  apply: vi.fn(),
-  refresh: vi.fn()
+  propose: vi.fn()
 }));
 
 vi.mock("@/app/actions/backlog", () => ({
-  proposeBacklogOrderingAction: mocks.propose,
-  applyBacklogOrderingAction: mocks.apply
+  proposeBacklogOrderingAction: mocks.propose
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 
 import { BacklogView } from "./backlog-view";
 import { SourceStatus } from "./source-status";
@@ -57,8 +53,6 @@ function reviewedProposal() {
 describe("Backlog ordering UI", () => {
   beforeEach(() => {
     mocks.propose.mockReset();
-    mocks.apply.mockReset();
-    mocks.refresh.mockReset();
   });
 
   it("groups active cards by Phase, Priority, then Rank and folds history", () => {
@@ -97,6 +91,8 @@ describe("Backlog ordering UI", () => {
 
   it("keeps keyboard ordering page-local until the owner reviews it", async () => {
     const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     mocks.propose.mockResolvedValue({ status: "success", data: reviewedProposal(), message: "Backlog ordering proposal prepared" });
     render(<BacklogView items={rankedItems} projectSlug="alljobs" control={control()} />);
 
@@ -107,7 +103,20 @@ describe("Backlog ordering UI", () => {
 
     expect(await screen.findByRole("region", { name: "Proposal review" })).toBeVisible();
     expect(screen.getByRole("listitem")).toHaveTextContent(/AJ-B-002\s*priority P1 → P1\s*rank 200 → 100/);
-    expect(mocks.apply).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Confirm and apply" })).not.toBeInTheDocument();
+
+    const handoff = screen.getByRole("textbox", { name: "Backlog application handoff" });
+    const handoffText = (handoff as HTMLTextAreaElement).value;
+    expect(handoffText).toContain("Project: alljobs");
+    expect(handoffText).toContain("HEAD: 5466c33");
+    expect(handoffText).toContain(`Full Backlog file digest (SHA-256): ${digest}`);
+    expect(handoffText).toContain(`Proposal digest (SHA-256): ${"b".repeat(64)}`);
+    expect(handoffText).toContain("alljobs AJ-B-002: priority P1 -> P1; rank 200 -> 100");
+    expect(handoffText).toContain("AllJobs did not write to docs/BACKLOG.md");
+
+    await user.click(screen.getByRole("button", { name: "Copy application handoff" }));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Field-only diff:"));
+    expect(screen.getByRole("status")).toHaveTextContent("Application handoff copied to clipboard.");
   });
 
   it("allows a priority-only draft before ranks are initialized and can discard it", async () => {
@@ -171,23 +180,22 @@ describe("Backlog ordering UI", () => {
     expect(screen.getByRole("button", { name: "Back to draft" })).toBeVisible();
   });
 
-  it("disables duplicate Apply and keeps the stale intent summary visible", async () => {
+  it("keeps a selectable handoff available when clipboard access fails", async () => {
     const user = userEvent.setup();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("Clipboard denied")) }
+    });
     mocks.propose.mockResolvedValue({ status: "success", data: reviewedProposal(), message: "Backlog ordering proposal prepared" });
-    let finishApply: ((value: unknown) => void) | undefined;
-    mocks.apply.mockImplementation(() => new Promise(resolve => { finishApply = resolve; }));
     render(<BacklogView items={rankedItems} projectSlug="alljobs" control={control()} />);
 
     await user.click(screen.getByRole("button", { name: "Manage ordering" }));
     await user.click(screen.getByRole("button", { name: "Move AJ-B-002 up" }));
     await user.click(screen.getByRole("button", { name: "Review changes" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm and apply" }));
-    expect(screen.getByRole("button", { name: "Applying changes" })).toBeDisabled();
-    expect(mocks.apply).toHaveBeenCalledTimes(1);
+    await user.click(await screen.findByRole("button", { name: "Copy application handoff" }));
 
-    finishApply?.({ status: "error", code: "STALE_WRITE", message: "Backlog changed after review; no write was made." });
-    expect(await screen.findByText("Prior intent (reference only)")).toBeVisible();
-    expect(screen.getByText(/Move AJ-B-002/)).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Clipboard is unavailable. Select the handoff text and copy it manually.");
+    expect(screen.getByRole("textbox", { name: "Backlog application handoff" })).toHaveAttribute("readonly");
   });
 
   it("keeps controls visible when reduced motion is requested", () => {

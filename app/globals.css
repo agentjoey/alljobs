@@ -865,6 +865,39 @@ body {
 .backlog-change-row { display: grid; grid-template-columns: minmax(130px, .8fr) 1fr 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hairline-faint); font-size: 12.5px; }
 .backlog-change-row code { font-family: var(--font-mono); font-weight: 600; }
 .backlog-review__facts dd { font-family: var(--font-mono); font-size: 11px; }
+.backlog-review__handoff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.backlog-review__handoff label {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.backlog-review__handoff textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 12px;
+  resize: vertical;
+  background: var(--paper-recessed);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.backlog-review__handoff p,
+.backlog-review__copy-feedback {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.backlog-review__copy-feedback { text-align: right; }
 .backlog-review__actions { margin-top: 4px; }
 .backlog-prior-intent { padding: 12px; border: 1px solid var(--rust-border); border-radius: var(--radius-md); background: var(--rust-soft); }
 .backlog-prior-intent summary { font-weight: 600; cursor: pointer; }

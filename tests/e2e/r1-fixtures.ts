@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -386,6 +387,11 @@ export function resetR1Backlog(mode: "unranked" | "ranked" | "invalid" | "confli
 
 export function readR1Backlog() {
   return readFileSync(getR1FixturePaths().backlogPath, "utf8");
+}
+
+export function readR1Activity() {
+  const activityPath = join(getR1FixturePaths().rootDir, "data", "log", "activity.jsonl");
+  return existsSync(activityPath) ? readFileSync(activityPath, "utf8") : "";
 }
 
 export function makeUnrelatedR1Edit() {

@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
-  propose: vi.fn(),
-  apply: vi.fn()
+  propose: vi.fn()
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/planning/backlog/mutations", () => ({
-  proposeBacklogOrderingChange: mocks.propose,
-  applyBacklogOrderingChange: mocks.apply
+  proposeBacklogOrderingChange: mocks.propose
 }));
 
-import { applyBacklogOrderingAction, proposeBacklogOrderingAction } from "./backlog";
+import * as backlogActions from "./backlog";
+
+const { proposeBacklogOrderingAction } = backlogActions;
 
 const digest = "a".repeat(64);
 
@@ -36,7 +36,6 @@ describe("backlog ordering actions", () => {
   beforeEach(() => {
     mocks.revalidatePath.mockReset();
     mocks.propose.mockReset();
-    mocks.apply.mockReset();
   });
 
   it.each([
@@ -58,14 +57,8 @@ describe("backlog ordering actions", () => {
     expect(mocks.propose).not.toHaveBeenCalled();
   });
 
-  it("rejects a supplied digest that does not match the reviewed proposal before applying", async () => {
-    const result = await applyBacklogOrderingAction({
-      proposal: proposal(),
-      proposalDigest: "b".repeat(64)
-    });
-
-    expect(result).toMatchObject({ status: "error", code: "INVALID_INPUT" });
-    expect(mocks.apply).not.toHaveBeenCalled();
+  it("does not expose a direct-apply Server Action", () => {
+    expect(backlogActions).not.toHaveProperty("applyBacklogOrderingAction");
   });
 
   it("returns the proposal without source Markdown", async () => {
@@ -98,46 +91,4 @@ describe("backlog ordering actions", () => {
     });
   });
 
-  it("revalidates the backlog views only after a successful apply", async () => {
-    const reviewed = proposal();
-    const applied = {
-      ok: true as const,
-      digest: "c".repeat(64),
-      changes: reviewed.changes,
-      warnings: ["ACTIVITY_LOG_FAILED"]
-    };
-    mocks.apply.mockResolvedValue(applied);
-
-    const result = await applyBacklogOrderingAction({ proposal: reviewed, proposalDigest: digest });
-
-    expect(result).toEqual({
-      status: "success",
-      data: { digest: applied.digest, changes: applied.changes, warnings: applied.warnings },
-      message: "Backlog ordering changes applied"
-    });
-    expect(mocks.apply).toHaveBeenCalledWith(reviewed, digest);
-    expect(mocks.revalidatePath).toHaveBeenCalledTimes(3);
-    expect(mocks.revalidatePath).toHaveBeenNthCalledWith(1, "/");
-    expect(mocks.revalidatePath).toHaveBeenNthCalledWith(2, "/projects");
-    expect(mocks.revalidatePath).toHaveBeenNthCalledWith(3, "/projects/code-proj");
-  });
-
-  it("keeps write failures generic and does not revalidate", async () => {
-    const reviewed = proposal();
-    mocks.apply.mockResolvedValue({
-      ok: false,
-      code: "WRITE_FAILED",
-      message: "Unable to rename /private/control-host/repos/code-proj/docs/.temp"
-    });
-
-    const result = await applyBacklogOrderingAction({ proposal: reviewed, proposalDigest: digest });
-
-    expect(result).toEqual({
-      status: "error",
-      code: "WRITE_FAILED",
-      message: "Failed to write changes to disk",
-      fieldErrors: undefined
-    });
-    expect(mocks.revalidatePath).not.toHaveBeenCalled();
-  });
 });

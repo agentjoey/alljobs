@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { applyBacklogOrderingAction, proposeBacklogOrderingAction } from "@/app/actions/backlog";
+import { proposeBacklogOrderingAction } from "@/app/actions/backlog";
 import type { BacklogChangeProposal } from "@/lib/planning/backlog/mutations";
 import type { BacklogItem, Priority } from "@/lib/planning/domain/types";
 import type { BacklogOrderingIntent } from "@/lib/planning/backlog/ordering";
@@ -13,9 +12,7 @@ export type EditorState =
   | { mode: "reading" }
   | { mode: "editing"; intent: BacklogOrderingIntent | null }
   | { mode: "reviewing"; proposal: BacklogChangeProposal }
-  | { mode: "applying"; proposal: BacklogChangeProposal }
-  | { mode: "error"; code: string; message: string; intent?: BacklogOrderingIntent }
-  | { mode: "success"; digest: string; changedIds: string[] };
+  | { mode: "error"; code: string; message: string; intent?: BacklogOrderingIntent };
 
 const PRIORITIES: Priority[] = ["P0", "P1", "P2"];
 const HISTORY_STATUSES = new Set<BacklogItem["status"]>(["done", "cancelled"]);
@@ -52,7 +49,6 @@ export function BacklogOrderingEditor({
   control: BacklogControlState;
   onExit: () => void;
 }) {
-  const router = useRouter();
   const [state, setState] = useState<EditorState>({ mode: "editing", intent: null });
   const [proposing, setProposing] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -88,40 +84,13 @@ export function BacklogOrderingEditor({
     }
   };
 
-  const apply = async (proposal: BacklogChangeProposal) => {
-    setState({ mode: "applying", proposal });
-    try {
-      const result = await applyBacklogOrderingAction({ proposal, proposalDigest: proposal.proposalDigest });
-      if (result.status === "success") {
-        setState({ mode: "success", digest: result.data.digest, changedIds: result.data.changes.map((change) => change.itemId) });
-        router.refresh();
-      } else {
-        setState({ mode: "error", code: result.code, message: result.message, intent: proposal.intent });
-      }
-    } catch {
-      setState({ mode: "error", code: "WRITE_FAILED", message: "Failed to write changes to disk.", intent: proposal.intent });
-    }
-  };
-
-  if (state.mode === "reviewing" || state.mode === "applying") {
+  if (state.mode === "reviewing") {
     return (
       <BacklogChangeReview
         proposal={state.proposal}
         items={items}
-        applying={state.mode === "applying"}
         onBack={() => setState({ mode: "editing", intent: state.proposal.intent })}
-        onApply={() => apply(state.proposal)}
       />
-    );
-  }
-
-  if (state.mode === "success") {
-    return (
-      <section className="backlog-notice backlog-notice--success" role="status">
-        <strong>Ordering changes applied locally.</strong> Changed {state.changedIds.join(", ")} · resulting digest {state.digest.slice(0, 10)}…
-        No commit, push, merge, fetch, or agent start occurred.
-        <button type="button" className="btn" onClick={onExit}>Continue reading</button>
-      </section>
     );
   }
 
@@ -136,7 +105,6 @@ export function BacklogOrderingEditor({
           </details>
         )}
         <div className="backlog-action-row">
-          {state.code === "STALE_WRITE" && <button type="button" className="btn btn--primary" onClick={() => router.refresh()}>Refresh local source</button>}
           <button type="button" className="btn" onClick={() => setState({ mode: "editing", intent: state.intent ?? null })}>Back to draft</button>
         </div>
       </section>

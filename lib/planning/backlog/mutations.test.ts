@@ -1,17 +1,14 @@
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ControlHostResolvedPaths } from "../config";
 import type { ProjectRegistryEntry } from "../domain/types";
-import { withProjectLock } from "../native/lock";
 import { NativePlanningStore } from "../native/store";
 import { NodeGitRunner } from "../providers/git-runner";
-import {
-  applyBacklogOrderingChange,
-  proposeBacklogOrderingChange,
-  type BacklogMutationDependencies
-} from "./mutations";
+import * as backlogMutations from "./mutations";
+
+const { proposeBacklogOrderingChange } = backlogMutations;
 
 const roadmap = [
   "# Roadmap", "", "## phase-1: Foundation", "", "```yaml alljobs",
@@ -27,18 +24,18 @@ const backlog = (extra = "") => [
   "rank: 100", "dependencies: []", "```", "", "Human note kept outside the target section.", extra, ""
 ].join("\n");
 
-describe("Backlog ordering mutations", () => {
+describe("Backlog ordering proposals", () => {
   let tempHome: string;
   let repository: string;
   let backlogPath: string;
   let paths: ControlHostResolvedPaths;
   let store: NativePlanningStore;
-  let deps: BacklogMutationDependencies;
+  let deps: backlogMutations.BacklogMutationDependencies;
   const gitRunner = new NodeGitRunner();
   const intent = { kind: "change-priority" as const, itemId: "AJ-B-002", targetPriority: "P0" as const };
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), "alljobs-backlog-mutations-"));
+    tempHome = await mkdtemp(join(tmpdir(), "alljobs-backlog-proposals-"));
     const trustedRoot = join(tempHome, "trusted");
     repository = join(trustedRoot, "sample");
     backlogPath = join(repository, "docs", "BACKLOG.md");
@@ -48,7 +45,11 @@ describe("Backlog ordering mutations", () => {
       config: { trustedCodeRoots: [trustedRoot], refreshIntervalSeconds: 300 }
     };
     await mkdir(join(repository, "docs"), { recursive: true });
-    await Promise.all([mkdir(paths.mirrorsDir, { recursive: true }), mkdir(paths.logsDir, { recursive: true }), mkdir(paths.cacheDir, { recursive: true })]);
+    await Promise.all([
+      mkdir(paths.mirrorsDir, { recursive: true }),
+      mkdir(paths.logsDir, { recursive: true }),
+      mkdir(paths.cacheDir, { recursive: true })
+    ]);
     await gitRunner.run(["init", "-b", "main"], { cwd: repository });
     await gitRunner.run(["config", "user.name", "Test User"], { cwd: repository });
     await gitRunner.run(["config", "user.email", "test@example.com"], { cwd: repository });
@@ -68,101 +69,24 @@ describe("Backlog ordering mutations", () => {
 
   afterEach(async () => { await rm(tempHome, { recursive: true, force: true }); });
 
+  it("does not expose a direct-apply mutation primitive", () => {
+    expect(backlogMutations).not.toHaveProperty("applyBacklogOrderingChange");
+  });
+
   it("builds a digest-bound proposal from a dirty local Backlog without writing it", async () => {
     const before = await readFile(backlogPath, "utf8");
+    const headBefore = await gitRunner.run(["rev-parse", "HEAD"], { cwd: repository });
     const result = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(await readFile(backlogPath, "utf8")).toBe(before);
+    expect((await gitRunner.run(["rev-parse", "HEAD"], { cwd: repository })).stdout).toBe(headBefore.stdout);
     expect(result.proposal.backlogModified).toBe(true);
     expect(result.proposal.changes).toEqual([{ itemId: "AJ-B-002", priority: "P0", rank: 200 }]);
     expect(result.proposal.expectedFileDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(result.proposal.proposalDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(result.proposal.diff).toContain("AJ-B-002");
-  });
-
-  it("applies only the reviewed fields and leaves Git HEAD unchanged", async () => {
-    const headBefore = await gitRunner.run(["rev-parse", "HEAD"], { cwd: repository });
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-
-    const result = await applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, deps);
-    const content = await readFile(backlogPath, "utf8");
-    const headAfter = await gitRunner.run(["rev-parse", "HEAD"], { cwd: repository });
-
-    expect(result).toMatchObject({ ok: true, changes: [{ itemId: "AJ-B-002", priority: "P0", rank: 200 }] });
-    expect(content).toContain("priority: P0\nrank: 200");
-    expect(content).toContain("Uncommitted human note.");
-    expect(headAfter.stdout).toBe(headBefore.stdout);
-    expect(await readFile(join(tempHome, "log", "activity.jsonl"), "utf8")).toContain("BACKLOG_ORDERING_APPLIED");
-  });
-
-  it("keeps a successful repository write successful when activity logging fails", async () => {
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-
-    const result = await applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, {
-      ...deps,
-      recordEvent: async () => { throw new Error("log unavailable"); }
-    });
-
-    expect(result).toMatchObject({ ok: true, warnings: ["ACTIVITY_LOG_FAILED"] });
-    expect(await readFile(backlogPath, "utf8")).toContain("priority: P0\nrank: 200");
-  });
-
-  it("returns STALE_WRITE and preserves an external whole-file change", async () => {
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-    const staleContent = `${await readFile(backlogPath, "utf8")}\nUnrelated human edit.\n`;
-    await writeFile(backlogPath, staleContent, "utf8");
-
-    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, deps))
-      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
-    expect(await readFile(backlogPath, "utf8")).toBe(staleContent);
-  });
-
-  it("rechecks bytes at the replacement boundary and preserves a late external edit", async () => {
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-    const staleContent = `${await readFile(backlogPath, "utf8")}\nEdit after the final Apply read.\n`;
-    const raceDeps = {
-      ...deps,
-      beforeReplace: async () => { await writeFile(backlogPath, staleContent, "utf8"); }
-    };
-
-    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, raceDeps))
-      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
-    expect(await readFile(backlogPath, "utf8")).toBe(staleContent);
-  });
-
-  it("rechecks directory identity at the replacement boundary and rejects a symlink swap", async () => {
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-    const docsPath = join(repository, "docs");
-    const originalDocsPath = join(repository, "docs-original");
-    const outsideDocsPath = join(tempHome, "outside-docs");
-    const originalContent = await readFile(backlogPath);
-    const outsideContent = Buffer.from("Outside target must remain unchanged.\n", "utf8");
-    await mkdir(outsideDocsPath);
-    await writeFile(join(outsideDocsPath, "BACKLOG.md"), outsideContent);
-    const raceDeps = {
-      ...deps,
-      beforeReplace: async () => {
-        await rename(docsPath, originalDocsPath);
-        await symlink(outsideDocsPath, docsPath);
-      }
-    };
-
-    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, raceDeps))
-      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
-    expect(await readFile(join(originalDocsPath, "BACKLOG.md"))).toEqual(originalContent);
-    expect(await readFile(join(outsideDocsPath, "BACKLOG.md"))).toEqual(outsideContent);
   });
 
   it("rejects malformed UTF-8 before proposal and preserves every source byte", async () => {
@@ -174,7 +98,7 @@ describe("Backlog ordering mutations", () => {
     expect(await readFile(backlogPath)).toEqual(malformed);
   });
 
-  it("keeps bytes unchanged for archived, locked, write-failure, tampered, invalid, and symlink cases", async () => {
+  it("keeps bytes unchanged for archived, invalid, conflict-marker, and symlink sources", async () => {
     const before = await readFile(backlogPath, "utf8");
     const project = await store.getProject("sample");
     if (!project) throw new Error("missing test project");
@@ -186,25 +110,6 @@ describe("Backlog ordering mutations", () => {
 
     project.archived = false;
     await writeFile(join(tempHome, "projects", "sample.json"), `${JSON.stringify(project, null, 2)}\n`, "utf8");
-    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-    await withProjectLock("sample", async () => {
-      await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, deps))
-        .resolves.toMatchObject({ ok: false, code: "LOCKED" });
-    }, tempHome);
-    expect(await readFile(backlogPath, "utf8")).toBe(before);
-
-    await expect(applyBacklogOrderingChange(proposed.proposal, "tampered", deps))
-      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
-    await expect(applyBacklogOrderingChange({ ...proposed.proposal, changes: [] }, proposed.proposal.proposalDigest, deps))
-      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
-    expect(await readFile(backlogPath, "utf8")).toBe(before);
-    const failingDeps = { ...deps, beforeReplace: async () => { throw new Error("disk full"); } };
-    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, failingDeps))
-      .resolves.toMatchObject({ ok: false, code: "WRITE_FAILED" });
-    expect(await readFile(backlogPath, "utf8")).toBe(before);
-
     const invalidContent = backlog().replace("phase: phase-1", "phase: missing");
     await writeFile(backlogPath, invalidContent, "utf8");
     await expect(proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps))
@@ -216,6 +121,7 @@ describe("Backlog ordering mutations", () => {
     await expect(proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps))
       .resolves.toMatchObject({ ok: false, code: "INVALID_BACKLOG" });
     expect(await readFile(backlogPath, "utf8")).toBe(conflictContent);
+
     await rm(backlogPath);
     await symlink(join(repository, "docs", "ROADMAP.md"), backlogPath);
     const symlinkContent = await readFile(backlogPath, "utf8");
@@ -240,18 +146,12 @@ describe("Backlog ordering mutations", () => {
     expect(await readFile(backlogPath, "utf8")).toBe(before);
   });
 
-  it("uses ALLJOBS_DATA_ROOT for default mutation project lookup", async () => {
+  it("uses ALLJOBS_DATA_ROOT for default proposal project lookup", async () => {
     const dataRoot = join(tempHome, "separate-data-root");
     const isolatedStore = new NativePlanningStore(dataRoot);
     const isolatedProject: ProjectRegistryEntry = {
-      slug: "isolated-data",
-      name: "Isolated data root",
-      type: "code",
-      work_modes: ["implementation"],
-      execution_locations: [],
-      trusted_path: repository,
-      git_branch: "main",
-      archived: false
+      slug: "isolated-data", name: "Isolated data root", type: "code", work_modes: ["implementation"],
+      execution_locations: [], trusted_path: repository, git_branch: "main", archived: false
     };
     await isolatedStore.createProject(isolatedProject);
     await writeFile(paths.configPath, `${JSON.stringify(paths.config, null, 2)}\n`, "utf8");
