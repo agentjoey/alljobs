@@ -82,12 +82,12 @@ export async function readLocalWorkingTreePlanning(input: {
   });
   issues.push(...relationResult.issues);
 
-  const [headResult, statusResult] = await Promise.all([
+  const [headResult, roadmapHeadResult, backlogHeadResult] = await Promise.all([
     gitRunner.run(["rev-parse", "--verify", "HEAD"], { cwd: paths.workspacePath, denyExternalCommands: true }),
-    gitRunner.run(["status", "--porcelain=v1", "--untracked-files=all", "--no-renames", "--", "docs/ROADMAP.md", "docs/BACKLOG.md"], {
-      cwd: paths.workspacePath,
-      denyExternalCommands: true
-    })
+    project.work_modes.includes("implementation")
+      ? gitRunner.run(["show", "HEAD:docs/ROADMAP.md"], { cwd: paths.workspacePath, denyExternalCommands: true })
+      : Promise.resolve({ stdout: "", stderr: "", exitCode: 0 }),
+    gitRunner.run(["show", "HEAD:docs/BACKLOG.md"], { cwd: paths.workspacePath, denyExternalCommands: true })
   ]);
   if (headResult.exitCode !== 0) {
     issues.push({
@@ -97,16 +97,21 @@ export async function readLocalWorkingTreePlanning(input: {
       message: "The local planning source has no readable Git HEAD."
     });
   }
-  if (statusResult.exitCode !== 0) {
+  if (roadmapHeadResult.exitCode !== 0 || backlogHeadResult.exitCode !== 0) {
     issues.push({
       scope: "document",
-      code: "GIT_STATUS_UNAVAILABLE",
+      code: "GIT_HEAD_CONTENT_UNAVAILABLE",
       sourcePath: paths.workspacePath,
-      message: "The local planning source could not confirm path-scoped modification facts."
+      message: "The local planning source could not compare planning files with Git HEAD."
     });
   }
 
-  const modified = statusResult.exitCode === 0 ? modifiedPaths(statusResult.stdout) : new Set<string>();
+  const roadmapModified = roadmapHeadResult.exitCode === 0 && Boolean(roadmapBytes.length)
+    ? computeDigest(Buffer.from(roadmapHeadResult.stdout, "utf8")) !== computeDigest(roadmapBytes)
+    : false;
+  const backlogModified = backlogHeadResult.exitCode === 0
+    ? computeDigest(Buffer.from(backlogHeadResult.stdout, "utf8")) !== computeDigest(backlogBytes)
+    : false;
   const revision = headResult.exitCode === 0 ? headResult.stdout.trim() : "unknown";
   const roadmapDigest = roadmapBytes.length ? computeDigest(roadmapBytes) : undefined;
   const backlogDigest = computeDigest(backlogBytes);
@@ -135,8 +140,8 @@ export async function readLocalWorkingTreePlanning(input: {
       headRevision: revision,
       roadmapDigest,
       backlogDigest,
-      roadmapModified: modified.has("docs/ROADMAP.md"),
-      backlogModified: modified.has("docs/BACKLOG.md"),
+      roadmapModified,
+      backlogModified,
       readAt
     }
   };

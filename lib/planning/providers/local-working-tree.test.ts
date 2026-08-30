@@ -103,13 +103,14 @@ describe("readLocalWorkingTreePlanning", () => {
     await writeFile(command, `#!/bin/sh\nprintf executed > "${marker}"\n`, "utf8");
     await chmod(command, 0o755);
     await gitRunner.run(["config", "core.fsmonitor", command], { cwd: repository });
-    await gitRunner.run(["config", "filter.untrusted.smudge", command], { cwd: repository });
-    await gitRunner.run(["config", "diff.untrusted.command", command], { cwd: repository });
-    await gitRunner.run(["config", "core.pager", command], { cwd: repository });
+    await gitRunner.run(["config", "filter.untrusted.clean", command], { cwd: repository });
+    await writeFile(join(repository, ".gitattributes"), "docs/BACKLOG.md filter=untrusted\n", "utf8");
+    await writeFile(join(repository, "docs", "BACKLOG.md"), backlog("P0"), "utf8");
 
     const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
 
     expect(result.source.headRevision).toMatch(/^[0-9a-f]{40}$/);
+    expect(result.source.backlogModified).toBe(true);
     await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
