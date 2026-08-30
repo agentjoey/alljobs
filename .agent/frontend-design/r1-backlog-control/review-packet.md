@@ -70,3 +70,51 @@ node scripts/shot.mjs file:///.../mockup/index.html?state=editing .agent/fronten
 - Include concrete evidence for every P0/P1 issue, note P2/P3 observations, and state whether a follow-up visual capture is needed.
 - The independent reviewer must not modify the reviewed implementation. If an edit is necessary, a new independent review is required.
 - Human Owner remains the only party that may approve this rendered revision and unlock Task 1.
+
+---
+
+## Task 9 independent final review packet
+
+**Review role:** Independent code and boundary reviewer in a fresh context. Do not edit the worktree, approve release, choose a pilot, or treat previous task reviews as evidence.
+
+**Candidate:** 47da8457780aa53e7ffa71d057086c40da2834db on codex/r1-backlog-control
+**Baseline:** 5466c338e5b74c7f672d7b6a710d4b7f8f74b665
+**Approved visual reference:** T3 Brief revision 3 and mockup-screens/. The Human Owner approved the rendered mockup only, not release or repository writes.
+
+### Required independent procedure
+
+1. Read the R1 specification and Task 9 plan section, then inspect the candidate diff from 5466c33 to 47da845 without relying on the implementer’s conclusions.
+2. Inspect the source/path resolver, parser/patcher, mutation orchestration, Server Action boundary, activity recording, ordering engine, and corresponding tests.
+3. Run or examine evidence for the exact checks below. Use only the R1 temporary fixture and loopback port 3465; never access a real project, ~/.alljobs, port 3456, or production services.
+4. Write a findings-only report to the designated Task 9 review record. Give every issue a P0–P3 severity, exact evidence, and a concrete disposition. Return PASS only if no blocking or unaddressed material issue remains. This is a review conclusion, not Human Owner release approval.
+
+### Safety invariants to review
+
+- trusted registered path and symlink/realpath escape rejection;
+- present invalid local source does not fall back to remote/cache;
+- client payload cannot choose a path, document body, arbitrary field, or authoritative patch;
+- complete-file digest detects stale writes before write;
+- patching preserves bytes outside permitted priority and rank scalar ranges;
+- lock/atomic-write failures preserve the original file;
+- no Git mutation, repository-code execution, agent start, or backup action occurs;
+- activity excludes Backlog body and secrets;
+- only existing items and only priority/rank are directly editable;
+- new-item flow remains a copy-only repository-agent handoff.
+
+### Candidate evidence commands
+
+    npm test
+    npm run planning:skill:validate
+    npm run typecheck
+    npm run lint
+    npm run build
+    npm run test:e2e:r1
+    git diff --check
+
+### Files in review scope
+
+The candidate changes the R1 files under lib/planning/backlog/, lib/planning/providers/, lib/planning/domain/schemas.ts, lib/planning/queries/project.ts, app/actions/backlog.ts, components/planning/, app/globals.css, the R1 Playwright fixture/spec/config, planning-skill references, and their focused tests. Use git diff --name-only 5466c33..47da845 for the authoritative complete list.
+
+### Out of scope / hard stop
+
+Do not perform or authorize a real pilot write, commit/push/merge/deploy, listener restart, Tunnel/Access/domain/refresh-worker change, or port-3456 test. Pilot selection and release are Human Owner gates after both independent conclusions.

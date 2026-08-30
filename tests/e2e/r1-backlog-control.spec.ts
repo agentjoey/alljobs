@@ -252,5 +252,10 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     await page.getByRole("button", { name: "Review changes" }).click();
     await expect(page.getByRole("heading", { name: "Review the exact field changes" })).toBeVisible();
     await page.screenshot({ path: resolve(evidenceDir, "r1-backlog-review-1440.png"), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.getByRole("heading", { name: "Review the exact field changes" })).toBeVisible();
+    await page.screenshot({ path: resolve(evidenceDir, "r1-backlog-review-390.png"), fullPage: true });
+    expect(existsSync(resolve(evidenceDir, "r1-backlog-review-390.png"))).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 # R1 Backlog Control — T3 Brief
 
 **Revision:** 3  
-**Status:** Human Owner approved rendered Mockup Gate — Task 1 authorized  
+**Status:** Rendered Mockup Gate approved; final candidate verification in progress (not released)
 **Date:** 2026-08-29  
 **Canonical inputs:** `docs/superpowers/specs/2026-08-29-alljobs-r1-backlog-control-design.md` · `docs/superpowers/plans/2026-08-29-alljobs-r1-backlog-control.md` · `docs/superpowers/specs/2026-08-29-alljobs-product-roadmap-design.md`
 
@@ -72,3 +72,4 @@ Human checkpoints: rendered mockup direction; later final build, pilot write, an
 - Application rollback returns to prior read-only behavior; it never silently undoes a confirmed repository edit.
 - A Human Owner-selected real pilot is required before any later production write; this task selects no pilot and changes no repository Backlog.
 - Human Owner explicitly authorized the repaired revision 3 and Task 1 on 2026-08-29, with no repeat independent review requested. The mockup remains a synthetic, non-production artifact.
+- Final candidate verification is bounded to the isolated worktree and loopback port 3465. A real pilot, release, deployment, merge, or push remains a separate Human Owner decision.

@@ -67,3 +67,10 @@ Execute only approved Task 7 after Human Owner authorization. Do not push, merge
 ## Next safe action
 
 Run Task 8's isolated browser-to-filesystem tests, then include this copy-only form in Task 9's independent final review and verification. Do not push, merge, deploy, select a write-back pilot, or permit the UI to write a new Backlog item.
+
+## Task 9 candidate continuation
+
+- Candidate after Task 8: 47da8457780aa53e7ffa71d057086c40da2834db; baseline: 5466c338e5b74c7f672d7b6a710d4b7f8f74b665.
+- R1 remains an isolated, unmerged, non-deployed candidate. No Pact operation is part of this delivery.
+- Task 9 may collect final loopback evidence and independent conclusions only. It may not choose a pilot, write an external Backlog, push, merge, deploy, restart a service, or alter Tunnel, Access, domain, refresh-worker, or port 3456.
+- An owner-selected registered project and explicit pilot-write authorization remain required before any real Backlog edit.

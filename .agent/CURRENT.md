@@ -58,6 +58,14 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
 
+## R1 Backlog Control candidate (not deployed)
+
+- **Branch / worktree:** `codex/r1-backlog-control` · `.worktrees/r1-backlog-control`
+- **Baseline / candidate:** `5466c33` / `47da845`
+- **Status:** Task 9 final candidate evidence and independent gates are in progress. This branch is not merged, pushed, deployed, or connected to the Control Host listener.
+- **Scope:** validated local working-tree precedence; direct existing-item `priority`/`rank` writes only; digest-guarded Proposal/Apply; read-only remote/cache fallback; copy-only new-item handoff.
+- **Remaining Human Gates:** owner-selected pilot project plus explicit pilot-write authorization; owner walkthrough; explicit release approval. No real repository Backlog may be modified until the pilot gate is granted.
+
 ## Release history
 
 | Version | Date | Status | Summary |
