@@ -69,7 +69,7 @@ export function BacklogView({
   const history = items.filter((item) => HISTORY_STATUSES.has(item.status));
 
   if (items.length === 0) {
-    return <section className="backlog-surface"><header className="backlog-surface__header"><div><h2>Backlog ledger</h2><p>Phase → Priority → Rank</p></div></header><StatePanel title="No backlog items" description="Add implementation tasks to docs/BACKLOG.md in your repository." /></section>;
+    return <section className="backlog-surface"><header className="backlog-surface__header"><div><h2>Backlog ledger</h2><p>Phase → Priority → Rank</p></div></header><StatePanel title="No canonical backlog items currently available" description="Review planning document health above before adding items to docs/BACKLOG.md." /></section>;
   }
 
   if (managing && control?.writable) return <BacklogOrderingEditor items={items} projectSlug={projectSlug} control={control} onExit={() => setManaging(false)} />;

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import React, { useState } from "react";
 import { refreshProjectAction } from "@/app/actions/refresh";
 import type { ProjectDetailView } from "@/lib/planning/queries/project";
 import { BacklogProposalForm } from "./backlog-proposal-form";
 import { BacklogView } from "./backlog-view";
+import { DocumentHealth } from "./document-health";
 import { NativeTaskForm } from "./native-task-form";
 import { ProvenancePanel } from "./provenance-panel";
 import { RoadmapView } from "./roadmap-view";
@@ -94,6 +94,14 @@ export function ProjectDetail({
         <div style={{ background: "var(--amber-soft)", border: "1px solid var(--amber-border)", padding: "8px 14px", borderRadius: "var(--radius-sm)", fontSize: "12.5px", marginBottom: "16px" }}>
           {refreshMsg}
         </div>
+      )}
+
+      {isCode && detail.planningSource && (
+        <DocumentHealth
+          documents={detail.documents}
+          source={detail.planningSource}
+          projectSlug={project.slug}
+        />
       )}
 
       {/* Tabs Navigation */}
