@@ -1,7 +1,7 @@
 # Document adaptation and degradation — T2 Brief
 
 **Revision:** 1  
-**Status:** Draft mockup — pending independent review and Human Owner approval  
+**Status:** Approved — rendered Mockup Gate passed by Human Owner  
 **Date:** 2026-08-30  
 **Authoritative design:** `docs/superpowers/specs/2026-08-30-alljobs-document-adaptation-design.md`
 
@@ -68,4 +68,4 @@ The rendered revision must visibly distinguish canonical planning data from cand
 - **Mockup revision:** 2 (I-1 evidence-preserving handoff correction).
 - **Preview:** local static server at `http://127.0.0.1:4173`.
 - **Evidence:** `screenshots/desktop-1440.png`, `screenshots/mid-900.png`, `screenshots/mobile-390.png`.
-- **Human Owner decision:** **PENDING — revision 2 is not approved.**
+- **Human Owner decision:** **APPROVED — rendered Mockup Gate passed.** The approved direction is limited to the reviewed Paper Workbench document-health hierarchy and state contract; it does not authorize deployment, source-document writes, push, merge, or service changes.
