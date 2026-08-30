@@ -7,7 +7,7 @@ import type {
 const canonicalTemplates: Record<PlanningDocumentKind, string> = {
   roadmap: `# Roadmap
 
-## phase-1 — Outcome title
+## phase-1: Outcome title
 
 \`\`\`yaml alljobs
 kind: phase
@@ -18,7 +18,7 @@ order: 10
 Describe the outcome and its role in the project Roadmap.`,
   backlog: `# Backlog
 
-## PROJECT-BL-001 — Outcome title
+## PROJECT-BL-001: Outcome title
 
 \`\`\`yaml alljobs
 work_mode: implementation

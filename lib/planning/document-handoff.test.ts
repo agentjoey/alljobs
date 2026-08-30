@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { validateProjectRelations } from "./domain/relations";
+import { parseBacklogDocument } from "./markdown/backlog";
+import { parseRoadmapDocument } from "./markdown/roadmap";
 import type { DocumentTriage, PlanningSourceState } from "./providers/contracts";
 import { buildDocumentStandardizationHandoff } from "./document-handoff";
 
@@ -8,6 +11,14 @@ const localSource: PlanningSourceState = {
   headRevision: "abc123",
   readAt: "2026-08-30T00:00:00.000Z"
 };
+
+function extractCanonicalTemplate(handoff: string, sourcePath: string) {
+  const marker = `Canonical template for ${sourcePath}:\n`;
+  const start = handoff.indexOf(marker);
+  const end = handoff.indexOf("\n\nRepository-agent validation:", start);
+  if (start < 0 || end < 0) throw new Error(`Canonical template not found for ${sourcePath}`);
+  return handoff.slice(start + marker.length, end);
+}
 
 describe("buildDocumentStandardizationHandoff", () => {
   it("builds a deterministic copy-only Backlog handoff with all source evidence", () => {
@@ -105,5 +116,84 @@ describe("buildDocumentStandardizationHandoff", () => {
     expect(text).toContain("# Roadmap");
     expect(text).toContain("order: 10");
     expect(text).not.toContain("work_mode: implementation");
+  });
+
+  it("emits templates whose stable IDs and implementation phase relation pass strict validation", () => {
+    const roadmapPath = "docs/ROADMAP.md";
+    const backlogPath = "docs/BACKLOG.md";
+    const roadmapHandoff = buildDocumentStandardizationHandoff({
+      projectSlug: "code-project",
+      triage: {
+        document: "roadmap",
+        state: "missing",
+        sourcePath: roadmapPath,
+        diagnostics: [{
+          scope: "document",
+          code: "PLANNING_FILE_MISSING",
+          message: "Roadmap file is missing."
+        }],
+        candidates: []
+      },
+      source: localSource
+    });
+    const backlogHandoff = buildDocumentStandardizationHandoff({
+      projectSlug: "code-project",
+      triage: {
+        document: "backlog",
+        state: "missing",
+        sourcePath: backlogPath,
+        diagnostics: [{
+          scope: "document",
+          code: "PLANNING_FILE_MISSING",
+          message: "Backlog file is missing."
+        }],
+        candidates: []
+      },
+      source: localSource
+    });
+    const roadmap = parseRoadmapDocument(
+      extractCanonicalTemplate(roadmapHandoff, roadmapPath),
+      roadmapPath,
+      "phase"
+    );
+    const backlog = parseBacklogDocument(
+      extractCanonicalTemplate(backlogHandoff, backlogPath),
+      backlogPath
+    );
+
+    expect(roadmap.issues).toEqual([]);
+    expect(roadmap.valid).toEqual([
+      expect.objectContaining({ id: "phase-1", title: "Outcome title" })
+    ]);
+    expect(backlog.issues).toEqual([]);
+    expect(backlog.valid).toEqual([
+      expect.objectContaining({
+        id: "PROJECT-BL-001",
+        title: "Outcome title",
+        work_mode: "implementation",
+        phase: "phase-1"
+      })
+    ]);
+
+    const relations = validateProjectRelations({
+      project: {
+        slug: "code-project",
+        name: "Code Project",
+        type: "code",
+        work_modes: ["implementation"],
+        execution_locations: [],
+        archived: false
+      },
+      roadmapItems: roadmap.valid,
+      backlogItems: backlog.valid,
+      tasks: [],
+      sourcePath: "repository-agent-handoff"
+    });
+
+    expect(relations.issues).toEqual([]);
+    expect(relations.valid[0]).toMatchObject({
+      roadmapItems: [{ id: "phase-1" }],
+      backlogItems: [{ id: "PROJECT-BL-001", phase: "phase-1" }]
+    });
   });
 });
