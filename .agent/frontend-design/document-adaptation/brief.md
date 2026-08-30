@@ -65,8 +65,7 @@ The rendered revision must visibly distinguish canonical planning data from cand
 ## Mockup Gate record
 
 - **Decision:** Conditional-created.
-- **Mockup revision:** 1.
+- **Mockup revision:** 2 (I-1 evidence-preserving handoff correction).
 - **Preview:** local static server at `http://127.0.0.1:4173`.
 - **Evidence:** `screenshots/desktop-1440.png`, `screenshots/mid-900.png`, `screenshots/mobile-390.png`.
-- **Human Owner decision:** **PENDING — not approved.**
-
+- **Human Owner decision:** **PENDING — revision 2 is not approved.**

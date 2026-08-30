@@ -1,3 +1,45 @@
+const canonicalTemplates = {
+  roadmap: `# Roadmap
+
+## phase-1 — Outcome title
+
+\`\`\`yaml alljobs
+kind: phase
+status: planned
+order: 10
+\`\`\`
+
+Describe the outcome and its role in the project Roadmap.`,
+  backlog: `# Backlog
+
+## PROJECT-BL-001 — Outcome title
+
+\`\`\`yaml alljobs
+work_mode: implementation
+phase: phase-1
+status: ready
+priority: P1
+owner: joey
+dependencies: []
+\`\`\`
+
+### Problem
+
+Describe the problem or required outcome.
+
+### Done When
+
+- [ ] Add an owner-verifiable completion condition.`
+};
+
+const recoverableCandidate = {
+  heading: "Improve document health",
+  line: 71,
+  evidence: "## Improve document health",
+  confidence: "Recognized heading shape",
+  missingCanonicalFields: ["id", "status", "priority", "phase"]
+};
+
 const scenarios = {
   canonical: {
     label: "Canonical",
@@ -36,7 +78,13 @@ const scenarios = {
     digest: "sha256 8f2a76d…019c",
     title: "One Backlog section needs repair",
     summary: "Three canonical items remain official. One recognizable section is isolated as evidence and does not enter counts.",
-    detail: "recoverable"
+    detail: "recoverable",
+    diagnostic: {
+      code: "BACKLOG_FIELD_INVALID · line 74",
+      evidence: "priority: urgent",
+      recovery: "Expected P0, P1, P2, or P3. The section was isolated; three canonical items remain official."
+    },
+    candidates: [recoverableCandidate]
   },
   unstructured: {
     label: "Unstructured document",
@@ -49,7 +97,19 @@ const scenarios = {
     digest: "sha256 4760bd0…c40f",
     title: "Readable Markdown without canonical sections",
     summary: "The outline is useful for orientation, but it is not canonical planning data.",
-    detail: "unstructured"
+    detail: "unstructured",
+    diagnostic: {
+      code: "BACKLOG_STRUCTURE_MISSING",
+      evidence: "No canonical YAML sections found",
+      recovery: "Readable headings remain as an outline. No planning fields were inferred."
+    },
+    candidates: [{
+      heading: "Later ideas",
+      line: 39,
+      evidence: "## Later ideas",
+      confidence: "Ambiguous outline",
+      missingCanonicalFields: ["id", "status", "priority", "phase"]
+    }]
   },
   "missing-backlog": {
     label: "Missing document",
@@ -62,7 +122,14 @@ const scenarios = {
     digest: "not available",
     title: "Backlog document is missing",
     summary: "AllJobs looked for the fixed Backlog path and did not find a regular file. This is not a zero-item Backlog.",
-    detail: "missing"
+    detail: "missing",
+    diagnostic: {
+      code: "DOCUMENT_MISSING",
+      evidence: "docs/BACKLOG.md",
+      recovery: "Create this fixed document in the repository review workflow; AllJobs did not create it."
+    },
+    candidates: [],
+    canonicalTemplate: canonicalTemplates.backlog
   },
   "missing-roadmap": {
     label: "Missing document",
@@ -75,7 +142,14 @@ const scenarios = {
     digest: "not available",
     title: "Roadmap document is missing",
     summary: "AllJobs looked for the fixed Roadmap path and did not find a regular file. No phase count is inferred.",
-    detail: "missing"
+    detail: "missing",
+    diagnostic: {
+      code: "DOCUMENT_MISSING",
+      evidence: "docs/ROADMAP.md",
+      recovery: "Create this fixed document in the repository review workflow; AllJobs did not create it."
+    },
+    candidates: [],
+    canonicalTemplate: canonicalTemplates.roadmap
   },
   unsafe: {
     label: "Source blocked",
@@ -88,7 +162,13 @@ const scenarios = {
     digest: "not read",
     title: "Backlog path is not a regular file",
     summary: "The selected local path resolves to a symbolic link outside the trusted project root. AllJobs did not read through it.",
-    detail: "unsafe"
+    detail: "unsafe",
+    diagnostic: {
+      code: "SOURCE_PATH_REJECTED",
+      evidence: "docs/BACKLOG.md → /tmp/shared-backlog.md",
+      recovery: "The local path is not a trusted regular file. No remote fallback was selected."
+    },
+    candidates: []
   },
   remote: {
     label: "Canonical · read only",
@@ -114,7 +194,13 @@ const scenarios = {
     digest: "sha256 6de3041…8fe0",
     title: "Cached evidence may be out of date",
     summary: "The cache preserves the last readable projection after refresh failed. It is evidence, not a current source claim.",
-    detail: "cache"
+    detail: "cache",
+    diagnostic: {
+      code: "REFRESH_FAILED · cached evidence retained",
+      evidence: "Last successful read · 2 hours ago",
+      recovery: "Retry source refresh before relying on this projection."
+    },
+    candidates: []
   },
   unavailable: {
     label: "Unavailable source",
@@ -127,7 +213,13 @@ const scenarios = {
     digest: "not available",
     title: "No readable Backlog source",
     summary: "The local path is unavailable, the mirror has no readable commit, and no cache snapshot exists.",
-    detail: "unavailable"
+    detail: "unavailable",
+    diagnostic: {
+      code: "SOURCE_UNAVAILABLE",
+      evidence: "Local read failed · remote revision absent · cache absent",
+      recovery: "Restore a readable source, then refresh. No planning data was inferred."
+    },
+    candidates: []
   },
   clipboard: {
     label: "Needs attention",
@@ -140,7 +232,13 @@ const scenarios = {
     digest: "sha256 8f2a76d…019c",
     title: "One Backlog section needs repair",
     summary: "Clipboard access is unavailable in this browser. The full handoff stays selectable below.",
-    detail: "clipboard"
+    detail: "clipboard",
+    diagnostic: {
+      code: "BACKLOG_FIELD_INVALID · line 74",
+      evidence: "priority: urgent",
+      recovery: "Expected P0, P1, P2, or P3. Clipboard access is also unavailable."
+    },
+    candidates: [recoverableCandidate]
   }
 };
 
@@ -159,27 +257,38 @@ function escapeHtml(value) {
 }
 
 function handoffText(item) {
-  const diagnostic = item.detail === "missing"
-    ? `Missing fixed planning document: ${item.path}`
-    : item.detail === "unsafe"
-      ? `Unsafe source rejected: ${item.path} is not a trusted regular file`
-      : item.detail === "unavailable"
-        ? `No readable local, remote, or cached source for ${item.path}`
-        : "BACKLOG_FIELD_INVALID at line 74: priority must be P0, P1, P2, or P3";
-
-  return [
+  const lines = [
     "Repository-agent handoff — review required",
     "Project: AllJobs demonstration project",
     `Document: ${item.path}`,
     `Source mode: ${item.source}`,
     `Revision: ${item.revision}`,
     `Digest: ${item.digest}`,
-    `Diagnostic: ${diagnostic}`,
-    "Candidate: Improve document health (line 71)",
-    "Missing canonical fields: id, status, priority, phase",
+    `Diagnostic: ${item.diagnostic.code} — ${item.diagnostic.evidence}`,
+    `Recovery: ${item.diagnostic.recovery}`
+  ];
+
+  for (const candidate of item.candidates || []) {
+    lines.push(
+      `Candidate: ${candidate.heading} (line ${candidate.line})`,
+      `Candidate evidence: ${candidate.evidence}`,
+      `Candidate confidence: ${candidate.confidence}`
+    );
+    if (candidate.missingCanonicalFields.length > 0) {
+      lines.push(`Missing canonical fields: ${candidate.missingCanonicalFields.join(", ")}`);
+    }
+  }
+
+  if (item.canonicalTemplate) {
+    lines.push(`Canonical template for ${item.path}:`, item.canonicalTemplate);
+  }
+
+  lines.push(
     "Choose stable IDs, preserve source meaning, and validate relations in the repository review workflow.",
     "AllJobs made no repository write, commit, push, merge, fetch, or agent-start action."
-  ].join("\n");
+  );
+
+  return lines.join("\n");
 }
 
 function healthMarker(item) {
@@ -213,8 +322,9 @@ function canonicalDetail(item) {
   </section>`;
 }
 
-function candidateSheet(kind = "recoverable") {
-  const isOutline = kind === "unstructured";
+function candidateSheet(item) {
+  const candidate = item.candidates[0];
+  const isOutline = item.detail === "unstructured";
   return `<section class="evidence-section" aria-labelledby="candidate-heading">
     <header class="section-heading">
       <div>
@@ -224,30 +334,20 @@ function candidateSheet(kind = "recoverable") {
       <span class="evidence-label">Not canonical</span>
     </header>
     <div class="candidate-sheet">
-      <div class="candidate-line"><span>Heading</span><strong>${isOutline ? "Later ideas" : "Improve document health"}</strong></div>
-      <div class="candidate-line"><span>Source line</span><code>${isOutline ? "line 39" : "line 71"}</code></div>
-      <div class="candidate-line"><span>Evidence</span><q>${isOutline ? "## Later ideas" : "## Improve document health"}</q></div>
-      <div class="candidate-line"><span>Confidence</span><strong>${isOutline ? "Ambiguous outline" : "Recognized heading shape"}</strong></div>
-      <div class="candidate-line"><span>Missing fields</span><code>id · status · priority · phase</code></div>
+      <div class="candidate-line"><span>Heading</span><strong>${escapeHtml(candidate.heading)}</strong></div>
+      <div class="candidate-line"><span>Source line</span><code>line ${escapeHtml(candidate.line)}</code></div>
+      <div class="candidate-line"><span>Evidence</span><q>${escapeHtml(candidate.evidence)}</q></div>
+      <div class="candidate-line"><span>Confidence</span><strong>${escapeHtml(candidate.confidence)}</strong></div>
+      <div class="candidate-line"><span>Missing fields</span><code>${escapeHtml(candidate.missingCanonicalFields.join(" · "))}</code></div>
     </div>
     <p class="withheld">No ID assigned · no priority or rank inferred · no drag, create, or apply control</p>
   </section>`;
 }
 
 function diagnosticBlock(item) {
-  const blocks = {
-    recoverable: ["BACKLOG_FIELD_INVALID · line 74", "priority: urgent", "Expected P0, P1, P2, or P3. The section was isolated; three canonical items remain official."],
-    clipboard: ["BACKLOG_FIELD_INVALID · line 74", "priority: urgent", "Expected P0, P1, P2, or P3. Clipboard access is also unavailable."],
-    unstructured: ["BACKLOG_STRUCTURE_MISSING", "No canonical YAML sections found", "Readable headings remain as an outline. No planning fields were inferred."],
-    missing: ["DOCUMENT_MISSING", item.path, "Create this fixed document in the repository review workflow; AllJobs did not create it."],
-    unsafe: ["SOURCE_PATH_REJECTED", `${item.path} → /tmp/shared-backlog.md`, "The local path is not a trusted regular file. No remote fallback was selected."],
-    cache: ["REFRESH_FAILED · cached evidence retained", "Last successful read · 2 hours ago", "Retry source refresh before relying on this projection."],
-    unavailable: ["SOURCE_UNAVAILABLE", "Local read failed · remote revision absent · cache absent", "Restore a readable source, then refresh. No planning data was inferred."]
-  };
-  const [code, evidence, recovery] = blocks[item.detail] || blocks.recoverable;
   return `<section class="diagnostic" aria-labelledby="diagnostic-heading">
     <div class="diagnostic-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg></div>
-    <div><h2 id="diagnostic-heading">${escapeHtml(code)}</h2><code>${escapeHtml(evidence)}</code><p>${escapeHtml(recovery)}</p></div>
+    <div><h2 id="diagnostic-heading">${escapeHtml(item.diagnostic.code)}</h2><code>${escapeHtml(item.diagnostic.evidence)}</code><p>${escapeHtml(item.diagnostic.recovery)}</p></div>
   </section>`;
 }
 
@@ -272,9 +372,9 @@ function handoffBlock(item, reveal = false) {
 
 function renderDetail(item) {
   if (["canonical", "canonical-modified", "remote"].includes(item.detail)) return canonicalDetail(item);
-  const showCandidate = ["recoverable", "clipboard", "unstructured"].includes(item.detail);
+  const showCandidate = item.candidates.length > 0;
   return `${diagnosticBlock(item)}
-    ${showCandidate ? candidateSheet(item.detail) : ""}
+    ${showCandidate ? candidateSheet(item) : ""}
     ${handoffBlock(item, item.detail === "clipboard")}`;
 }
 
@@ -341,4 +441,3 @@ async function copyHandoff(item) {
 
 scenarioSelect.addEventListener("change", render);
 render();
-

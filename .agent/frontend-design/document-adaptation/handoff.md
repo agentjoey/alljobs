@@ -5,14 +5,14 @@
 - **Branch / worktree:** `codex/document-adaptation` · `.worktrees/document-adaptation`
 - **Base / current commit:** `fded5e7de22c6765360fc7d05e0e4906388f37c6` / Task 0 artifact commit recorded in `task-0-report.md` after creation
 - **Files changed:** Task 0 artifacts only under `.agent/frontend-design/document-adaptation/`
-- **Decisions:** strict canonical output remains the only planning authority; non-canonical candidates are ruled evidence sheets; all adaptation actions are copy-only; mockup uses synthetic data
+- **Decisions:** strict canonical output remains the only planning authority; non-canonical candidates are ruled evidence sheets; all adaptation actions are copy-only; mockup uses synthetic data; revision 2 derives copied evidence from the selected scenario and includes the appropriate canonical template only for missing documents
 - **Assumptions:** the approved design and current Paper Workbench visual world settle direction; no production component is authorized before the Human Mockup Gate
 - **Commands / checks:** dependency install: 0 vulnerabilities; Impeccable detector: advisory-only findings reviewed against the approved `DESIGN.md`; 11 rendered states present; 1440/900/390 horizontal overflow: none; copy handoff: keyboard-reachable; three required screenshots captured and visually inspected
 - **Evidence:** `screenshots/desktop-1440.png`, `screenshots/mid-900.png`, `screenshots/mobile-390.png`
-- **Known failures / open questions:** independent Review/Verification has not run; Human Owner has not approved rendered revision 1; Impeccable reported the existing `.impeccable/design.json` sidecar is older than `DESIGN.md`, and refreshing it is outside Task 0
+- **Known failures / open questions:** revision 1 received `PASS_WITH_FIXES` with I-1; revision 2 fixes I-1 but still requires fresh independent verification; Human Owner has not approved rendered revision 2; Impeccable reported the existing `.impeccable/design.json` sidecar is older than `DESIGN.md`, and refreshing it is outside Task 0
 - **Uncommitted state:** Task 0 report is intentionally written after the artifact commit and remains outside that commit; final status is recorded there
 - **Next safe action:** launch a fresh independent Review/Verification session with `review-packet.md`, then present the rendered evidence and review result to the Human Owner. Stop before production implementation.
 
 ## Gate status
 
-**PENDING — the rendered mockup is not approved.** No separate reviewer was authorized in this session, so the required independent review remains open.
+**PENDING — rendered mockup revision 2 is not approved.** Independent re-verification of the I-1 correction remains open.

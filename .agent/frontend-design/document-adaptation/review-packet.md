@@ -6,7 +6,7 @@
 - **Brief revision:** 1
 - **Tier:** T2 — reusable user-visible source-health states and copy interaction on existing Project surfaces
 - **Reviewer role:** independent Review and Verification agent/session; reviewer must not inherit the Primary Agent's conclusions
-- **Mockup revision:** 1 · **Human status: pending, not approved**
+- **Mockup revision:** 2 · **Human status: pending, not approved**
 - **Target branch/worktree:** `codex/document-adaptation` · `.worktrees/document-adaptation`
 - **Target commit/build:** Task 0 mockup commit; standalone static preview, not production code
 - **Result write-back:** append the independent result to this packet and update `handoff.md`; do not mark Human approval
@@ -76,5 +76,4 @@ Return `PASS`, `PASS_WITH_FIXES`, or `BLOCK`, followed by findings prioritized a
 
 ## Independence status
 
-No separate reviewer has explicit authorization in this Task 0 session. Independent review is **not run**. This packet is ready for a fresh independent session, and work pauses at that gate.
-
+Revision 1 received an independent `PASS_WITH_FIXES` verdict with one important finding: I-1, copied handoffs reused recoverable Backlog evidence across unrelated states and omitted missing-document templates. Revision 2 derives diagnostics, candidates, missing fields, and document templates from the selected scenario. The correction requires fresh independent verification; the Human Mockup Gate remains pending.
