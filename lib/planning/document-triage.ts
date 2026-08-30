@@ -19,8 +19,14 @@ export interface TriagePlanningDocumentInput {
 }
 
 const missingFieldsByDocument: Record<PlanningDocumentKind, string[]> = {
-  roadmap: ["id", "kind", "status"],
-  backlog: ["id", "priority", "status"]
+  roadmap: ["id", "kind", "status", "order"],
+  backlog: [
+    "id",
+    "priority",
+    "status",
+    "work_mode",
+    "phase (required when work_mode is implementation)"
+  ]
 };
 
 function isDocumentTitle(heading: string, document: PlanningDocumentKind) {

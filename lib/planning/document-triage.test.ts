@@ -24,6 +24,24 @@ describe("triagePlanningDocument", () => {
     });
   });
 
+  it("reports every required and conditional Backlog field without inferring a phase", () => {
+    const result = triagePlanningDocument({
+      document: "backlog",
+      sourcePath: "docs/BACKLOG.md",
+      content: "# Backlog\n\n- [ ] Prepare release\n",
+      parserIssues: [],
+      canonicalItemCount: 0
+    });
+
+    expect(result.candidates[0]?.missingCanonicalFields).toEqual([
+      "id",
+      "priority",
+      "status",
+      "work_mode",
+      "phase (required when work_mode is implementation)"
+    ]);
+  });
+
   it("reports an explicitly missing fixed planning document", () => {
     const missingIssue: ProofIssue = {
       scope: "document",
@@ -111,6 +129,23 @@ describe("triagePlanningDocument", () => {
         confidence: "ambiguous"
       }]
     });
+  });
+
+  it("reports every required Roadmap field for an outline candidate", () => {
+    const result = triagePlanningDocument({
+      document: "roadmap",
+      sourcePath: "docs/ROADMAP.md",
+      content: "# Roadmap\n\n## Notes\n",
+      parserIssues: [],
+      canonicalItemCount: 0
+    });
+
+    expect(result.candidates[0]?.missingCanonicalFields).toEqual([
+      "id",
+      "kind",
+      "status",
+      "order"
+    ]);
   });
 
   it("represents an explicitly unavailable source without inventing a candidate", () => {
