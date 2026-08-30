@@ -64,6 +64,7 @@ describe("planning UI components", () => {
             issues: [],
             attention: [],
             provenance: [],
+            documents: [],
             metrics: { activeTasks: 3, totalBacklog: 4, doneCount: 1, blockedCount: 0 },
             digest: "abc"
           }
