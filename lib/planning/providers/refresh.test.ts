@@ -6,7 +6,7 @@ import type { ControlHostResolvedPaths } from "../config";
 import type { ProjectRegistryEntry } from "../domain/types";
 import { NativePlanningStore } from "../native/store";
 import { NodeGitRunner } from "./git-runner";
-import { refreshProject } from "./refresh";
+import { getCachedProjection, refreshProject } from "./refresh";
 
 const sampleRoadmap = `# AllJobs Roadmap
 
@@ -95,6 +95,13 @@ describe("refreshProject", () => {
     expect(projection.roadmap.length).toBe(1);
     expect(projection.backlog.length).toBe(1);
     expect(projection.issues).toEqual([]);
+    expect(projection.documents).toEqual([
+      expect.objectContaining({ document: "roadmap", state: "canonical" }),
+      expect.objectContaining({ document: "backlog", state: "canonical" })
+    ]);
+
+    const cached = await getCachedProjection(project.slug, paths.cacheDir);
+    expect(cached?.documents).toEqual(projection.documents);
   });
 
   it("falls back to trusted_path when git_remote is unusable", async () => {
@@ -134,6 +141,27 @@ describe("refreshProject", () => {
     expect(projection.freshness).toBe("fresh");
     expect(projection.roadmap.length).toBe(1);
     expect(projection.backlog.length).toBe(1);
+  });
+
+  it("loads a pre-triage cache snapshot with an empty documents collection", async () => {
+    const cacheDir = resolve(tempHome, "cache");
+    await mkdir(cacheDir, { recursive: true });
+    await writeFile(resolve(cacheDir, "legacy.json"), JSON.stringify({
+      project: "legacy",
+      revision: "old-cache",
+      fetchedAt: "2026-08-29T00:00:00.000Z",
+      freshness: "stale",
+      roadmap: [],
+      backlog: [],
+      tasks: [],
+      issues: [],
+      provenance: []
+    }), "utf8");
+
+    await expect(getCachedProjection("legacy", cacheDir)).resolves.toMatchObject({
+      project: "legacy",
+      documents: []
+    });
   });
 });
 

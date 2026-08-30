@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -95,6 +95,62 @@ describe("readLocalWorkingTreePlanning", () => {
     expect(result.source.mode).toBe("local-working-tree");
     expect(result.source.writable).toBe(false);
     expect(result.projection.issues.some((issue) => issue.code === "MALFORMED_YAML")).toBe(true);
+  });
+
+  it("retains a canonical Roadmap when the local Backlog is missing", async () => {
+    await rm(join(repository, "docs", "BACKLOG.md"));
+
+    const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
+
+    expect(result.source.mode).toBe("local-working-tree");
+    expect(result.source.writable).toBe(false);
+    expect(result.projection.roadmap).toHaveLength(1);
+    expect(result.projection.backlog).toEqual([]);
+    expect(result.projection.documents).toContainEqual(expect.objectContaining({
+      document: "roadmap",
+      state: "canonical"
+    }));
+    expect(result.projection.documents).toContainEqual(expect.objectContaining({
+      document: "backlog",
+      state: "missing",
+      sourcePath: expect.stringMatching(/docs\/BACKLOG\.md$/)
+    }));
+  });
+
+  it("keeps an uncommitted local Roadmap when Git HEAD contains only the Backlog", async () => {
+    await gitRunner.run(["rm", "docs/ROADMAP.md"], { cwd: repository });
+    await gitRunner.run(["commit", "-m", "remove Roadmap from HEAD"], { cwd: repository });
+    await writeFile(join(repository, "docs", "ROADMAP.md"), roadmap, "utf8");
+
+    const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
+
+    expect(result.projection.roadmap).toHaveLength(1);
+    expect(result.projection.documents).toContainEqual(expect.objectContaining({
+      document: "roadmap",
+      state: "canonical"
+    }));
+    expect(result.projection.issues).not.toContainEqual(expect.objectContaining({
+      code: "GIT_HEAD_CONTENT_UNAVAILABLE"
+    }));
+    expect(result.source.roadmapModified).toBe(true);
+  });
+
+  it("does not project bytes through an unsafe local Backlog symlink", async () => {
+    await rm(join(repository, "docs", "BACKLOG.md"));
+    await symlink(join(repository, "docs", "ROADMAP.md"), join(repository, "docs", "BACKLOG.md"));
+
+    const result = await readLocalWorkingTreePlanning({ project, config: config(), gitRunner });
+
+    expect(result.projection.roadmap).toHaveLength(1);
+    expect(result.projection.backlog).toEqual([]);
+    expect(result.projection.documents).toContainEqual(expect.objectContaining({
+      document: "backlog",
+      state: "unavailable",
+      diagnostics: [expect.objectContaining({ code: "PLANNING_FILE_SYMLINK" })]
+    }));
+    expect(result.projection.provenance).not.toContainEqual(expect.objectContaining({
+      location: "docs/BACKLOG.md"
+    }));
   });
 
   it("does not execute commands selected by repository configuration while reading", async () => {

@@ -82,5 +82,54 @@ describe("GitMarkdownProvider", () => {
     expect(projection.backlog.length).toBe(1);
     expect(projection.backlog[0].id).toBe("AJ-B-001");
     expect(projection.provenance.length).toBe(2);
+    expect(projection.documents).toEqual([
+      expect.objectContaining({ document: "roadmap", state: "canonical" }),
+      expect.objectContaining({ document: "backlog", state: "canonical" })
+    ]);
+  });
+
+  it("retains a canonical sibling when one fixed document is absent from the commit", async () => {
+    await runner.run(["rm", "docs/BACKLOG.md"], { cwd: tempRepo });
+    await runner.run(["commit", "-m", "remove Backlog"], { cwd: tempRepo });
+
+    const projection = await provider.projectRoadmap(testProject, {
+      trustedPath: tempRepo,
+      ref: "main"
+    });
+
+    expect(projection.roadmap).toHaveLength(1);
+    expect(projection.backlog).toEqual([]);
+    expect(projection.documents).toEqual([
+      expect.objectContaining({ document: "roadmap", state: "canonical" }),
+      expect.objectContaining({
+        document: "backlog",
+        state: "missing",
+        sourcePath: "docs/BACKLOG.md"
+      })
+    ]);
+  });
+
+  it("returns unavailable triage for every required document when no repository path is provided", async () => {
+    const projection = await provider.projectRoadmap(testProject);
+
+    expect(projection.documents).toEqual([
+      expect.objectContaining({ document: "roadmap", state: "unavailable" }),
+      expect.objectContaining({ document: "backlog", state: "unavailable" })
+    ]);
+  });
+
+  it("omits Roadmap triage for an operations-only project", async () => {
+    const projection = await provider.projectRoadmap({
+      ...testProject,
+      work_modes: ["operations"]
+    }, {
+      trustedPath: tempRepo,
+      ref: "main"
+    });
+
+    expect(projection.roadmap).toEqual([]);
+    expect(projection.documents).toEqual([
+      expect.objectContaining({ document: "backlog", state: "canonical" })
+    ]);
   });
 });

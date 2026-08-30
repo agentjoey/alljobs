@@ -47,8 +47,34 @@ describe("resolveLocalPlanningPaths", () => {
     await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
       ok: true,
       workspacePath: canonicalRoot,
-      roadmapPath: join(canonicalRoot, "docs", "ROADMAP.md"),
-      backlogPath: join(canonicalRoot, "docs", "BACKLOG.md")
+      roadmap: { readable: true, path: join(canonicalRoot, "docs", "ROADMAP.md") },
+      backlog: { readable: true, path: join(canonicalRoot, "docs", "BACKLOG.md") }
+    });
+  });
+
+  it("retains a readable sibling when one fixed planning document is missing", async () => {
+    const root = await workspace();
+    await rm(join(root, "docs", "BACKLOG.md"));
+
+    await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
+      ok: true,
+      roadmap: { readable: true, path: expect.stringMatching(/docs\/ROADMAP\.md$/) },
+      backlog: {
+        readable: false,
+        path: expect.stringMatching(/docs\/BACKLOG\.md$/),
+        issue: { code: "PLANNING_FILE_MISSING" }
+      }
+    });
+  });
+
+  it("reports both fixed documents as missing when the planning directory is absent", async () => {
+    const root = join(trustedRoot, "project");
+    await mkdir(root);
+
+    await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
+      ok: true,
+      roadmap: { readable: false, issue: { code: "PLANNING_FILE_MISSING" } },
+      backlog: { readable: false, issue: { code: "PLANNING_FILE_MISSING" } }
     });
   });
 
@@ -74,13 +100,18 @@ describe("resolveLocalPlanningPaths", () => {
     });
   });
 
-  it("rejects a Backlog symlink even when it points inside the workspace", async () => {
+  it("records an unsafe Backlog symlink without weakening strict write callers", async () => {
     const root = await workspace();
     const target = join(root, "backlog-source.md");
     await writeFile(target, "# Backlog\n");
     await rm(join(root, "docs", "BACKLOG.md"));
     await symlink(target, join(root, "docs", "BACKLOG.md"));
 
+    await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
+      ok: true,
+      roadmap: { readable: true },
+      backlog: { readable: false, issue: { code: "PLANNING_FILE_SYMLINK" } }
+    });
     await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
       ok: false,
       state: "unsafe",
@@ -104,26 +135,24 @@ describe("resolveLocalPlanningPaths", () => {
     });
   });
 
-  it("rejects a directory in place of a required planning file", async () => {
+  it("records a directory in place of a required planning file", async () => {
     const root = await workspace();
     await rm(join(root, "docs", "BACKLOG.md"));
     await mkdir(join(root, "docs", "BACKLOG.md"));
 
-    await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
-      ok: false,
-      state: "invalid-file",
-      code: "PLANNING_FILE_NOT_REGULAR"
+    await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
+      ok: true,
+      backlog: { readable: false, issue: { code: "PLANNING_FILE_NOT_REGULAR" } }
     });
   });
 
-  it("rejects a planning file over 2 MiB", async () => {
+  it("records a planning file over 2 MiB", async () => {
     const root = await workspace();
     await writeFile(join(root, "docs", "BACKLOG.md"), Buffer.alloc(2 * 1024 * 1024 + 1));
 
-    await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
-      ok: false,
-      state: "invalid-file",
-      code: "PLANNING_FILE_TOO_LARGE"
+    await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
+      ok: true,
+      backlog: { readable: false, issue: { code: "PLANNING_FILE_TOO_LARGE" } }
     });
   });
 

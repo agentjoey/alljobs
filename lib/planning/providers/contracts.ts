@@ -51,8 +51,7 @@ export interface ExternalProjection {
   tasks: Task[];
   issues: ProofIssue[];
   provenance: SourceProvenance[];
-  // Task 2 will populate this for every projection and make it required.
-  documents?: DocumentTriage[];
+  documents: DocumentTriage[];
 }
 
 export interface PlanningSourceState {

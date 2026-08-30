@@ -1,4 +1,5 @@
 import { validateProjectRelations } from "../domain/relations";
+import { triagePlanningDocument } from "../document-triage";
 import type {
   BacklogItem,
   ProjectRegistryEntry,
@@ -11,10 +12,30 @@ import { parseRoadmapDocument } from "../markdown/roadmap";
 import { computeDigest } from "../native/digest";
 import type {
   ExternalProjection,
+  DocumentTriage,
   PlanningProvider,
   SourceProvenance
 } from "./contracts";
 import type { GitRunner } from "./git-runner";
+
+function unavailableDocuments(project: ProjectRegistryEntry, issue: ProofIssue): DocumentTriage[] {
+  return [
+    ...(project.work_modes.includes("implementation") ? [triagePlanningDocument({
+      document: "roadmap" as const,
+      sourcePath: "docs/ROADMAP.md",
+      parserIssues: [issue],
+      canonicalItemCount: 0,
+      unavailable: true
+    })] : []),
+    triagePlanningDocument({
+      document: "backlog",
+      sourcePath: "docs/BACKLOG.md",
+      parserIssues: [issue],
+      canonicalItemCount: 0,
+      unavailable: true
+    })
+  ];
+}
 
 export class GitMarkdownProvider implements PlanningProvider {
   readonly name = "git-markdown";
@@ -30,6 +51,12 @@ export class GitMarkdownProvider implements PlanningProvider {
     const fetchedAt = new Date().toISOString();
 
     if (!cwd) {
+      const issue: ProofIssue = {
+        scope: "document",
+        code: "MISSING_REPOSITORY_PATH",
+        sourcePath: "",
+        message: `No mirror or workspace path available for project "${project.slug}"`
+      };
       return {
         project: project.slug,
         revision: "unknown",
@@ -38,15 +65,9 @@ export class GitMarkdownProvider implements PlanningProvider {
         roadmap: [],
         backlog: [],
         tasks: [],
-        issues: [
-          {
-            scope: "document",
-            code: "MISSING_REPOSITORY_PATH",
-            sourcePath: "",
-            message: `No mirror or workspace path available for project "${project.slug}"`
-          }
-        ],
-        provenance: []
+        issues: [issue],
+        provenance: [],
+        documents: unavailableDocuments(project, issue)
       };
     }
 
@@ -56,6 +77,12 @@ export class GitMarkdownProvider implements PlanningProvider {
     const revision = revResult.exitCode === 0 ? revResult.stdout.trim() : "unknown";
 
     if (revResult.exitCode !== 0) {
+      const issue: ProofIssue = {
+        scope: "document",
+        code: "GIT_REV_PARSE_FAILED",
+        sourcePath: cwd,
+        message: `Failed to resolve ref "${ref}" in "${cwd}": ${revResult.stderr}`
+      };
       return {
         project: project.slug,
         revision: "unknown",
@@ -64,49 +91,64 @@ export class GitMarkdownProvider implements PlanningProvider {
         roadmap: [],
         backlog: [],
         tasks: [],
-        issues: [
-          {
-            scope: "document",
-            code: "GIT_REV_PARSE_FAILED",
-            sourcePath: cwd,
-            message: `Failed to resolve ref "${ref}" in "${cwd}": ${revResult.stderr}`
-          }
-        ],
-        provenance: []
+        issues: [issue],
+        provenance: [],
+        documents: unavailableDocuments(project, issue)
       };
     }
 
     const issues: ProofIssue[] = [];
     const provenance: SourceProvenance[] = [];
+    const documents: DocumentTriage[] = [];
 
     // Read docs/ROADMAP.md from git tree
     let roadmapItems: RoadmapItem[] = [];
-    const roadmapResult = await this.gitRunner.run(
-      ["show", "--end-of-options", `${ref}:docs/ROADMAP.md`],
-      { cwd }
-    );
+    if (project.work_modes.includes("implementation")) {
+      const roadmapResult = await this.gitRunner.run(
+        ["show", "--end-of-options", `${ref}:docs/ROADMAP.md`],
+        { cwd }
+      );
 
-    if (roadmapResult.exitCode === 0) {
-      const content = roadmapResult.stdout;
-      const digest = computeDigest(content);
-      provenance.push({
-        provider: this.name,
-        location: "docs/ROADMAP.md",
-        revision,
-        digest,
-        fetchedAt
-      });
+      if (roadmapResult.exitCode === 0) {
+        const content = roadmapResult.stdout;
+        const digest = computeDigest(content);
+        provenance.push({
+          provider: this.name,
+          location: "docs/ROADMAP.md",
+          revision,
+          digest,
+          fetchedAt
+        });
 
-      const parsed = parseRoadmapDocument(content, "docs/ROADMAP.md", "phase");
-      roadmapItems = parsed.valid;
-      issues.push(...parsed.issues);
-    } else {
-      issues.push({
-        scope: "document",
-        code: "ROADMAP_DOCUMENT_NOT_FOUND",
-        sourcePath: "docs/ROADMAP.md",
-        message: `Could not read docs/ROADMAP.md from revision ${revision.slice(0, 7)}`
-      });
+        const parsed = parseRoadmapDocument(content, "docs/ROADMAP.md", "phase");
+        roadmapItems = parsed.valid;
+        issues.push(...parsed.issues);
+        documents.push(triagePlanningDocument({
+          document: "roadmap",
+          sourcePath: "docs/ROADMAP.md",
+          content,
+          digest,
+          revision,
+          parserIssues: parsed.issues,
+          canonicalItemCount: parsed.valid.length
+        }));
+      } else {
+        const issue: ProofIssue = {
+          scope: "document",
+          code: "ROADMAP_DOCUMENT_NOT_FOUND",
+          sourcePath: "docs/ROADMAP.md",
+          message: `Could not read docs/ROADMAP.md from revision ${revision.slice(0, 7)}`
+        };
+        issues.push(issue);
+        documents.push(triagePlanningDocument({
+          document: "roadmap",
+          sourcePath: "docs/ROADMAP.md",
+          revision,
+          parserIssues: [issue],
+          canonicalItemCount: 0,
+          missing: true
+        }));
+      }
     }
 
     // Read docs/BACKLOG.md from git tree
@@ -130,13 +172,31 @@ export class GitMarkdownProvider implements PlanningProvider {
       const parsed = parseBacklogDocument(content, "docs/BACKLOG.md");
       backlogItems = parsed.valid;
       issues.push(...parsed.issues);
+      documents.push(triagePlanningDocument({
+        document: "backlog",
+        sourcePath: "docs/BACKLOG.md",
+        content,
+        digest,
+        revision,
+        parserIssues: parsed.issues,
+        canonicalItemCount: parsed.valid.length
+      }));
     } else {
-      issues.push({
+      const issue: ProofIssue = {
         scope: "document",
         code: "BACKLOG_DOCUMENT_NOT_FOUND",
         sourcePath: "docs/BACKLOG.md",
         message: `Could not read docs/BACKLOG.md from revision ${revision.slice(0, 7)}`
-      });
+      };
+      issues.push(issue);
+      documents.push(triagePlanningDocument({
+        document: "backlog",
+        sourcePath: "docs/BACKLOG.md",
+        revision,
+        parserIssues: [issue],
+        canonicalItemCount: 0,
+        missing: true
+      }));
     }
 
     // Validate project relations
@@ -159,7 +219,8 @@ export class GitMarkdownProvider implements PlanningProvider {
       backlog: relationResult.valid[0]?.backlogItems || backlogItems,
       tasks: [],
       issues,
-      provenance
+      provenance,
+      documents
     };
   }
 }

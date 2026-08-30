@@ -3,12 +3,23 @@ import "server-only";
 import { lstat, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { isDirectChildOfTrustedRoots, type ControlHostConfig } from "../config";
-import type { ProjectRegistryEntry } from "../domain/types";
+import type { ProjectRegistryEntry, ProofIssue } from "../domain/types";
 
 const MAX_PLANNING_FILE_BYTES = 2 * 1024 * 1024;
 
+export type LocalDocumentInspection =
+  | { readable: true; path: string }
+  | { readable: false; path: string; issue: ProofIssue };
+
 export type LocalPlanningPathsResult =
-  | { ok: true; workspacePath: string; roadmapPath: string; backlogPath: string }
+  | {
+      ok: true;
+      workspacePath: string;
+      roadmapPath: string;
+      backlogPath: string;
+      roadmap: LocalDocumentInspection;
+      backlog: LocalDocumentInspection;
+    }
   | {
       ok: false;
       state: "workspace-unavailable" | "unsafe" | "invalid-file";
@@ -16,44 +27,48 @@ export type LocalPlanningPathsResult =
       message: string;
     };
 
-async function regularPlanningFile(path: string, label: "Roadmap" | "Backlog"): Promise<LocalPlanningPathsResult | null> {
+function documentIssue(path: string, code: string, message: string): LocalDocumentInspection {
+  return {
+    readable: false,
+    path,
+    issue: { scope: "document", code, sourcePath: path, message }
+  };
+}
+
+async function inspectPlanningFile(path: string, label: "Roadmap" | "Backlog"): Promise<LocalDocumentInspection> {
   let entry;
   try {
     entry = await lstat(path);
-  } catch {
-    return {
-      ok: false,
-      state: "invalid-file",
-      code: "PLANNING_FILE_MISSING",
-      message: `${label} file is missing at "${path}".`
-    };
+  } catch (error) {
+    const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
+    return documentIssue(
+      path,
+      missing ? "PLANNING_FILE_MISSING" : "PLANNING_FILE_UNAVAILABLE",
+      missing
+        ? `${label} file is missing at "${path}".`
+        : `${label} file cannot be inspected safely at "${path}".`
+    );
   }
 
   if (entry.isSymbolicLink()) {
-    return {
-      ok: false,
-      state: "unsafe",
-      code: "PLANNING_FILE_SYMLINK",
-      message: `${label} file must not be a symbolic link.`
-    };
+    return documentIssue(path, "PLANNING_FILE_SYMLINK", `${label} file must not be a symbolic link.`);
   }
   if (!entry.isFile()) {
-    return {
-      ok: false,
-      state: "invalid-file",
-      code: "PLANNING_FILE_NOT_REGULAR",
-      message: `${label} file must be a regular file.`
-    };
+    return documentIssue(path, "PLANNING_FILE_NOT_REGULAR", `${label} file must be a regular file.`);
   }
   if (entry.size > MAX_PLANNING_FILE_BYTES) {
-    return {
-      ok: false,
-      state: "invalid-file",
-      code: "PLANNING_FILE_TOO_LARGE",
-      message: `${label} file exceeds the 2 MiB safety limit.`
-    };
+    return documentIssue(path, "PLANNING_FILE_TOO_LARGE", `${label} file exceeds the 2 MiB safety limit.`);
   }
-  return null;
+  return { readable: true, path };
+}
+
+function inspectionFailure(inspection: Extract<LocalDocumentInspection, { readable: false }>): LocalPlanningPathsResult {
+  return {
+    ok: false,
+    state: inspection.issue.code === "PLANNING_FILE_SYMLINK" ? "unsafe" : "invalid-file",
+    code: inspection.issue.code,
+    message: inspection.issue.message
+  };
 }
 
 /**
@@ -63,7 +78,8 @@ async function regularPlanningFile(path: string, label: "Roadmap" | "Backlog"): 
  */
 export async function resolveLocalPlanningPaths(
   project: ProjectRegistryEntry,
-  config: ControlHostConfig
+  config: ControlHostConfig,
+  options: { allowDegradedDocuments?: boolean } = {}
 ): Promise<LocalPlanningPathsResult> {
   const candidatePath = project.trusted_path;
   if (!candidatePath) {
@@ -115,10 +131,22 @@ export async function resolveLocalPlanningPaths(
 
   const workspacePath = await realpath(candidatePath);
   const docsPath = join(workspacePath, "docs");
+  const roadmapPath = join(docsPath, "ROADMAP.md");
+  const backlogPath = join(docsPath, "BACKLOG.md");
   let docsEntry;
   try {
     docsEntry = await lstat(docsPath);
-  } catch {
+  } catch (error) {
+    if (options.allowDegradedDocuments && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      return {
+        ok: true,
+        workspacePath,
+        roadmapPath,
+        backlogPath,
+        roadmap: documentIssue(roadmapPath, "PLANNING_FILE_MISSING", `Roadmap file is missing at "${roadmapPath}".`),
+        backlog: documentIssue(backlogPath, "PLANNING_FILE_MISSING", `Backlog file is missing at "${backlogPath}".`)
+      };
+    }
     return {
       ok: false,
       state: "invalid-file",
@@ -142,16 +170,15 @@ export async function resolveLocalPlanningPaths(
       message: "Planning documents path must be a directory."
     };
   }
-  const roadmapPath = join(docsPath, "ROADMAP.md");
-  const backlogPath = join(docsPath, "BACKLOG.md");
-  const needsRoadmap = project.work_modes.includes("implementation");
+  const [roadmap, backlog] = await Promise.all([
+    inspectPlanningFile(roadmapPath, "Roadmap"),
+    inspectPlanningFile(backlogPath, "Backlog")
+  ]);
 
-  if (needsRoadmap) {
-    const roadmapFailure = await regularPlanningFile(roadmapPath, "Roadmap");
-    if (roadmapFailure) return roadmapFailure;
+  if (!options.allowDegradedDocuments) {
+    if (project.work_modes.includes("implementation") && !roadmap.readable) return inspectionFailure(roadmap);
+    if (!backlog.readable) return inspectionFailure(backlog);
   }
-  const backlogFailure = await regularPlanningFile(backlogPath, "Backlog");
-  if (backlogFailure) return backlogFailure;
 
-  return { ok: true, workspacePath, roadmapPath, backlogPath };
+  return { ok: true, workspacePath, roadmapPath, backlogPath, roadmap, backlog };
 }
