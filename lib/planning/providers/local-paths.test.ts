@@ -65,6 +65,10 @@ describe("resolveLocalPlanningPaths", () => {
         issue: { code: "PLANNING_FILE_MISSING" }
       }
     });
+    await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
+      ok: false,
+      code: "PLANNING_FILE_MISSING"
+    });
   });
 
   it("reports both fixed documents as missing when the planning directory is absent", async () => {
@@ -144,6 +148,10 @@ describe("resolveLocalPlanningPaths", () => {
       ok: true,
       backlog: { readable: false, issue: { code: "PLANNING_FILE_NOT_REGULAR" } }
     });
+    await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
+      ok: false,
+      code: "PLANNING_FILE_NOT_REGULAR"
+    });
   });
 
   it("records a planning file over 2 MiB", async () => {
@@ -153,6 +161,10 @@ describe("resolveLocalPlanningPaths", () => {
     await expect(resolveLocalPlanningPaths(project(root), config, { allowDegradedDocuments: true })).resolves.toMatchObject({
       ok: true,
       backlog: { readable: false, issue: { code: "PLANNING_FILE_TOO_LARGE" } }
+    });
+    await expect(resolveLocalPlanningPaths(project(root), config)).resolves.toMatchObject({
+      ok: false,
+      code: "PLANNING_FILE_TOO_LARGE"
     });
   });
 
