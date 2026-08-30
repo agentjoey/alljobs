@@ -29,6 +29,18 @@ focus: primary
 \`\`\`
 
 Exercise the R1 browser-to-filesystem boundary.
+
+## phase-2: Later lane
+
+\`\`\`yaml alljobs
+id: phase-2
+kind: phase
+status: active
+order: 20
+focus: normal
+\`\`\`
+
+Keep a second lane available for conflict repair coverage.
 `;
 
 const COMMITTED_BACKLOG = `# Sample Code Backlog
@@ -128,6 +140,13 @@ dependencies: []
 
 This invalid local section must remain authoritative and non-writable.
 `;
+
+export const CONFLICTING_DIRTY_BACKLOG = RANKED_DIRTY_BACKLOG
+  .replace(
+    "phase: phase-1\nstatus: doing\npriority: P0\nrank: 200",
+    "phase: phase-2\nstatus: doing\npriority: P1\nrank: 100"
+  )
+  .replace("phase: phase-1\nstatus: blocked", "phase: phase-2\nstatus: blocked");
 
 interface R1Fixture {
   rootDir: string;
@@ -352,10 +371,12 @@ export function getR1FixturePaths() {
   return { rootDir, repositoryDir, backlogPath };
 }
 
-export function resetR1Backlog(mode: "unranked" | "ranked" | "invalid" = "unranked") {
+export function resetR1Backlog(mode: "unranked" | "ranked" | "invalid" | "conflict" = "unranked") {
   const { backlogPath } = getR1FixturePaths();
   const content = mode === "ranked"
     ? RANKED_DIRTY_BACKLOG
+    : mode === "conflict"
+      ? CONFLICTING_DIRTY_BACKLOG
     : mode === "invalid"
       ? INVALID_DIRTY_BACKLOG
       : UNRANKED_DIRTY_BACKLOG;

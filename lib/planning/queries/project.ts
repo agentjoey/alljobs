@@ -12,7 +12,11 @@ import type { PlanningSourceState, SourceProvenance } from "../providers/contrac
 import { NodeGitRunner } from "../providers/git-runner";
 import { getCachedProjection } from "../providers/refresh";
 import { resolveCodePlanning } from "../providers/source-resolver";
-import { analyzeBacklogOrdering, type BacklogOrderingState } from "../backlog/ordering";
+import {
+  analyzeBacklogOrdering,
+  type BacklogConflictLane,
+  type BacklogOrderingState
+} from "../backlog/ordering";
 import { deriveAttentionItems, type AttentionItem } from "./attention";
 
 export interface ProjectDetailMetrics {
@@ -30,6 +34,7 @@ export interface BacklogControlBlocker {
 export interface BacklogControlState {
   source: PlanningSourceState;
   ordering: BacklogOrderingState;
+  conflictLanes: BacklogConflictLane[];
   writable: boolean;
   blockers: BacklogControlBlocker[];
 }
@@ -64,7 +69,8 @@ function deriveBacklogControlState(input: {
   source: PlanningSourceState;
 }): BacklogControlState {
   const { project, backlog, issues, source } = input;
-  const ordering = analyzeBacklogOrdering(backlog).state;
+  const orderingAnalysis = analyzeBacklogOrdering(backlog);
+  const ordering = orderingAnalysis.state;
   const blockers: BacklogControlBlocker[] = [];
   const backlogIds = new Set(backlog.map((item) => item.id));
   const controlIssues = issues.filter((issue) => isBacklogControlIssue(issue, backlogIds));
@@ -96,6 +102,7 @@ function deriveBacklogControlState(input: {
   return {
     source,
     ordering,
+    conflictLanes: orderingAnalysis.conflictLanes,
     writable: !project.archived && source.writable && controlIssues.length === 0,
     blockers
   };

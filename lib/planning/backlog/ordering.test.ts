@@ -27,7 +27,7 @@ describe("Backlog ordering", () => {
       item({ id: "AJ-B-002", status: "done" })
     ]);
 
-    expect(result).toEqual({ state: "uninitialized", missingIds: ["AJ-B-001"], conflictingIds: [] });
+    expect(result).toEqual({ state: "uninitialized", missingIds: ["AJ-B-001"], conflictingIds: [], conflictLanes: [] });
   });
 
   it("detects duplicate ranks only within an active Phase + Priority lane", () => {
@@ -38,7 +38,12 @@ describe("Backlog ordering", () => {
       item({ id: "AJ-B-004", rank: 100, status: "cancelled" })
     ]);
 
-    expect(result).toEqual({ state: "repair-required", missingIds: [], conflictingIds: ["AJ-B-001", "AJ-B-002"] });
+    expect(result).toEqual({
+      state: "repair-required",
+      missingIds: [],
+      conflictingIds: ["AJ-B-001", "AJ-B-002"],
+      conflictLanes: [{ phase: "phase-1", priority: "P1", itemIds: ["AJ-B-001", "AJ-B-002"] }]
+    });
   });
 
   it("initializes active items in source order at 100-point intervals by lane", () => {
@@ -132,5 +137,15 @@ describe("Backlog ordering", () => {
       ],
       renumbered: true
     });
+  });
+
+  it("rejects a repair request for a lane that does not contain the rank conflict", () => {
+    const result = planBacklogOrderingChange([
+      item({ id: "AJ-B-001", priority: "P0", rank: 100 }),
+      item({ id: "AJ-B-002", priority: "P1", rank: 100 }),
+      item({ id: "AJ-B-003", priority: "P1", rank: 100 })
+    ], { kind: "repair", phase: "phase-1", priority: "P0" });
+
+    expect(result).toMatchObject({ ok: false, code: "RANK_CONFLICT" });
   });
 });

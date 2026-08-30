@@ -5,6 +5,12 @@ const HISTORY_STATUSES = new Set<BacklogItem["status"]>(["done", "cancelled"]);
 
 export type BacklogOrderingState = "initialized" | "uninitialized" | "repair-required";
 
+export interface BacklogConflictLane {
+  phase: string;
+  priority: Priority;
+  itemIds: string[];
+}
+
 export interface BacklogFieldChange {
   itemId: string;
   priority: Priority;
@@ -71,6 +77,7 @@ export function analyzeBacklogOrdering(items: BacklogItem[]): {
   state: BacklogOrderingState;
   missingIds: string[];
   conflictingIds: string[];
+  conflictLanes: BacklogConflictLane[];
 } {
   const active = activeIndexed(items);
   const missingIds = active.filter(({ item }) => item.rank === undefined).map(({ item }) => item.id);
@@ -92,10 +99,24 @@ export function analyzeBacklogOrdering(items: BacklogItem[]): {
     }
   }
 
+  const conflictLaneItems = new Map<string, BacklogConflictLane>();
+  for (const { item } of active) {
+    if (!conflictingIds.has(item.id)) continue;
+    const key = laneKey(item);
+    const lane = conflictLaneItems.get(key) ?? {
+      phase: phaseKey(item),
+      priority: item.priority,
+      itemIds: []
+    };
+    lane.itemIds.push(item.id);
+    conflictLaneItems.set(key, lane);
+  }
+
   return {
     state: conflictingIds.size > 0 ? "repair-required" : missingIds.length > 0 ? "uninitialized" : "initialized",
     missingIds,
-    conflictingIds: active.filter(({ item }) => conflictingIds.has(item.id)).map(({ item }) => item.id)
+    conflictingIds: active.filter(({ item }) => conflictingIds.has(item.id)).map(({ item }) => item.id),
+    conflictLanes: [...conflictLaneItems.values()]
   };
 }
 
@@ -189,6 +210,12 @@ export function planBacklogOrderingChange(items: BacklogItem[], intent: BacklogO
   }
 
   if (intent.kind === "repair") {
+    const conflictLane = analysis.conflictLanes.find(
+      (lane) => lane.phase === intent.phase && lane.priority === intent.priority
+    );
+    if (!conflictLane) {
+      return fail("RANK_CONFLICT", "The requested Phase + Priority lane does not contain duplicate active ranks.");
+    }
     const lane = active.filter(({ item }) => sameLane(item, intent.phase, intent.priority));
     if (lane.length === 0) return fail("NOT_FOUND", "The requested Phase + Priority lane has no active items.");
     return { ok: true, changes: changesForLane(lane), renumbered: true };

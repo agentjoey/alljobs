@@ -149,6 +149,26 @@ test.describe("R1 Backlog Control browser-to-filesystem boundaries", () => {
     expect(afterPriority.replace("priority: P2\nrank: 100", "priority: P0\nrank: 100")).toBe(afterMove);
   });
 
+  test("repairs the later lane that actually contains duplicate ranks", async ({ page }) => {
+    resetR1Backlog("conflict");
+    const before = readR1Backlog();
+    await openBacklog(page);
+    await enterOrdering(page);
+
+    await page.getByRole("button", { name: "Repair phase-2 / P1 ordering" }).click();
+    await page.getByRole("button", { name: "Review changes" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-002" })).toContainText("rank 100 → 100");
+    await expect(page.getByRole("listitem").filter({ hasText: "AJ-B-003" })).toContainText("rank 100 → 200");
+    await page.getByRole("button", { name: "Confirm and apply" }).click();
+    await expect(page.getByText("Ordering changes applied locally.", { exact: false })).toBeVisible();
+
+    const after = readR1Backlog();
+    expect(scalar(after, "AJ-B-001", "rank")).toBe("100");
+    expect(scalar(after, "AJ-B-002", "rank")).toBe("100");
+    expect(scalar(after, "AJ-B-003", "rank")).toBe("200");
+    expect(after.replace("rank: 200\ndependencies: []", "rank: 100\ndependencies: []")).toBe(before);
+  });
+
   test("rejects a stale reviewed proposal and preserves an unrelated external edit", async ({ page }) => {
     resetR1Backlog("ranked");
     await openBacklog(page);

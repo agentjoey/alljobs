@@ -143,7 +143,6 @@ export function BacklogOrderingEditor({
     );
   }
 
-  const firstActive = active[0];
   return (
     <section className="backlog-editor" aria-label="Manage Backlog ordering">
       <header className="backlog-editor__header">
@@ -161,10 +160,19 @@ export function BacklogOrderingEditor({
           <button type="button" className="btn btn--primary" onClick={() => setIntent({ kind: "initialize" })}>Initialize ordering</button>
         </p>
       )}
-      {control.ordering === "repair-required" && firstActive && (
+      {control.ordering === "repair-required" && control.conflictLanes.length > 0 && (
         <p className="backlog-notice backlog-notice--error">
           <strong>RANK_CONFLICT.</strong> Repair the affected lane before ordinary moves.
-          <button type="button" className="btn" onClick={() => setIntent({ kind: "repair", phase: firstActive.phase ?? "", priority: firstActive.priority })}>Repair ordering</button>
+          {control.conflictLanes.map((lane) => (
+            <button
+              key={`${lane.phase}\u0000${lane.priority}`}
+              type="button"
+              className="btn"
+              onClick={() => setIntent({ kind: "repair", phase: lane.phase, priority: lane.priority })}
+            >
+              Repair {lane.phase || "No phase"} / {lane.priority} ordering
+            </button>
+          ))}
         </p>
       )}
 

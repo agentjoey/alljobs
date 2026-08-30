@@ -32,6 +32,7 @@ function control(overrides: Partial<BacklogControlState> = {}): BacklogControlSt
   return {
     source: { mode: "local-working-tree", writable: true, headRevision: "5466c33", backlogDigest: digest, backlogModified: true, readAt: "2026-08-29T00:00:00.000Z" },
     ordering: "initialized",
+    conflictLanes: [],
     writable: true,
     blockers: [],
     ...overrides
@@ -125,6 +126,36 @@ describe("Backlog ordering UI", () => {
     expect(screen.getByText("1 item changed")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(screen.getByRole("heading", { name: "Manage ordering" })).toBeVisible();
+  });
+
+  it("repairs the duplicate-rank lane instead of the first active lane", async () => {
+    const user = userEvent.setup();
+    const conflictingItems: BacklogItem[] = [
+      { ...rankedItems[2], id: "AJ-B-001", phase: "phase-1", priority: "P0", rank: 100 },
+      { ...rankedItems[0], id: "AJ-B-002", phase: "phase-2", priority: "P1", rank: 100 },
+      { ...rankedItems[1], id: "AJ-B-003", phase: "phase-2", priority: "P1", rank: 100 }
+    ];
+    mocks.propose.mockResolvedValue({ status: "error", code: "STOP", message: "Captured intent" });
+    render(
+      <BacklogView
+        items={conflictingItems}
+        projectSlug="alljobs"
+        control={control({
+          ordering: "repair-required",
+          conflictLanes: [{ phase: "phase-2", priority: "P1", itemIds: ["AJ-B-002", "AJ-B-003"] }]
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Manage ordering" }));
+    expect(screen.queryByRole("button", { name: /phase-1 \/ P0/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Repair phase-2 / P1 ordering" }));
+    await user.click(screen.getByRole("button", { name: "Review changes" }));
+
+    expect(mocks.propose).toHaveBeenCalledWith({
+      projectSlug: "alljobs",
+      intent: { kind: "repair", phase: "phase-2", priority: "P1" }
+    });
   });
 
   it("keeps a recoverable editor error when proposal preparation throws", async () => {

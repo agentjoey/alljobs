@@ -1,7 +1,8 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { chmod, lstat, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open, readFile, realpath, rename, unlink, type FileHandle } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { loadControlHostConfig, type ControlHostResolvedPaths } from "../config";
 import type { ProjectRegistryEntry } from "../domain/types";
@@ -42,13 +43,20 @@ export interface BacklogMutationDependencies {
   paths: ControlHostResolvedPaths;
   store: NativePlanningStore;
   gitRunner: GitRunner;
-  atomicReplace?: (filePath: string, content: string) => Promise<void>;
+  beforeReplace?: () => Promise<void>;
   recordEvent?: typeof recordActivity;
 }
 
 type MutationFailure = { ok: false; code: BacklogMutationCode; message: string };
 type ProposalResult = { ok: true; proposal: BacklogChangeProposal } | MutationFailure;
 type ApplyResult = { ok: true; digest: string; changes: BacklogFieldChange[]; warnings: string[] } | MutationFailure;
+type FileIdentity = { dev: bigint; ino: bigint };
+
+class BacklogMutationError extends Error {
+  constructor(readonly code: BacklogMutationCode, message: string) {
+    super(message);
+  }
+}
 
 function failure(code: BacklogMutationCode, message: string): MutationFailure {
   return { ok: false, code, message };
@@ -111,24 +119,184 @@ function formatDiff(project: ProjectRegistryEntry, items: Awaited<ReturnType<typ
   }).join("\n");
 }
 
-async function atomicReplaceBacklog(filePath: string, content: string): Promise<void> {
-  const link = await lstat(filePath);
-  if (link.isSymbolicLink() || !link.isFile()) {
-    throw new Error("Backlog path is no longer a regular file.");
+function identity(entry: { dev: bigint; ino: bigint }): FileIdentity {
+  return { dev: entry.dev, ino: entry.ino };
+}
+
+function sameIdentity(left: FileIdentity, right: FileIdentity) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+async function readHandleBytes(handle: FileHandle) {
+  const before = await handle.stat({ bigint: true });
+  if (before.size > BigInt(2 * 1024 * 1024)) {
+    throw new BacklogMutationError("INVALID_BACKLOG", "Backlog exceeds the 2 MiB safety limit; no write was made.");
   }
-  const original = await stat(filePath);
-  const tempPath = join(dirname(filePath), "." + randomUUID() + ".backlog.tmp");
+  const bytes = Buffer.alloc(Number(before.size) + 1);
+  let offset = 0;
+  while (offset < bytes.length) {
+    const result = await handle.read(bytes, offset, bytes.length - offset, offset);
+    if (result.bytesRead === 0) break;
+    offset += result.bytesRead;
+  }
+  const after = await handle.stat({ bigint: true });
+  if (
+    before.dev !== after.dev || before.ino !== after.ino ||
+    before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs ||
+    BigInt(offset) !== after.size
+  ) {
+    throw new BacklogMutationError("STALE_WRITE", "Backlog changed while its write-boundary snapshot was read; no write was made.");
+  }
+  return bytes.subarray(0, offset);
+}
+
+async function assertStableTempPath(tempPath: string, expected: FileIdentity) {
   try {
-    await writeFile(tempPath, content, { encoding: "utf8", mode: original.mode });
-    await chmod(tempPath, original.mode);
-    await rename(tempPath, filePath);
-  } catch (error) {
+    const entry = await lstat(tempPath, { bigint: true });
+    if (entry.isSymbolicLink() || !entry.isFile() || !sameIdentity(identity(entry), expected)) {
+      throw new Error("identity changed");
+    }
+  } catch {
+    throw new BacklogMutationError("STALE_WRITE", "Temporary replacement identity changed; no write was made.");
+  }
+}
+
+async function assertStablePath(
+  workspacePath: string,
+  docsPath: string,
+  filePath: string,
+  expected: { workspace: FileIdentity; docs: FileIdentity; file: FileIdentity }
+) {
+  try {
+    const [workspace, docs, file, realWorkspace, realDocs] = await Promise.all([
+      lstat(workspacePath, { bigint: true }),
+      lstat(docsPath, { bigint: true }),
+      lstat(filePath, { bigint: true }),
+      realpath(workspacePath),
+      realpath(docsPath)
+    ]);
+    if (
+      workspace.isSymbolicLink() || !workspace.isDirectory() ||
+      docs.isSymbolicLink() || !docs.isDirectory() ||
+      file.isSymbolicLink() || !file.isFile() ||
+      realWorkspace !== workspacePath || realDocs !== docsPath ||
+      !sameIdentity(identity(workspace), expected.workspace) ||
+      !sameIdentity(identity(docs), expected.docs) ||
+      !sameIdentity(identity(file), expected.file)
+    ) {
+      throw new Error("identity changed");
+    }
+  } catch {
+    throw new BacklogMutationError(
+      "STALE_WRITE",
+      "Backlog path identity changed at the write boundary; no write was made."
+    );
+  }
+}
+
+async function atomicReplaceBacklog(
+  filePath: string,
+  expectedDigest: string,
+  changes: BacklogFieldChange[],
+  beforeReplace?: () => Promise<void>
+) {
+  const docsPath = dirname(filePath);
+  const workspacePath = dirname(docsPath);
+  let workspaceHandle: FileHandle | undefined;
+  let docsHandle: FileHandle | undefined;
+  let fileHandle: FileHandle | undefined;
+  let tempHandle: FileHandle | undefined;
+  let tempPath: string | undefined;
+  let tempCreated = false;
+  let tempIdentity: FileIdentity | undefined;
+  let expected: { workspace: FileIdentity; docs: FileIdentity; file: FileIdentity } | undefined;
+
+  try {
     try {
-      await unlink(tempPath);
+      workspaceHandle = await open(workspacePath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+      docsHandle = await open(docsPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+      fileHandle = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const [workspace, docs, file] = await Promise.all([
+        workspaceHandle.stat({ bigint: true }),
+        docsHandle.stat({ bigint: true }),
+        fileHandle.stat({ bigint: true })
+      ]);
+      expected = { workspace: identity(workspace), docs: identity(docs), file: identity(file) };
+      await assertStablePath(workspacePath, docsPath, filePath, expected);
+    } catch (error) {
+      if (error instanceof BacklogMutationError) throw error;
+      throw new BacklogMutationError("STALE_WRITE", "Backlog path changed before replacement; no write was made.");
+    }
+
+    const sourceBytes = await readHandleBytes(fileHandle);
+    if (computeDigest(sourceBytes) !== expectedDigest) {
+      throw new BacklogMutationError("STALE_WRITE", "Backlog changed after review; no write was made.");
+    }
+    let source: string;
+    try {
+      source = decodeUtf8(sourceBytes);
     } catch {
-      // Best-effort removal keeps a failed write from creating a repository backup.
+      throw new BacklogMutationError("INVALID_BACKLOG", "Backlog must contain valid UTF-8; no write was made.");
+    }
+    const patched = patchBacklogFields(source, changes);
+    if (!patched.ok) throw new BacklogMutationError(patched.code, patched.message);
+
+    if (computeDigest(await readHandleBytes(fileHandle)) !== expectedDigest) {
+      throw new BacklogMutationError("STALE_WRITE", "Backlog changed at the write boundary; no write was made.");
+    }
+
+    const fileMetadata = await fileHandle.stat({ bigint: true });
+    await assertStablePath(workspacePath, docsPath, filePath, expected);
+    tempPath = join(docsPath, "." + randomUUID() + ".backlog.tmp");
+    tempHandle = await open(
+      tempPath,
+      constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+      Number(fileMetadata.mode & BigInt(0o7777))
+    );
+    tempCreated = true;
+    await tempHandle.writeFile(Buffer.from(patched.content, "utf8"));
+    await tempHandle.chmod(Number(fileMetadata.mode & BigInt(0o7777)));
+    await tempHandle.sync();
+    tempIdentity = identity(await tempHandle.stat({ bigint: true }));
+
+    await assertStablePath(workspacePath, docsPath, filePath, expected);
+    await assertStableTempPath(tempPath, tempIdentity);
+    if (computeDigest(await readHandleBytes(tempHandle)) !== computeDigest(Buffer.from(patched.content, "utf8"))) {
+      throw new BacklogMutationError("STALE_WRITE", "Temporary replacement content changed; no write was made.");
+    }
+    if (computeDigest(await readHandleBytes(fileHandle)) !== expectedDigest) {
+      throw new BacklogMutationError("STALE_WRITE", "Backlog changed at the write boundary; no write was made.");
+    }
+
+    await beforeReplace?.();
+    if (computeDigest(await readHandleBytes(fileHandle)) !== expectedDigest) {
+      throw new BacklogMutationError("STALE_WRITE", "Backlog changed immediately before replacement; no write was made.");
+    }
+    if (computeDigest(await readHandleBytes(tempHandle)) !== computeDigest(Buffer.from(patched.content, "utf8"))) {
+      throw new BacklogMutationError("STALE_WRITE", "Temporary replacement changed immediately before installation; no write was made.");
+    }
+    await assertStablePath(workspacePath, docsPath, filePath, expected);
+    await assertStableTempPath(tempPath, tempIdentity);
+    await rename(tempPath, filePath);
+    tempCreated = false;
+    return patched;
+  } catch (error) {
+    if (tempCreated && tempPath && tempIdentity) {
+      try {
+        await assertStableTempPath(tempPath, tempIdentity);
+        await unlink(tempPath);
+      } catch {
+        // Never unlink a temporary pathname after its identity changes.
+      }
     }
     throw error;
+  } finally {
+    await Promise.allSettled([
+      tempHandle?.close(),
+      fileHandle?.close(),
+      docsHandle?.close(),
+      workspaceHandle?.close()
+    ]);
   }
 }
 
@@ -239,21 +407,16 @@ export async function applyBacklogOrderingChange(
       if (!project) return failure("NOT_FOUND", "Project was not found.");
       const localPaths = await resolveLocalPlanningPaths(project, deps.paths.config);
       if (!localPaths.ok) return failure("INVALID_BACKLOG", localPaths.message);
-      const currentBytes = await readFile(localPaths.backlogPath);
-      if (computeDigest(currentBytes) !== proposal.expectedFileDigest) {
-        return failure("STALE_WRITE", "Backlog changed after review; no write was made.");
-      }
-      let current: string;
+      let patched: Awaited<ReturnType<typeof atomicReplaceBacklog>>;
       try {
-        current = decodeUtf8(currentBytes);
-      } catch {
-        return failure("INVALID_BACKLOG", "Backlog must contain valid UTF-8; no write was made.");
-      }
-      const patched = patchBacklogFields(current, rebuilt.proposal.changes);
-      if (!patched.ok) return failure(patched.code, patched.message);
-      try {
-        await (deps.atomicReplace ?? atomicReplaceBacklog)(localPaths.backlogPath, patched.content);
-      } catch {
+        patched = await atomicReplaceBacklog(
+          localPaths.backlogPath,
+          proposal.expectedFileDigest,
+          rebuilt.proposal.changes,
+          deps.beforeReplace
+        );
+      } catch (error) {
+        if (error instanceof BacklogMutationError) return failure(error.code, error.message);
         return failure("WRITE_FAILED", "The Backlog could not be replaced atomically; no change was applied.");
       }
 

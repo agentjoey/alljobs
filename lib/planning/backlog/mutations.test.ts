@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -125,6 +125,46 @@ describe("Backlog ordering mutations", () => {
     expect(await readFile(backlogPath, "utf8")).toBe(staleContent);
   });
 
+  it("rechecks bytes at the replacement boundary and preserves a late external edit", async () => {
+    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    const staleContent = `${await readFile(backlogPath, "utf8")}\nEdit after the final Apply read.\n`;
+    const raceDeps = {
+      ...deps,
+      beforeReplace: async () => { await writeFile(backlogPath, staleContent, "utf8"); }
+    };
+
+    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, raceDeps))
+      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
+    expect(await readFile(backlogPath, "utf8")).toBe(staleContent);
+  });
+
+  it("rechecks directory identity at the replacement boundary and rejects a symlink swap", async () => {
+    const proposed = await proposeBacklogOrderingChange({ projectSlug: "sample", intent }, deps);
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    const docsPath = join(repository, "docs");
+    const originalDocsPath = join(repository, "docs-original");
+    const outsideDocsPath = join(tempHome, "outside-docs");
+    const originalContent = await readFile(backlogPath);
+    const outsideContent = Buffer.from("Outside target must remain unchanged.\n", "utf8");
+    await mkdir(outsideDocsPath);
+    await writeFile(join(outsideDocsPath, "BACKLOG.md"), outsideContent);
+    const raceDeps = {
+      ...deps,
+      beforeReplace: async () => {
+        await rename(docsPath, originalDocsPath);
+        await symlink(outsideDocsPath, docsPath);
+      }
+    };
+
+    await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, raceDeps))
+      .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
+    expect(await readFile(join(originalDocsPath, "BACKLOG.md"))).toEqual(originalContent);
+    expect(await readFile(join(outsideDocsPath, "BACKLOG.md"))).toEqual(outsideContent);
+  });
+
   it("rejects malformed UTF-8 before proposal and preserves every source byte", async () => {
     const malformed = Buffer.concat([Buffer.from(backlog("Human UTF-8 note: 你好."), "utf8"), Buffer.from([0xff])]);
     await writeFile(backlogPath, malformed);
@@ -160,7 +200,7 @@ describe("Backlog ordering mutations", () => {
     await expect(applyBacklogOrderingChange({ ...proposed.proposal, changes: [] }, proposed.proposal.proposalDigest, deps))
       .resolves.toMatchObject({ ok: false, code: "STALE_WRITE" });
     expect(await readFile(backlogPath, "utf8")).toBe(before);
-    const failingDeps = { ...deps, atomicReplace: async () => { throw new Error("disk full"); } };
+    const failingDeps = { ...deps, beforeReplace: async () => { throw new Error("disk full"); } };
     await expect(applyBacklogOrderingChange(proposed.proposal, proposed.proposal.proposalDigest, failingDeps))
       .resolves.toMatchObject({ ok: false, code: "WRITE_FAILED" });
     expect(await readFile(backlogPath, "utf8")).toBe(before);
