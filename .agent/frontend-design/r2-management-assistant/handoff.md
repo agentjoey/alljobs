@@ -294,3 +294,21 @@ mutated `standard`/`deep` value is rejected (`safeParse(...).success === false`)
 ## Next safe action
 
 Stop for independent review of `r2-contracts` before Task 2 (context assembly).
+
+---
+
+## Independent reviewer result — Task 1 (2026-09-01)
+
+**Reviewer:** Pact seat `claude` (orchestrator review; separate from the `opencode` implementation run)
+**Candidate reviewed:** `19fdb2e` plus rework `54172fe`
+**Verdict:** **ACCEPT**
+
+### Evidence
+
+- Scope review: limited to the Task 1 configuration, contract, digest, focused-test, example-config, handoff, and Pact ledger files. No dependency, provider invocation, credential, route, UI, source-access, manifest, activity, or Task 2+ change is present.
+- Contract review: every Standard/Deep configuration field is now an exact `z.literal` of `ASSISTANT_LIMITS`; configuration may omit budgets but cannot override them. The assistant request schema strictly rejects both empty and non-empty browser `history`, preserving the approved fresh bounded-run behavior.
+- Independent focused verification: `npm test -- lib/planning/domain/schemas.test.ts lib/planning/config.test.ts lib/assistant/contracts.test.ts lib/assistant/digest.test.ts` passed **4 files / 69 tests**; `npm run typecheck` and `git diff --check 6e94d42..HEAD` passed.
+
+### Gate boundary
+
+Task 1 is accepted. Task 2 (attributable context and receipts) is not dispatched by this review; it requires a separate Pact assignment and its own RED -> GREEN delivery/review cycle. Final build, independent verification, Human walkthrough, and release approval remain separate T3 gates.
