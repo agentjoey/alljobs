@@ -77,3 +77,10 @@ features:
         spec: .pact/tasks/r2-management-assistant-source-gates.md
         evidence: Task 3 complete. Commit afd33d6 (`feat: gate bounded source inspection`) on codex/r2-management-assistant. Scope: lib/assistant/source-gates.{ts,test.ts} + lib/assistant/source-files.{ts,test.ts} + handoff.md (Task 3 section). No shell/Git/provider/credential/route/UI/activity/write/Task4+ work; no history revival.  Delivered: createSourceGate (digest-only, binds Project/question/manifest digests + fixed standard/deep budgets + gateTtlMs), consumeSourceGate (atomic single-use, expiry + project/question/manifest mismatch), rejectSourceGate (reason rejected|cancelled, invalidates without granting), listProjectFiles (deterministic sorted bounded listing, exclusions + symlink skip + extension allowlist + safe prefix), readProjectFiles (fail-closed: traversal/absolute/backslash, excluded dirs + .env* + *.pem/key/p12/pfx/crt/cer + id_rsa/id_ed25519 + credentials/secrets, every symlink at any component, non-regular, per-file oversize, NUL/invalid-UTF-8 binary, disallowed extension, realpath escape, file/tool/byte budgets), plus createAssistantReadTools/sourceBudgetFromGate (Task 5 model-tools seam).  RED: npm test -- lib/assistant/source-gates.test.ts lib/assistant/source-files.test.ts → 2 failed (2) / no tests (Failed to resolve import ./source-gates / ./source-files). GREEN: same command → 2 passed (2) / 33 tests passed. Static: npm run typecheck → exit 0; git diff --check → exit 0; npm test → 46 files / 305 tests passed (was 44/272 in Task 2); npm run lint → 0 errors (65 pre-existing warnings, none in new files).
         deps: [r2-context]
+      - id: r2-minimax-client
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r2-management-assistant-minimax-client.md
+        evidence: null
+        deps: [r2-source-gates]
