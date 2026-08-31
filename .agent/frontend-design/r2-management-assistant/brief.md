@@ -1,9 +1,9 @@
 # R2 Planning / Management Assistant — T3 Brief
 
-**Revision:** Approved 17
-**Status:** Approved design input — formal spec approved; rendered Mockup Gate produced (Task 0) and pending Human Owner approval
-**Date:** 2026-08-30
-**Rendered mockup (Task 0):** `mockup/index.html` · `mockup/styles.css` · `mockup/app.js` · evidence `mockup-screens/*.png` · `mockup-review.md` · `handoff.md`
+**Revision:** Approved 17 · Mockup revision 2 (2026-09-01)
+**Status:** Approved design input — formal spec approved; rendered Mockup Gate produced (Task 0) and reopened as Mockup revision 2 (persistent Companion composer + distinct Companion output); pending Human Owner approval
+**Date:** 2026-08-30 (rev 2 interaction decision recorded 2026-09-01)
+**Rendered mockup (Task 0):** `mockup/index.html` · `mockup/styles.css` · `mockup/app.js` · evidence `mockup-screens/*.png` · `mockup-review.md` · `handoff.md` · focused contract check `verify-revision-2.mjs`
 
 ## Start Card
 
@@ -155,6 +155,18 @@ R2 adds one project-scoped assistant entry to the existing Project Detail surfac
 - R2 answers only single-Project questions. Cross-project questions are explicitly unavailable until the later Console phase embeds the same assistant contract with a portfolio context assembler.
 
 Because this introduces a core model-backed journey and changes the Project Detail composition, the T3 rendered Mockup Gate remains required even though no new route is added.
+
+### Companion interaction direction — Mockup revision 2 (approved 2026-09-01)
+
+The rendered Mockup Gate (Task 0) was reopened before Human Owner approval with a corrected interaction direction. The Human Owner's decision, recorded for a fresh reviewer:
+
+- **No continuous or cross-project conversation history is requested.** The Companion is not a chat transcript and does not accumulate cross-run or cross-project memory.
+- **The project-scoped Companion input is persistent.** The composer is anchored at the bottom of the companion plane on desktop and mobile and remains visible and usable after an answer renders — the owner never has to close and reopen the panel to ask a follow-up.
+- **Every submission is a new bounded run.** The persistent composer carries the current-project scope and the selected mode; submitting starts a fresh bounded run rather than continuing or merging a conversation.
+- **The Companion output is visibly distinct.** Results render in a clearly labelled `Companion output` run-record work area with a strong Paper Workbench boundary and structured sections (direct answer, confirmed facts/citations, inferences, unknowns, questions, recommendations). It is a structured document/ledger, not chat bubbles or a generic card stack.
+- **Backlog/Task stay dominant** on desktop; the true-390px full-height mobile Sheet retains both the output and the persistent composer with no horizontal clipping.
+
+This revision supersedes the original Task 0 output treatment (which replaced the composer with the answer) but does not change scope, provider, privacy, write-boundary, or any other approved decision.
 
 ### Write and action boundary — approved 2026-08-30
 
@@ -415,4 +427,4 @@ The mockups retain the current AllJobs design system and Paper Workbench languag
 
 ## Discovery status
 
-All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate artifacts are produced (Task 0: `mockup/`, `mockup-screens/`, `mockup-review.md`, `handoff.md`) and remain pending Human Owner approval. No model package, credential, route, or production component may be added before that gate is approved.
+All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate artifacts are produced (Task 0: `mockup/`, `mockup-screens/`, `mockup-review.md`, `handoff.md`) and were reopened as Mockup revision 2 (persistent Companion composer + distinct `Companion output` run-record; focused contract check `verify-revision-2.mjs`). They remain pending Human Owner approval. No model package, credential, route, or production component may be added before that gate is approved.

@@ -1,8 +1,31 @@
 # R2 Management Assistant — Mockup Review Record
 
 **Candidate:** Paper Workbench R2 Management Assistant mockup (Task 0 rendered Mockup Gate)
-**Status:** awaiting independent review, then Human Owner Mockup Gate
+**Status:** awaiting independent review (revision 2), then Human Owner Mockup Gate
 **Scope:** Task 0 only — standalone synthetic HTML/CSS/JS; no production imports, no model call, no canonical write
+
+## Revision 2 — reopened before Human approval (2026-09-01)
+
+The accepted Task 0 evidence was reopened with a corrected interaction direction
+from the Human Owner (recorded in `brief.md` under "Companion interaction
+direction — Mockup revision 2"). In short:
+
+- No continuous or cross-project conversation history is requested.
+- The project-scoped **Companion input is persistent**: a composer anchored at
+  the bottom of the companion plane (desktop and mobile), still present and
+  usable after an answer; every submission is a new bounded run.
+- The **Companion output is visibly distinct**: a labelled `Companion output`
+  run-record work area with a strong Paper Workbench boundary and structured
+  sections (answer, facts/citations, inferences, unknowns, recommendations).
+- Backlog/Task remain dominant; true-390px mobile Sheet keeps output + composer
+  usable with no horizontal clipping.
+
+**Focused RED → GREEN contract** (`verify-revision-2.mjs`, standalone CDP):
+19 checks failed before implementation (no persistent `.assistant-composer`, no
+`.companion-output`); all 20 checks pass after, covering composer persistence in
+ready + answer, bottom anchoring, scope/mode carry, labelled distinct output
+with structured sections, and true-390px render/overflow. Full output in
+`handoff.md`.
 
 ## Primary shape
 
@@ -28,12 +51,12 @@ The assistant panel is a single state-driven DOM controlled by `data-state` (`re
 
 | Required state (scenario group) | Evidence |
 |---|---|
-| Desktop initial — entry, receipt, Standard/Deep, optional doc, composer | `mockup-screens/ready-1440.png` |
-| Desktop answer — facts/citations, inferences, unknowns, questions, recommendations, Task/Backlog actions | `mockup-screens/answer-1440.png` |
+| Desktop initial — entry, receipt, Standard/Deep, optional doc, persistent composer | `mockup-screens/ready-1440.png` |
+| Desktop answer — `Companion output` run-record (facts/citations, inferences, unknowns, questions, recommendations, Task/Backlog actions) + persistent composer | `mockup-screens/answer-1440.png` |
 | Intermediate single-column | `mockup-screens/answer-900.png` |
 | Safety — one-time source gate (structured request + modal decision) | `mockup-screens/source-gate-1440.png` |
 | Safety — STALE / INCOMPLETE / INVALID SOURCE / PROVIDER ERROR treatments | `mockup-screens/exceptions-1440.png` |
-| Mobile — full-height Sheet, collapsed receipt, readable answer, bottom actions | `mockup-screens/mobile-390.png` |
+| Mobile — full-height Sheet, readable answer, persistent composer | `mockup-screens/mobile-390.png` |
 
 ## Checks run by Primary Agent
 
@@ -41,11 +64,12 @@ The assistant panel is a single state-driven DOM controlled by `data-state` (`re
 |---|---|
 | `node --check mockup/app.js` | Passed. |
 | `git diff --check` | Passed (no whitespace errors). |
+| `node verify-revision-2.mjs` (revision 2 focused contract) | 20/20 PASS (persistence + distinct output + 390 overflow). |
 | `node scripts/shot.mjs … 1440 2 0 light` (×4 states) | Passed; desktop + safety captures. |
 | `node scripts/shot.mjs … 900 2 0 light` | Passed; intermediate capture. |
 | `node scripts/shot.mjs … 390 2 1 light` | Passed; true CDP mobile capture. |
-| CDP overflow probe at 390px | `clientWidth === scrollWidth === innerWidth === 390` (no horizontal scroll). |
-| Visual inspection of all six captures | No clipping; 44px mobile controls; disabled actions visibly muted; reduced-motion present. |
+| CDP overflow probe at 390px | `clientWidth === scrollWidth === 390` (no horizontal scroll). |
+| Visual inspection of all six captures | No clipping; composer below all answer content (no overlap); 44px mobile controls; disabled actions visibly muted; reduced-motion present. |
 
 ## Findings and disposition (primary agent, pre-independent-review)
 
@@ -67,21 +91,27 @@ This is a T3 design-only task. The Primary Agent cannot self-accept. Independent
 You are an independent design reviewer for a T3 frontend task. You have no prior
 context from the implementation session. Review ONLY from these authoritative inputs:
 
-- Brief: .agent/frontend-design/r2-management-assistant/brief.md (revision 17)
+- Brief: .agent/frontend-design/r2-management-assistant/brief.md (revision 17 + Mockup revision 2)
 - Spec: docs/superpowers/specs/2026-08-30-alljobs-r2-planning-management-assistant-design.md
 - Plan Task 0: docs/superpowers/plans/2026-08-31-alljobs-r2-planning-management-assistant.md
 - Design system: DESIGN.md, PRODUCT.md
 - Deliverables: .agent/frontend-design/r2-management-assistant/mockup/{index.html,styles.css,app.js}
 - Evidence: .agent/frontend-design/r2-management-assistant/mockup-screens/*.png (6 captures)
+- Focused contract check: .agent/frontend-design/r2-management-assistant/verify-revision-2.mjs
 
 Target: branch codex/r2-management-assistant, worktree
         /Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator
 
-Review scope: the rendered Mockup Gate only. Verify the four required scenario
-groups (desktop ready; desktop answer; source gate + STALE/INCOMPLETE/invalid-source/
-provider-error; 390px full-height Sheet), that Backlog/Task stay dominant, and that the
-mockup uses Paper Workbench language with no chat bubbles, gradients, glass, card walls,
-decorative motion, or a new visual direction.
+Review scope: the rendered Mockup Gate revision 2 only. Verify the four required
+scenario groups (desktop ready; desktop answer; source gate + STALE/INCOMPLETE/
+invalid-source/provider-error; 390px full-height Sheet), and specifically the two
+revision-2 conditions: (1) a persistent composer anchored at the bottom of the
+companion plane in BOTH ready and answer states on desktop and mobile, carrying
+the project scope + mode; (2) results rendered in a clearly labelled `Companion
+output` run-record area with a strong Paper Workbench boundary and structured
+sections — not a chat transcript or generic card stack. Also confirm Backlog/Task
+stay dominant and that the mockup uses Paper Workbench language with no chat
+bubbles, gradients, glass, card walls, decorative motion, or a new visual direction.
 
 Method: run `impeccable critique` against the mockup and perform a rendered inspection of
 every screenshot (open the mockup at 1440 / 900 / true-390 and drive the states). Check

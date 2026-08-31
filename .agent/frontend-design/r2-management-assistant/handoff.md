@@ -1,51 +1,98 @@
-# R2 Management Assistant — Task 0 Handoff
+# R2 Management Assistant — Mockup Revision 2 Handoff
 
-**Pact task:** `r2-mockup-gate` (feature `r2-management-assistant`)
+**Pact task:** `r2-mockup-gate-revision-2` (feature `r2-management-assistant`)
 **Seat:** `opencode` (worker)
 **Branch:** `codex/r2-management-assistant`
 **Worktree:** `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator` (Pactify sandbox worktree — the required isolation; no nested worktree created)
-**Base SHA at start:** `c94ddef4fde3e0b73d04c26e8b714de6aa2d25b3`
+**Base SHA at start of this revision:** `e33999db418e532e96811c4d48300c0cf115fc88`
+**Prior Task 0 evidence:** retained as history (`bfc1406`, accepted `r2-mockup-gate`).
 
 ## Authority
 
 - Spec: `docs/superpowers/specs/2026-08-30-alljobs-r2-planning-management-assistant-design.md` (approved)
-- Brief: `.agent/frontend-design/r2-management-assistant/brief.md` revision 17 (approved)
+- Brief: `.agent/frontend-design/r2-management-assistant/brief.md` revision 17 + Mockup revision 2 (approved Human decision)
 - Plan Task 0: `docs/superpowers/plans/2026-08-31-alljobs-r2-planning-management-assistant.md`
-- Design system: `DESIGN.md`, `PRODUCT.md`, `AGENTS.md`, plus the existing Paper Workbench mockup (`planning-core-v1`) and R1 mockup review as reference.
+- Task spec: `.pact/tasks/r2-management-assistant-mockup-revision-2.md`
 
-## Discrepancies recorded (per plan "Baseline and handoff facts")
+## Why this revision exists (Human Owner decision, verbatim)
 
-- **Stale R1 paragraph in `.agent/CURRENT.md`:** lines 61–67 still describe R1 Backlog Control as a "candidate (not deployed) … not merged, pushed, deployed". This is stale: `main` already contains the copy-only R1-B commits through `d712551` (`chore: record r1b proposal-only verification`, `fix(planning): make r1 backlog proposals copy-only`). Not edited here (out of Task 0 scope); flagged for the orchestrator/reviewer.
-- **`node_modules` absent in this sandbox worktree.** The plan's Step 1 suggests `npm ci`, but this is a design-only task with a standalone static mockup and `scripts/shot.mjs` uses only Node built-ins. No `npm ci` was run by design, and no full-repository test suite was run (the task forbids repeated full suites). The installed Next 16 docs (`node_modules/next/dist/docs/…`) are therefore not present to read; none are needed to produce a static mockup, and no production Next code is written in Task 0.
+The rendered Task 0 evidence was reopened before Human Mockup Gate approval. The
+owner's corrected interaction direction:
 
-## Working-copy state (before Task 0 edits)
+- **No continuous or cross-project conversation history is requested.**
+- **The project-scoped Companion input must be persistent** — the composer stays
+  anchored at the bottom of the companion plane (desktop and mobile), including
+  after an answer renders; every submission is a new bounded run.
+- **The Companion output must be visibly distinct** — a clearly labelled
+  `Companion output` run-record work area with a strong Paper Workbench boundary
+  and structured sections (answer, facts/citations, inferences, unknowns,
+  recommendations), not a chat transcript or card stack.
+- **Backlog/Task stay dominant** on desktop; the true-390px full-height mobile
+  Sheet keeps both output and composer usable with no horizontal clipping.
 
-- Pre-existing unrelated changes, preserved and **not** staged/committed:
-  - `.pact/seat` (modified — bound to `opencode`; tracked in this tree despite the pact "git-excluded" convention)
-  - `opencode.json` (modified — `$schema` key added by the harness)
-- Task 0 edits are confined to `.agent/frontend-design/r2-management-assistant/`.
+This supersedes the original Task 0 treatment, which replaced the composer with
+the answer. Recorded in `brief.md` under "Companion interaction direction —
+Mockup revision 2 (approved 2026-09-01)".
 
-## Deliverables created
+## Changes made (revision 2 only)
 
-- `mockup/index.html` — one state-driven standalone DOM (`<main id="project-detail">` with a dominant Backlog ledger and an `<aside id="assistant-panel" data-state>`); no chat bubbles, no gradients/glass/card walls, Paper Workbench tokens only.
-- `mockup/styles.css` — panel, receipt, mode control, structured answer, citations, recommendations, source gate, exception treatments, and responsive (desktop / ≤1120 single-column / ≤720 full-height Sheet) + `prefers-reduced-motion`.
-- `mockup/app.js` — state controller (`ready`, `answer`, `source-gate`, `exceptions`), URL `?state=` param for screenshot targeting, exception sub-selector, receipt expand, Standard/Deep toggle, composer → answer, and a native `<dialog>` Human Gate.
-- `mockup-screens/*.png` — rendered evidence (6 captures).
-- `mockup-review.md` — primary-agent review record + paste-ready independent review prompt.
-- `brief.md` — permitted non-material Task 0 update (status + mockup artifact pointers only).
+- `mockup/app.js` — persistent composer as the bottom-most element of the panel
+  in **every** state (`panelShell()` wrapper: head → scrollable body → composer);
+  new `companionOutputHtml()` wraps the answer sections in a labelled
+  `Companion output` run-record with `RUN #1` identity and a run-meta strip;
+  composer now carries scope + mode (`tradelinks · Standard · MiniMax-M3`) and
+  a "new bounded run" note. Removed the now-redundant standalone run-meta banner,
+  usage footer, and mobile `.sheet-actions` bar (Task/Backlog actions remain on
+  the recommendation cards inside the output).
+- `mockup/styles.css` — `assistant-composer` (persistent, bottom-anchored),
+  `composer__context`, `companion-output` (2px ink boundary + dark head band +
+  recessed meta strip), panel flex-column shell; mobile sheet keeps the composer
+  at the bottom and 44px controls.
+- `verify-revision-2.mjs` (new) — focused CDP browser-contract check.
+- `brief.md` — reopened as Mockup revision 2, decision recorded verbatim.
+- `mockup-review.md` — updated for revision 2.
+- `mockup-screens/*.png` — six re-rendered captures.
 
-## Scenario coverage (four approved groups)
+## Focused RED → GREEN evidence
 
-| Group | State | Evidence |
-|---|---|---|
-| Desktop initial | `ready` (receipt, Standard/Deep, optional doc, composer) | `ready-1440.png` |
-| Desktop answer | `answer` (facts/citations, inferences, unknowns, questions, recommendations, Task/Backlog actions, usage) | `answer-1440.png` |
-| Intermediate | `answer` at 900px (single-column stack) | `answer-900.png` |
-| Safety — source gate | `source-gate` (structured request + modal Human Gate) | `source-gate-1440.png` |
-| Safety — exceptions | `exceptions` (STALE / INCOMPLETE / INVALID SOURCE / PROVIDER ERROR) | `exceptions-1440.png` |
-| Mobile critical flow | `answer` at 390px (full-height Sheet, collapsed receipt, bottom actions) | `mobile-390.png` |
+Check: `.agent/frontend-design/r2-management-assistant/verify-revision-2.mjs`
+(standalone Node + CDP; no repo deps, no model call, no write).
 
-## Commands and outputs (run after final code)
+**RED (before implementation):** 19 checks FAILED — no `.assistant-composer` in
+any state, no `.companion-output` in the answer state (only the pre-existing
+"no horizontal scroll" check passed).
+
+**GREEN (after implementation):**
+
+```text
+== ready state (1440) — persistence + anchor ==
+PASS  composer present
+PASS  composer is bottom-most element of plane
+PASS  composer has textarea + Ask
+PASS  composer carries project scope
+PASS  composer carries mode
+== answer state (1440) — persistence + distinct output ==
+PASS  composer present after answer
+PASS  composer is bottom-most element after answer
+PASS  composer has textarea + Ask after answer
+PASS  Companion output region present
+PASS  output labelled "Companion output"
+PASS  output has run-record identity
+PASS  output has Direct answer section
+PASS  output has Confirmed facts section
+PASS  output has Inferences section
+PASS  output has Unknowns section
+PASS  output has Recommendations section
+== answer state (true 390px) — render / overflow ==
+PASS  390px: no horizontal scroll
+PASS  390px: composer present in sheet
+PASS  390px: composer is bottom-most element
+PASS  390px: composer usable (textarea present)
+
+All checks PASSED
+```
+
+## Static checks (run after final code)
 
 ```text
 $ node --check .agent/frontend-design/r2-management-assistant/mockup/app.js
@@ -53,17 +100,34 @@ $ node --check .agent/frontend-design/r2-management-assistant/mockup/app.js
 
 $ git diff --check
 (no output; exit 0)
-
-$ node scripts/shot.mjs "file://$PWD/.agent/.../mockup/index.html?state=ready" …/ready-1440.png 1440 2 0 light
-OK …/ready-1440.png 513243b width=1440 scale=2 mobile=false
-… (answer-1440, answer-900, source-gate-1440, exceptions-1440, mobile-390 similarly OK)
-
-# Horizontal-scroll verification at true 390px (CDP measured)
-MEASURE {"clientWidth":390,"scrollWidth":390,"innerWidth":390,"bodyScroll":390}
 ```
 
-Visual inspection of all six captures confirmed: no clipping or horizontal scroll, 44px mobile controls (close + bottom actions), visible focus, reduced-motion fallback, and structured document/ledger answer language.
+## Screenshots (re-rendered via `scripts/shot.mjs`, true CDP metrics)
+
+| State | File | Size |
+|---|---|---|
+| ready-1440 | `ready-1440.png` | 532327b |
+| answer-1440 | `answer-1440.png` | 914432b |
+| answer-900 (intermediate) | `answer-900.png` | 789288b |
+| source-gate-1440 | `source-gate-1440.png` | 676316b |
+| exceptions-1440 | `exceptions-1440.png` | 628062b |
+| mobile-390 (true CDP mobile) | `mobile-390.png` | 544391b |
+
+Visual inspection confirmed: no overlap between the composer and answer content,
+no horizontal scroll/clipping at 390px, 44px mobile controls, `Companion output`
+dark boundary clearly distinct from ordinary Project Detail content, Backlog
+ledger still dominant on desktop.
+
+## Working-copy state
+
+- Unrelated Human changes preserved and not staged/committed: `.pact/seat`
+  (bound to `opencode`), `opencode.json` (`$schema` key). These remain untracked
+  from prior sessions and are untouched here.
+- Revision 2 edits are confined to `.agent/frontend-design/r2-management-assistant/`.
 
 ## Next safe action
 
-Independent design review (fresh session, `impeccable critique` + rendered inspection; see paste-ready prompt in `mockup-review.md`), then Human Owner Mockup Gate approval. **Do not** install model packages, add shadcn production components, or begin Task 1 before approval.
+Fresh independent design review (impeccable critique + rendered inspection; see
+paste-ready prompt in `mockup-review.md`), then Human Owner Mockup Gate approval.
+**Do not** install model packages, add shadcn production components, or begin
+Task 1 before approval.

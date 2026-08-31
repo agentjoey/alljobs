@@ -97,19 +97,33 @@
 
   function composerHtml() {
     return `
-      <div class="composer">
-        <label class="sr-only" for="assistant-question">Ask a question about this project</label>
-        <textarea id="assistant-question" placeholder="Ask about this project's planning state…"></textarea>
-        <div class="composer__actions">
-          <span class="composer__hint">${mode === "standard" ? "standard" : "deep"} · MiniMax-M3</span>
-          <button type="button" class="btn btn--primary composer__send" id="composer-send">Ask</button>
+      <div class="assistant-composer" role="region" aria-label="Companion composer">
+        <div class="composer__context" aria-label="Run scope">
+          <span class="composer__scope"><strong>tradelinks</strong> · ${mode === "standard" ? "Standard" : "Deep"} · MiniMax-M3</span>
+          <span class="composer__run-note">each submission is a new bounded run</span>
+        </div>
+        <div class="composer">
+          <label class="sr-only" for="assistant-question">Ask a question about this project</label>
+          <textarea id="assistant-question" placeholder="Ask about this project's planning state…"></textarea>
+          <div class="composer__actions">
+            <span class="composer__hint">${mode === "standard" ? "standard" : "deep"} mode</span>
+            <button type="button" class="btn btn--primary composer__send" id="composer-send">Ask</button>
+          </div>
         </div>
       </div>`;
   }
 
+  // Persistent companion-plane shell: header (fixed), scrollable body, and a
+  // composer anchored at the bottom in every state — including after an answer.
+  function panelShell(bodyHtml) {
+    return headHtml() +
+      `<div class="assistant-scroll"><div class="assistant-body">` +
+      bodyHtml + `</div></div>` +
+      composerHtml();
+  }
+
   function readyHtml() {
-    return headHtml() + `<div class="assistant-body">` +
-      receiptHtml() + modeControlHtml() + composerHtml() + `</div>`;
+    return panelShell(receiptHtml() + modeControlHtml());
   }
 
   function citationSup(refs) {
@@ -118,101 +132,101 @@
     }).join("");
   }
 
-  function answerHtml() {
-    return headHtml() + `
-      <div class="assistant-body">
-        <div class="state-banner state-banner--info" role="status">
-          <div><strong>Run meta</strong>Standard · MiniMax-M3 · 4.2s · completed</div>
-        </div>
-
-        <section class="answer-section" aria-label="Direct answer">
-          <p class="answer-label">Direct answer</p>
-          <p class="answer-direct">Phase 2 “Reporting” is the active milestone with two open Backlog items. The milestone is gated by one blocked, overdue P1 item (TR-B-003) that shares the order-routing path with the in-progress settlement work.</p>
-        </section>
-
-        <section class="answer-section" aria-label="Confirmed facts">
-          <p class="answer-label answer-label--fact">Confirmed facts</p>
-          <ul class="fact-list">
-            <li>Phase 2 “Reporting” is the active milestone and owns two open items.${citationSup(["S2"])}</li>
-            <li>TR-B-003 (order routing rate-limit retries) is <em>blocked</em> and overdue, at P1 in the Core phase.${citationSup(["S1"])}</li>
-            <li>The Backlog is a read-only projection of <code>docs/BACKLOG.md</code> at HEAD <code>d712551</code>.${citationSup(["S1"])}</li>
-          </ul>
-        </section>
-
-        <section class="answer-section" aria-label="Citations">
-          <div class="citation-ledger">
-            <div class="citation-ledger__head">Citations</div>
-            <div class="citation-ledger__row"><span class="citation-sup">S1</span><span><span class="citation-path">docs/BACKLOG.md</span><span class="citation-digest">sha256 9c4b…81af</span></span></div>
-            <div class="citation-ledger__row"><span class="citation-sup">S2</span><span><span class="citation-path">docs/ROADMAP.md</span><span class="citation-digest">sha256 7f3a…c21e</span></span></div>
-          </div>
-        </section>
-
-        <section class="answer-section" aria-label="Inferences">
-          <p class="answer-label answer-label--infer">Inferences</p>
-          <ul class="infer-list">
-            <li><span class="infer-tag">INFER</span>The blocked retry item is likely delaying settlement webhooks, since both touch order routing.</li>
-            <li><span class="infer-tag">INFER</span>Phase 2 cannot close until TR-B-004 and TR-B-005 land.</li>
-          </ul>
-        </section>
-
-        <section class="answer-section" aria-label="Unknowns">
-          <p class="answer-label answer-label--unknown">Unknowns</p>
-          <ul class="unknown-list">
-            <li>No acceptance criteria are recorded for TR-B-005.</li>
-            <li>Source code is not in default context; implementation feasibility is unverified.</li>
-          </ul>
-        </section>
-
-        <section class="answer-section" aria-label="Questions">
-          <p class="answer-label answer-label--question">Questions</p>
-          <ul class="question-list">
-            <li>Should TR-B-003 be split into a rate-limit item and a retry-queue item?</li>
-          </ul>
-        </section>
-
-        <section class="answer-section" aria-label="Recommendations">
-          <p class="answer-label answer-label--rec">Recommendations</p>
-          <div class="rec-card">
-            <div class="rec-card__head">
-              <p class="rec-card__title">Split TR-B-003 into two items</p>
-              <span class="rec-card__kind rec-card__kind--task">task</span>
-            </div>
-            <p class="rec-card__body">Separate the rate-limit backoff from the retry queue so the queue can start independently of the backoff tuning.</p>
-            <div class="rec-card__actions">
-              <button type="button" class="btn btn--quiet" data-action="task-draft">Use as task draft</button>
-            </div>
-          </div>
-          <div class="rec-card" style="margin-top:10px;">
-            <div class="rec-card__head">
-              <p class="rec-card__title">Define settlement webhook acceptance criteria</p>
-              <span class="rec-card__kind rec-card__kind--backlog">backlog</span>
-            </div>
-            <p class="rec-card__body">Add a P1 Backlog item describing the reconciliation acceptance criteria before the webhook work proceeds.</p>
-            <div class="rec-card__actions">
-              <button type="button" class="btn btn--quiet" data-action="draft-backlog">Draft Backlog proposal</button>
-            </div>
-          </div>
-        </section>
-
-        <footer class="usage-footer">
-          <span><strong>model</strong> MiniMax-M3</span>
+  function companionOutputHtml() {
+    return `
+      <section class="companion-output" aria-label="Companion output">
+        <header class="companion-output__head">
+          <span class="companion-output__label">Companion output</span>
+          <span class="companion-output__run">RUN #1 · 14:02Z</span>
+        </header>
+        <div class="companion-output__meta" role="status">
           <span><strong>mode</strong> Standard</span>
+          <span><strong>model</strong> MiniMax-M3</span>
+          <span><strong>duration</strong> 4.2s</span>
+          <span><strong>status</strong> completed</span>
           <span><strong>usage</strong> 1,240 in · 388 out</span>
           <span><strong>source gate</strong> none</span>
-        </footer>
+        </div>
+        <div class="companion-output__body">
+          <section class="answer-section" aria-label="Direct answer">
+            <p class="answer-label">Direct answer</p>
+            <p class="answer-direct">Phase 2 “Reporting” is the active milestone with two open Backlog items. The milestone is gated by one blocked, overdue P1 item (TR-B-003) that shares the order-routing path with the in-progress settlement work.</p>
+          </section>
 
-        <button type="button" class="btn btn--quiet new-conversation" data-action="new-conversation" style="width:100%;">New conversation</button>
-      </div>
+          <section class="answer-section" aria-label="Confirmed facts">
+            <p class="answer-label answer-label--fact">Confirmed facts</p>
+            <ul class="fact-list">
+              <li>Phase 2 “Reporting” is the active milestone and owns two open items.${citationSup(["S2"])}</li>
+              <li>TR-B-003 (order routing rate-limit retries) is <em>blocked</em> and overdue, at P1 in the Core phase.${citationSup(["S1"])}</li>
+              <li>The Backlog is a read-only projection of <code>docs/BACKLOG.md</code> at HEAD <code>d712551</code>.${citationSup(["S1"])}</li>
+            </ul>
+          </section>
 
-      <div class="sheet-actions" role="group" aria-label="Bottom actions">
-        <button type="button" class="btn btn--quiet" data-action="task-draft">Use as task draft</button>
-        <button type="button" class="btn btn--primary" data-action="draft-backlog">Draft Backlog proposal</button>
-      </div>`;
+          <section class="answer-section" aria-label="Citations">
+            <div class="citation-ledger">
+              <div class="citation-ledger__head">Citations</div>
+              <div class="citation-ledger__row"><span class="citation-sup">S1</span><span><span class="citation-path">docs/BACKLOG.md</span><span class="citation-digest">sha256 9c4b…81af</span></span></div>
+              <div class="citation-ledger__row"><span class="citation-sup">S2</span><span><span class="citation-path">docs/ROADMAP.md</span><span class="citation-digest">sha256 7f3a…c21e</span></span></div>
+            </div>
+          </section>
+
+          <section class="answer-section" aria-label="Inferences">
+            <p class="answer-label answer-label--infer">Inferences</p>
+            <ul class="infer-list">
+              <li><span class="infer-tag">INFER</span>The blocked retry item is likely delaying settlement webhooks, since both touch order routing.</li>
+              <li><span class="infer-tag">INFER</span>Phase 2 cannot close until TR-B-004 and TR-B-005 land.</li>
+            </ul>
+          </section>
+
+          <section class="answer-section" aria-label="Unknowns">
+            <p class="answer-label answer-label--unknown">Unknowns</p>
+            <ul class="unknown-list">
+              <li>No acceptance criteria are recorded for TR-B-005.</li>
+              <li>Source code is not in default context; implementation feasibility is unverified.</li>
+            </ul>
+          </section>
+
+          <section class="answer-section" aria-label="Questions">
+            <p class="answer-label answer-label--question">Questions</p>
+            <ul class="question-list">
+              <li>Should TR-B-003 be split into a rate-limit item and a retry-queue item?</li>
+            </ul>
+          </section>
+
+          <section class="answer-section" aria-label="Recommendations">
+            <p class="answer-label answer-label--rec">Recommendations</p>
+            <div class="rec-card">
+              <div class="rec-card__head">
+                <p class="rec-card__title">Split TR-B-003 into two items</p>
+                <span class="rec-card__kind rec-card__kind--task">task</span>
+              </div>
+              <p class="rec-card__body">Separate the rate-limit backoff from the retry queue so the queue can start independently of the backoff tuning.</p>
+              <div class="rec-card__actions">
+                <button type="button" class="btn btn--quiet" data-action="task-draft">Use as task draft</button>
+              </div>
+            </div>
+            <div class="rec-card" style="margin-top:10px;">
+              <div class="rec-card__head">
+                <p class="rec-card__title">Define settlement webhook acceptance criteria</p>
+                <span class="rec-card__kind rec-card__kind--backlog">backlog</span>
+              </div>
+              <p class="rec-card__body">Add a P1 Backlog item describing the reconciliation acceptance criteria before the webhook work proceeds.</p>
+              <div class="rec-card__actions">
+                <button type="button" class="btn btn--quiet" data-action="draft-backlog">Draft Backlog proposal</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>`;
+  }
+
+  function answerHtml() {
+    return panelShell(companionOutputHtml() +
+      `<button type="button" class="btn btn--quiet new-conversation" data-action="new-conversation" style="width:100%;">New conversation</button>`);
   }
 
   function sourceGateHtml() {
-    return headHtml() + `
-      <div class="assistant-body">
+    return panelShell(`
         <div class="state-banner state-banner--info" role="status">
           <div><strong>Source access requested</strong>The documents are insufficient to answer responsibly. Source code needs a separate one-time read.</div>
         </div>
@@ -228,8 +242,7 @@
           </dl>
           <p class="gate-request__lead">Approval authorizes only this response. It expires on completion, cancel, timeout, or any manifest change. It never becomes standing access.</p>
           <button type="button" class="btn btn--primary" id="gate-review" style="width:100%;">Review gate</button>
-        </section>
-      </div>`;
+        </section>`);
   }
 
   function treatmentHtml(code, text, variant) {
@@ -288,8 +301,7 @@
   }
 
   function exceptionsHtml() {
-    return headHtml() + `
-      <div class="assistant-body">
+    return panelShell(`
         <section aria-label="Compact exception treatments">
           <p class="answer-label">Compact treatments</p>
           <div class="treatment-strip">
@@ -299,8 +311,7 @@
             ${treatmentHtml("PROVIDER ERROR", "Auth / plan / rate / timeout / unavailable, distinct.", "provider-error")}
           </div>
         </section>
-        ${exceptionDetailHtml()}
-      </div>`;
+        ${exceptionDetailHtml()}`);
   }
 
   function renderPanel() {
