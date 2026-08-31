@@ -131,3 +131,118 @@ Fresh independent design review (impeccable critique + rendered inspection; see
 paste-ready prompt in `mockup-review.md`), then Human Owner Mockup Gate approval.
 **Do not** install model packages, add shadcn production components, or begin
 Task 1 before approval.
+
+---
+
+# Task 1 — contracts, limits, and digests (`r2-contracts`)
+
+**Pact task:** `r2-contracts` (feature `r2-management-assistant`)
+**Seat:** `opencode` (worker)
+**Branch:** `codex/r2-management-assistant`
+**Worktree:** `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator`
+**Commit:** `19fdb2e` (`feat: define r2 assistant contracts`)
+**Base SHA at start:** `33e0bb3e5f1ebb85e5b0cbfdb4feeaef9199990d`
+
+## Start Card
+
+```md
+Workflow: 3.3
+Task: Task 1 (contracts, limits, and digests)
+Role: worker
+Tier / reason: T3 — core model-backed Project Detail journey
+Canonical record: .agent/frontend-design/r2-management-assistant/
+Branch: codex/r2-management-assistant
+Mockup Gate: approved for revision 2 (Human Owner, 2026-09-01)
+Reviewer: claude (independent)
+```
+
+## Scope audit
+
+Implemented **only** Task 1 from the canonical plan. Files touched:
+
+| File | Change |
+|---|---|
+| `lib/assistant/limits.ts` | new — fixed `ASSISTANT_LIMITS` (verbatim from plan) |
+| `lib/assistant/contracts.ts` | new — strict Zod schema graph |
+| `lib/assistant/contracts.test.ts` | new — focused strict-rejection/bounds tests |
+| `lib/assistant/digest.ts` | new — `canonicalize` + `assistantDigest` (SHA-256) |
+| `lib/assistant/digest.test.ts` | new — key-ordering + array-order tests |
+| `lib/planning/domain/schemas.ts` | add `projectAssistantConfigSchema` + `assistant` field |
+| `lib/planning/domain/schemas.test.ts` | add Project assistant-config tests |
+| `lib/planning/config.ts` | add strict Control Host `assistant` config |
+| `lib/planning/config.test.ts` | new — Control Host assistant config tests |
+| `config/alljobs.example.json` | add `assistant.enabled: false`, no credential |
+
+No dependencies installed, no provider invoked, no credentials added, no API
+routes/UI/source access/manifests/activity/drafts/proposals behavior, no Task 2+
+work. Mockup artifacts and unrelated Human changes preserved.
+
+## Contracts produced
+
+`AssistantMode`, `AssistantRequestIntent` (discriminated `ask | inspect_source |
+answer_without_source | draft_task | draft_backlog`), `AssistantContextManifest`,
+`AssistantOutcome` (discriminated `management_answer | source_access_proposal`),
+`AssistantStreamEvent` (discriminated `run_status | assistant_partial |
+source_access_requested | assistant_complete | assistant_error`), `TaskDraft`,
+`BacklogProposal`, `AssistantRunRecord`, `ASSISTANT_LIMITS`, `assistantDigest()`,
+plus the answer primitives `ManagementCitation`, `ManagementFact`,
+`ManagementInference`, `ManagementRecommendation`.
+
+## RED → GREEN evidence
+
+**RED (implementation absent, tests present):** after stashing only the
+implementation (`schemas.ts`/`config.ts` assistant additions, `lib/assistant/*.ts`)
+with the four test files in place:
+
+```text
+ Test Files  4 failed (4)
+      Tests  6 failed | 17 passed (23)
+```
+
+Failures: missing `projectAssistantConfigSchema`/`assistant` field, missing
+`controlHostAssistantConfigSchema`, and missing `lib/assistant/{contracts,digest}`
+module imports — the new assertions reject nothing until the schema graph exists.
+
+**GREEN (after implementation):**
+
+```text
+$ npm test -- lib/planning/domain/schemas.test.ts lib/planning/config.test.ts lib/assistant/contracts.test.ts lib/assistant/digest.test.ts
+ Test Files  4 passed (4)
+      Tests  65 passed (65)
+```
+
+Focused tests prove: strict rejection of browser-supplied `workspace_path`,
+non-minimax provider, non-`MiniMax-M3` model, `api_key`/unknown keys, oversized
+questions, malformed digests, over-limit optional sources, invalid mode enum,
+repository-relative `context_paths` (absolute/`..` rejected, max 8), both outcome
+kinds, citation-source requirements, unknown manifest/task-draft fields, and that
+`question`, `answer`, `reasoning`, `fragments`, `draft`, `proposal`, and
+`credential` fields cannot enter an `AssistantRunRecord`. Digest tests prove
+recursive key-ordering invariance and array-order preservation.
+
+## Static checks (run after final code)
+
+```text
+$ npm run typecheck      → exit 0
+$ git diff --check       → exit 0
+```
+
+Example config re-validated through `controlHostConfigSchema`:
+`assistant` → `{ enabled: false, provider: "minimax", model: "MiniMax-M3",
+standard: <fixed>, deep: <fixed> }` (no credential key).
+
+## Warnings / notes
+
+- The RED demonstration is captured post-hoc (stash implementation, run tests,
+  restore) because the four test files were authored in the same working pass as
+  the implementation; the recorded RED/GREEN outputs are exact.
+- `provider` and `model` are `z.literal(...).default(...)` so the example config's
+  `{ "enabled": false }` validates; `enabled` remains required boolean (fail-closed
+  explicitness).
+- `standard`/`deep` limits in the Control Host config default to the fixed
+  `ASSISTANT_LIMITS` values; `ASSISTANT_LIMITS` remains the server-authoritative
+  source of truth and is not browser-configurable.
+
+## Next safe action
+
+Stop for independent review of `r2-contracts` before Task 2 (context assembly).
