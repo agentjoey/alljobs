@@ -63,3 +63,10 @@ features:
         spec: .pact/tasks/r2-management-assistant-contracts.md
         evidence: Rework round 2: resolved both P1 findings. Commit 54172fe. (1) P1 security: controlHostAssistantConfigSchema standard/deep now lock every budget field via z.literal(ASSISTANT_LIMITS.<mode>.<field>) with .strict() + .default(<fixed>); mutated budgets fail validation (added 2 rejection tests). (2) P1 product boundary: removed history field + historyMessageSchema from ask intent (Mockup revision 2 = fresh bounded run, no continuous history); strict schema now rejects any history key empty/nonempty as unknown (added 2 rejection tests). RED (new tests vs pre-fix impl): 2 files / 4 tests failed (the 2 mutated-budget + 2 history rejections). GREEN: npm test -- lib/planning/domain/schemas.test.ts lib/planning/config.test.ts lib/assistant/contracts.test.ts lib/assistant/digest.test.ts → 4 passed / 69 tests passed. npm run typecheck → exit 0. git diff --check → exit 0. Scope unchanged (Task 1 files only). Details in handoff.md.
         deps: [r2-mockup-gate-revision-2]
+      - id: r2-context
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r2-management-assistant-context.md
+        evidence: null
+        deps: [r2-contracts]
