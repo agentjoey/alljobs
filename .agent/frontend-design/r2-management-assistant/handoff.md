@@ -434,3 +434,121 @@ Stop for independent review of `r2-context` before Task 3 (source gates).
 - Independent verification passed: Task 2 focused tests **2 files / 22 tests**, `npm run typecheck`, and `git diff --check 6344651..HEAD`.
 
 Task 3 is not covered by this acceptance and requires a separate Pact assignment/review cycle.
+
+---
+
+# Task 3 — one-time source gates and safe read tools (`r2-source-gates`)
+
+**Pact task:** `r2-source-gates` (feature `r2-management-assistant`)
+**Seat:** `opencode` (worker)
+**Branch:** `codex/r2-management-assistant`
+**Worktree:** `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator`
+**Base SHA at start:** `348b03b` (`pact: ledger sync`)
+
+## Scope audit
+
+Implemented **only** Task 3 from the canonical plan. Files touched:
+
+| File | Change |
+|---|---|
+| `lib/assistant/source-gates.ts` | new — process-local digest-only one-time gates (`createSourceGate`, `consumeSourceGate`, `rejectSourceGate`) |
+| `lib/assistant/source-gates.test.ts` | new — gate lifecycle focused coverage |
+| `lib/assistant/source-files.ts` | new — fail-closed bounded list/read (`listProjectFiles`, `readProjectFiles`, `createAssistantReadTools`, `sourceBudgetFromGate`) |
+| `lib/assistant/source-files.test.ts` | new — real-filesystem safety coverage |
+
+No shell, Git, provider, dependency, credential, route, UI, activity, write, or
+Task 4+ work. No history revival. `SourceFragment` is reused via `import type`
+from Task 2's `context.ts` (no runtime coupling).
+
+## Design decisions
+
+- **Gates are digest-only and process-local.** `createSourceGate` binds
+  Project/question/manifest digests, the fixed Standard/Deep source budgets
+  (`sourceFiles`/`sourceBytes`/`toolCalls`) and the `gateTtlMs` expiry. The store
+  holds only digests + gate metadata — never the question, history, source body,
+  answer, or reasoning. A process restart invalidates every gate; nothing is
+  persisted or recorded to activity.
+- **Atomic/single-use/rejectable.** `consumeSourceGate` validates status →
+  expiry → Project → question digest → manifest digest in a single synchronous
+  transition, then marks the gate `consumed`. A second consume returns
+  `SOURCE_GATE_CONSUMED`; `rejectSourceGate` (optionally `reason: "cancelled"`)
+  transitions `active` → `rejected`/`cancelled` without granting either
+  capability. Lazy cleanup removes gates well past expiry.
+- **Fail-closed read.** `readProjectFiles` resolves the registered workspace via
+  the existing direct-child trusted-root guard (`isDirectChildOfTrustedRoots` +
+  `loadControlHostConfig`), rejects a symlinked/missing/non-directory/untrusted
+  workspace, then per path rejects: traversal/absolute/backslash/empty/dot/`..`
+  (`SOURCE_PATH_REJECTED`), excluded dirs and credential files
+  (`SOURCE_PATH_EXCLUDED`), every symlink at any path component
+  (`SOURCE_SYMLINK_REJECTED`), non-regular files (`SOURCE_FILE_NOT_REGULAR`),
+  disallowed extensions (`SOURCE_EXTENSION_REJECTED`), per-file oversize
+  (`SOURCE_FILE_TOO_LARGE`), NUL/invalid-UTF-8 binary (`SOURCE_FILE_BINARY`), and
+  a final realpath containment escape (`SOURCE_PATH_ESCAPED`).
+- **Bounded budget.** A `SourceReadBudget` (`sourceBudgetFromGate`) threads
+  `remaining_files`/`remaining_bytes`/`remaining_tool_calls` across calls;
+  `createAssistantReadTools` binds a gate to a shared session and returns
+  `remaining_tool_calls`/`remaining_bytes` on every call (the Task 5 model-tools
+  seam). Exceeding any bound fails closed (`SOURCE_FILES_EXCEEDED`,
+  `SOURCE_BYTES_EXCEEDED`, `SOURCE_TOOL_CALLS_EXHAUSTED`).
+- **Deterministic bounded listing.** `listProjectFiles` walks with
+  `readdir({ withFileTypes: true })`, skips excluded dirs/files, symlinks, and
+  non-allowed extensions, sorts deterministically, caps at a listing bound, and
+  filters by an optional safe `prefix`.
+- **Extension allowlist.** Only bounded source/config/document text extensions
+  are readable. `EXCLUDED_DIRS` and `EXCLUDED_FILES` follow the plan verbatim,
+  with one strengthening: `EXCLUDED_FILES` matches `.env.*` (e.g. `.env.local`,
+  `.env.production`) in addition to `.env`, because the plan's literal
+  `\.env($|\.)` form does not actually match `.env.*` and those are credential
+  files that must fail closed (spec §11.4/§14.2).
+
+## RED → GREEN evidence
+
+**RED (implementation absent, tests present):**
+
+```text
+ Test Files  2 failed (2)
+      Tests  no tests
+```
+
+`Failed to resolve import "./source-gates"` / `"./source-files"` — the assertions
+exist but the modules that reject/assemble them do not.
+
+**GREEN (after implementation):**
+
+```text
+$ npm test -- lib/assistant/source-gates.test.ts lib/assistant/source-files.test.ts
+ Test Files  2 passed (2)
+      Tests  33 passed (33)
+```
+
+Focused coverage proves: gate budget derivation (standard 6 files/192 KiB/4 calls,
+deep 12/384 KiB/8), digest-only storage (no question/history text), single-use
+consume, second-consume `SOURCE_GATE_CONSUMED`, Project/question/manifest
+mismatch, expiry, unknown-gate, reject and cancel invalidation; deterministic
+sorted listing with prefix filtering and exclusions; regular read into a
+digest-bearing fragment; traversal/absolute/excluded-dir/excluded-file/symlink/
+non-regular/binary-NUL/oversize/disallowed-extension/missing-file rejection;
+per-file and total-byte and file-count and tool-call exhaustion; workspace
+disappearance; a post-gate symlink escape; and shared tool-call accounting
+across a read-tools session.
+
+## Static checks (run after final code)
+
+```text
+$ npm run typecheck      → exit 0
+$ git diff --check       → exit 0
+$ npm test               → 46 files / 305 tests passed (was 44 / 272 in Task 2)
+$ npm run lint           → 0 errors (65 pre-existing warnings in unrelated files; none in the new files)
+```
+
+## Notes
+
+- `npm run build` was not run in this worktree: its `node_modules` is empty and
+  Turbopack requires a real local `node_modules` (documented in `AGENTS.md`).
+  `typecheck` is the TS gate here; prior `r2-contracts`/`r2-context` tasks
+  likewise recorded no build output.
+
+## Next safe action
+
+Stop for independent review of `r2-source-gates` before Task 4 (MiniMax-M3 model
+client).
