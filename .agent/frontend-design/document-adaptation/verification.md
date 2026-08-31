@@ -54,5 +54,8 @@ All three were captured from the isolated final build after `1b3dbdc`. Visual in
 
 - Human rendered Mockup Gate: **APPROVED** for mockup revision 2.
 - Primary implementation validation: **PASS** for the checks above.
-- Independent `impeccable critique` and browser/a11y verification: **PENDING**; this record does not self-approve them.
+- Independent `impeccable critique` and browser/a11y verification: **PASS** for Task 5 artifact `e32b07d42d3e3e46eaf11e1df77a156c24381202`.
+  - Assessment A independently scored the Paper Workbench surface **31/40**. It found no canonical/candidate, copy-only, keyboard, responsive, or state-matrix failure. Its two follow-up recommendations are recorded as non-blocking backlog candidates: elevate degraded handoff prominence and make the global provenance strip source-aware. They require a separate approved shell-level design task: Task 4 deliberately owns `DocumentHealth` and existing project surfaces only, while `AppShell` cannot receive route-specific source state from the root layout. The current health section remains directly above the tab panel with exact source facts and a copy-only action, as Task 4 requires.
+  - Assessment B independently rebuilt the final Webpack target and ran the isolated Chromium suite: **5/5 passed**. It verified local-missing no-cache fallback, recoverable/unstructured evidence-only presentation, remote read-only disabled ordering, true-390 keyboard copy with a polite success message, and no horizontal page overflow. The DocumentHealth detector reported **0 findings**. Cache read-only is source/fixture-inspected, not separately browser-navigated; no broader WCAG claim is made because automated axe is not bundled.
+- Final independent assessment: **PASS — no P0/P1 correction is required within this approved Task 5 scope.**
 - Push, merge, deploy, production service, Tunnel, Access, DNS, port 3456, and refresh worker: **NOT TOUCHED**.
