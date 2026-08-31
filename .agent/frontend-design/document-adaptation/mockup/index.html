@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>AllJobs — Document adaptation mockup</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to document health</a>
+
+    <div class="mockup-note" role="note">
+      <span>Rendered mockup · revision 2 · synthetic demonstration data</span>
+      <strong>Human Mockup Gate: pending</strong>
+    </div>
+
+    <header class="app-header">
+      <a class="brand" href="#main" aria-label="AllJobs Planning home">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <path d="M9 3v18M3 9h6"></path>
+        </svg>
+        <span>AllJobs <i>/ Planning</i></span>
+      </a>
+      <nav class="primary-nav" aria-label="Primary navigation">
+        <a href="#main">Portfolio</a>
+        <a href="#main" aria-current="page">Projects</a>
+        <a href="#main">Tasks</a>
+      </nav>
+      <div class="search-shell" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg>
+        <span>Universal search…</span><kbd>⌘K</kbd>
+      </div>
+    </header>
+
+    <div id="source-strip" class="source-strip" role="region" aria-label="Planning source provenance"></div>
+
+    <section class="scenario-control" aria-labelledby="scenario-label">
+      <label id="scenario-label" for="scenario">Mockup state</label>
+      <select id="scenario" name="scenario">
+        <option value="canonical">Canonical · local clean</option>
+        <option value="modified">Canonical · local modified</option>
+        <option value="recoverable" selected>Recoverable · malformed section</option>
+        <option value="unstructured">Unstructured Markdown</option>
+        <option value="missing-backlog">Missing Backlog</option>
+        <option value="missing-roadmap">Missing Roadmap</option>
+        <option value="unsafe">Unsafe / non-regular local file</option>
+        <option value="remote">Remote commit · read only</option>
+        <option value="cache">Cache snapshot · stale read only</option>
+        <option value="unavailable">Unavailable source</option>
+        <option value="clipboard">Clipboard unavailable</option>
+      </select>
+      <p>Switches synthetic evidence only. No repository action is connected.</p>
+    </section>
+
+    <main id="main" tabindex="-1">
+      <div id="surface"></div>
+    </main>
+
+    <div id="copy-status" class="visually-hidden" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>

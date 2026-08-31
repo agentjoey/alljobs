@@ -2,12 +2,32 @@ import { existsSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { ControlHostResolvedPaths } from "../config";
-import type { ProjectRegistryEntry } from "../domain/types";
+import type { ProjectRegistryEntry, ProofIssue } from "../domain/types";
+import { triagePlanningDocument } from "../document-triage";
 import { withProjectLock } from "../native/lock";
 import type { NativePlanningStore } from "../native/store";
 import type { ExternalProjection } from "./contracts";
 import { GitMarkdownProvider } from "./git-markdown";
 import type { GitResult, GitRunner } from "./git-runner";
+
+function unavailableDocuments(project: ProjectRegistryEntry, issue: ProofIssue) {
+  return [
+    ...(project.work_modes.includes("implementation") ? [triagePlanningDocument({
+      document: "roadmap" as const,
+      sourcePath: "docs/ROADMAP.md",
+      parserIssues: [issue],
+      canonicalItemCount: 0,
+      unavailable: true
+    })] : []),
+    triagePlanningDocument({
+      document: "backlog",
+      sourcePath: "docs/BACKLOG.md",
+      parserIssues: [issue],
+      canonicalItemCount: 0,
+      unavailable: true
+    })
+  ];
+}
 
 export async function getCachedProjection(
   slug: string,
@@ -18,7 +38,8 @@ export async function getCachedProjection(
 
   try {
     const raw = await readFile(cachePath, "utf8");
-    return JSON.parse(raw);
+    const projection = JSON.parse(raw) as ExternalProjection & { documents?: ExternalProjection["documents"] };
+    return { ...projection, documents: projection.documents ?? [] };
   } catch {
     return null;
   }
@@ -53,7 +74,8 @@ export async function refreshProject(
       backlog: [],
       tasks: [],
       issues: [],
-      provenance: []
+      provenance: [],
+      documents: []
     };
   }
 
@@ -75,6 +97,12 @@ export async function refreshProject(
       }
 
       if (sources.length === 0) {
+        const issue: ProofIssue = {
+          scope: "document",
+          code: "NO_GIT_SOURCE",
+          sourcePath: "",
+          message: `Project "${project.slug}" has neither git_remote nor trusted_path configured`
+        };
         return {
           project: project.slug,
           revision: "unknown",
@@ -83,15 +111,9 @@ export async function refreshProject(
           roadmap: [],
           backlog: [],
           tasks: [],
-          issues: [
-            {
-              scope: "document",
-              code: "NO_GIT_SOURCE",
-              sourcePath: "",
-              message: `Project "${project.slug}" has neither git_remote nor trusted_path configured`
-            }
-          ],
-          provenance: []
+          issues: [issue],
+          provenance: [],
+          documents: unavailableDocuments(project, issue)
         };
       }
 
@@ -115,6 +137,12 @@ export async function refreshProject(
       }
 
       if (!cloneRes || cloneRes.exitCode !== 0) {
+        const issue: ProofIssue = {
+          scope: "document",
+          code: "GIT_CLONE_FAILED",
+          sourcePath: cloneSource,
+          message: `Failed to initialize bare mirror for "${project.slug}": ${cloneRes?.stderr || "no usable source"}`
+        };
         return {
           project: project.slug,
           revision: "unknown",
@@ -123,15 +151,9 @@ export async function refreshProject(
           roadmap: [],
           backlog: [],
           tasks: [],
-          issues: [
-            {
-              scope: "document",
-              code: "GIT_CLONE_FAILED",
-              sourcePath: cloneSource,
-              message: `Failed to initialize bare mirror for "${project.slug}": ${cloneRes?.stderr || "no usable source"}`
-            }
-          ],
-          provenance: []
+          issues: [issue],
+          provenance: [],
+          documents: unavailableDocuments(project, issue)
         };
       }
     } else if (project.git_remote) {
@@ -194,6 +216,12 @@ export async function refreshAllProjects(options: {
       const projection = await refreshProject(project, options);
       results.set(project.slug, projection);
     } catch (err: any) {
+      const issue: ProofIssue = {
+        scope: "document",
+        code: "REFRESH_ERROR",
+        sourcePath: project.slug,
+        message: err.message
+      };
       results.set(project.slug, {
         project: project.slug,
         revision: "error",
@@ -202,15 +230,9 @@ export async function refreshAllProjects(options: {
         roadmap: [],
         backlog: [],
         tasks: [],
-        issues: [
-          {
-            scope: "document",
-            code: "REFRESH_ERROR",
-            sourcePath: project.slug,
-            message: err.message
-          }
-        ],
-        provenance: []
+        issues: [issue],
+        provenance: [],
+        documents: unavailableDocuments(project, issue)
       });
     }
   }

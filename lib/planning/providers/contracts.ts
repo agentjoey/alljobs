@@ -14,6 +14,33 @@ export interface SourceProvenance {
   fetchedAt: string;
 }
 
+export type PlanningDocumentKind = "roadmap" | "backlog";
+
+export type DocumentTriageState =
+  | "canonical"
+  | "recoverable"
+  | "unstructured"
+  | "missing"
+  | "unavailable";
+
+export interface DocumentCandidate {
+  heading: string;
+  line: number;
+  evidence: string;
+  confidence: "recognized" | "ambiguous";
+  missingCanonicalFields: string[];
+}
+
+export interface DocumentTriage {
+  document: PlanningDocumentKind;
+  state: DocumentTriageState;
+  sourcePath: string;
+  digest?: string;
+  revision?: string;
+  diagnostics: ProofIssue[];
+  candidates: DocumentCandidate[];
+}
+
 export interface ExternalProjection {
   project: string;
   revision: string;
@@ -24,6 +51,7 @@ export interface ExternalProjection {
   tasks: Task[];
   issues: ProofIssue[];
   provenance: SourceProvenance[];
+  documents: DocumentTriage[];
 }
 
 export interface PlanningSourceState {

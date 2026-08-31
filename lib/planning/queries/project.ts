@@ -8,7 +8,11 @@ import type {
 import { loadControlHostConfig, type ControlHostResolvedPaths } from "../config";
 import { validateProjectRelations } from "../domain/relations";
 import { NativePlanningStore } from "../native/store";
-import type { PlanningSourceState, SourceProvenance } from "../providers/contracts";
+import type {
+  DocumentTriage,
+  PlanningSourceState,
+  SourceProvenance
+} from "../providers/contracts";
 import { NodeGitRunner } from "../providers/git-runner";
 import { getCachedProjection } from "../providers/refresh";
 import { resolveCodePlanning } from "../providers/source-resolver";
@@ -47,6 +51,7 @@ export interface ProjectDetailView {
   issues: ProofIssue[];
   attention: AttentionItem[];
   provenance: SourceProvenance[];
+  documents: DocumentTriage[];
   planningSource?: PlanningSourceState;
   backlogDigest?: string;
   backlogControl?: BacklogControlState;
@@ -66,14 +71,17 @@ function deriveBacklogControlState(input: {
   project: ProjectRegistryEntry;
   backlog: BacklogItem[];
   issues: ProofIssue[];
+  documents: DocumentTriage[];
   source: PlanningSourceState;
 }): BacklogControlState {
-  const { project, backlog, issues, source } = input;
+  const { project, backlog, issues, documents, source } = input;
   const orderingAnalysis = analyzeBacklogOrdering(backlog);
   const ordering = orderingAnalysis.state;
   const blockers: BacklogControlBlocker[] = [];
   const backlogIds = new Set(backlog.map((item) => item.id));
   const controlIssues = issues.filter((issue) => isBacklogControlIssue(issue, backlogIds));
+  const backlogDocument = documents.find((document) => document.document === "backlog");
+  const backlogDocumentBlocked = !backlogDocument || backlogDocument.state !== "canonical";
 
   if (project.archived) {
     blockers.push({ code: "PROJECT_ARCHIVED", message: "Archived projects cannot change Backlog ordering." });
@@ -86,6 +94,14 @@ function deriveBacklogControlState(input: {
   }
   for (const issue of controlIssues) {
     blockers.push({ code: issue.code, message: issue.message });
+  }
+  if (backlogDocumentBlocked) {
+    blockers.push({
+      code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
+      message: backlogDocument
+        ? `Backlog control is unavailable while ${backlogDocument.sourcePath} is ${backlogDocument.state}.`
+        : "Backlog control is unavailable because document health evidence is unavailable."
+    });
   }
   if (ordering === "uninitialized") {
     blockers.push({
@@ -103,7 +119,7 @@ function deriveBacklogControlState(input: {
     source,
     ordering,
     conflictLanes: orderingAnalysis.conflictLanes,
-    writable: !project.archived && source.writable && controlIssues.length === 0,
+    writable: !project.archived && source.writable && controlIssues.length === 0 && !backlogDocumentBlocked,
     blockers
   };
 }
@@ -137,6 +153,7 @@ export async function getProjectDetail(
   let backlog: BacklogItem[] = [];
   const issues: ProofIssue[] = [...taskIssues];
   let provenance: SourceProvenance[] = [];
+  let documents: DocumentTriage[] = [];
   let planningSource: PlanningSourceState | undefined;
   let backlogDigest: string | undefined;
   let projection = null;
@@ -167,6 +184,7 @@ export async function getProjectDetail(
           backlog = projection.backlog;
           issues.push(...projection.issues);
           provenance = projection.provenance;
+          documents = projection.documents;
         }
       }
       planningSource = {
@@ -190,6 +208,7 @@ export async function getProjectDetail(
       backlog = projection.backlog;
       issues.push(...projection.issues);
       provenance = projection.provenance;
+      documents = projection.documents;
     }
   }
 
@@ -223,7 +242,7 @@ export async function getProjectDetail(
   const doneCount = allTasks.filter(t => t.status === "done").length;
   const blockedCount = allTasks.filter(t => t.status === "blocked").length;
   const backlogControl = project.type === "code" && planningSource
-    ? deriveBacklogControlState({ project, backlog, issues, source: planningSource })
+    ? deriveBacklogControlState({ project, backlog, issues, documents, source: planningSource })
     : undefined;
 
   return {
@@ -234,6 +253,7 @@ export async function getProjectDetail(
     issues,
     attention,
     provenance,
+    documents,
     planningSource,
     backlogDigest,
     backlogControl,

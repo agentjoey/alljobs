@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import React, { useState } from "react";
 import { refreshProjectAction } from "@/app/actions/refresh";
 import type { ProjectDetailView } from "@/lib/planning/queries/project";
 import { BacklogProposalForm } from "./backlog-proposal-form";
 import { BacklogView } from "./backlog-view";
+import { DocumentHealth } from "./document-health";
 import { NativeTaskForm } from "./native-task-form";
 import { ProvenancePanel } from "./provenance-panel";
 import { RoadmapView } from "./roadmap-view";
@@ -23,6 +23,14 @@ export function ProjectDetail({
   const [prefilledBacklogId, setPrefilledBacklogId] = useState<string | undefined>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+
+  const planningTabCount = (document: "roadmap" | "backlog", count: number) => {
+    if (detail.project.type === "code" && detail.documents.length === 0) return "Source unavailable";
+    const state = detail.documents.find((item) => item.document === document)?.state;
+    if (state === "missing") return "Missing document";
+    if (state === "unavailable") return "Source unavailable";
+    return String(count);
+  };
 
   const handleCreateTaskForBacklog = (backlogId: string) => {
     setPrefilledBacklogId(backlogId);
@@ -96,6 +104,14 @@ export function ProjectDetail({
         </div>
       )}
 
+      {isCode && detail.planningSource && (
+        <DocumentHealth
+          documents={detail.documents}
+          source={detail.planningSource}
+          projectSlug={project.slug}
+        />
+      )}
+
       {/* Tabs Navigation */}
       <div
         role="tablist"
@@ -110,8 +126,8 @@ export function ProjectDetail({
       >
         {(
           [
-            { key: "roadmap", label: `Roadmap (${roadmap.length})`, show: true },
-            { key: "backlog", label: `Backlog (${backlog.length})`, show: isCode },
+            { key: "roadmap", label: `Roadmap (${planningTabCount("roadmap", roadmap.length)})`, show: true },
+            { key: "backlog", label: `Backlog (${planningTabCount("backlog", backlog.length)})`, show: isCode },
             { key: "tasks", label: `Tasks (${tasks.length})`, show: true },
             { key: "provenance", label: `Provenance (${provenance.length})`, show: true }
           ] as const

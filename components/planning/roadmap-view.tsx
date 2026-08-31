@@ -13,10 +13,10 @@ export function RoadmapView({
   if (items.length === 0) {
     return (
       <StatePanel
-        title={`No ${isCodeProject ? "phases" : "milestones"} defined`}
+        title={`No canonical ${isCodeProject ? "phases" : "milestones"} currently available`}
         description={
           isCodeProject
-            ? "Add development phases to docs/ROADMAP.md in your repository."
+            ? "Review planning document health above before adding phases to docs/ROADMAP.md."
             : "Create your first business milestone."
         }
       />

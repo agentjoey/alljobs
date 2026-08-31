@@ -106,6 +106,11 @@ describe("getProjectDetail", () => {
         writable: false
       });
       expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "SOURCE_NOT_WRITABLE" }));
+      expect(detail?.documents).toEqual([]);
+      expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({
+        code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
+        message: "Backlog control is unavailable because document health evidence is unavailable."
+      }));
     } finally {
       delete process.env.ALLJOBS_DATA_ROOT;
       delete process.env.ALLJOBS_HOME;
@@ -180,7 +185,56 @@ describe("getProjectDetail", () => {
       source: { mode: "local-working-tree", writable: false },
       writable: false
     });
-    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "PLANNING_DIRECTORY_MISSING" }));
+    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "PLANNING_FILE_MISSING" }));
+  });
+
+  it("exposes a missing local Backlog separately without turning candidates into planning data", async () => {
+    const trustedRoot = join(tempHome, "trusted");
+    const repository = join(trustedRoot, "missing-backlog-proj");
+    const runner = new NodeGitRunner();
+    await mkdir(join(repository, "docs"), { recursive: true });
+    await runner.run(["init", "-b", "main"], { cwd: repository });
+    await runner.run(["config", "user.name", "Test User"], { cwd: repository });
+    await runner.run(["config", "user.email", "test@example.com"], { cwd: repository });
+    await writeFile(
+      join(repository, "docs", "ROADMAP.md"),
+      `# Roadmap\n\n## phase-1: Core\n\n\`\`\`yaml alljobs\nid: phase-1\nkind: phase\nstatus: active\norder: 10\n\`\`\`\n`,
+      "utf8"
+    );
+    await runner.run(["add", "docs/ROADMAP.md"], { cwd: repository });
+    await runner.run(["commit", "-m", "add roadmap"], { cwd: repository });
+
+    await store.createProject({
+      slug: "missing-backlog-proj",
+      name: "Missing Backlog Project",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      trusted_path: repository,
+      archived: false
+    });
+    await writeFile(
+      join(tempHome, "config.json"),
+      JSON.stringify({ trustedCodeRoots: [trustedRoot], refreshIntervalSeconds: 300 }),
+      "utf8"
+    );
+
+    const detail = await getProjectDetail("missing-backlog-proj", { root: tempHome });
+
+    expect(detail?.documents).toContainEqual(expect.objectContaining({
+      document: "backlog",
+      state: "missing",
+      sourcePath: expect.stringMatching(/missing-backlog-proj\/docs\/BACKLOG\.md$/),
+      diagnostics: [expect.objectContaining({ code: "PLANNING_FILE_MISSING" })],
+      candidates: []
+    }));
+    expect(detail?.roadmap).toHaveLength(1);
+    expect(detail?.backlog).toEqual([]);
+    expect(detail?.metrics.totalBacklog).toBe(0);
+    expect(detail?.backlogControl?.writable).toBe(false);
+    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({
+      code: "BACKLOG_DOCUMENT_NOT_CANONICAL"
+    }));
   });
 
   it("surfaces relation issues for native roadmap and tasks (M8)", async () => {

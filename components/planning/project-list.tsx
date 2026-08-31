@@ -3,6 +3,34 @@ import React from "react";
 import type { ProjectDetailView } from "@/lib/planning/queries/project";
 import { StatePanel } from "./state-panel";
 
+function documentHealthSummary(documents: ProjectDetailView["documents"]) {
+  if (documents.length === 0) return "Planning docs: unavailable";
+  if (documents.every((document) => document.state === "canonical")) {
+    return "Planning docs: canonical";
+  }
+
+  const missing = documents.filter((document) => document.state === "missing").length;
+  if (missing > 0) return `Planning docs: ${missing} missing`;
+
+  const unavailable = documents.filter((document) => document.state === "unavailable").length;
+  if (unavailable > 0) return `Planning docs: ${unavailable} unavailable`;
+
+  return `Planning docs: ${documents.filter((document) => document.state !== "canonical").length} needs review`;
+}
+
+function documentMetric(
+  kind: "roadmap" | "backlog",
+  documents: ProjectDetailView["documents"],
+  count: number
+) {
+  if (documents.length === 0) return `${kind === "roadmap" ? "Roadmap" : "Backlog"}: Source unavailable`;
+  const state = documents.find((document) => document.document === kind)?.state;
+  const label = kind === "roadmap" ? "Roadmap" : "Backlog";
+  if (state === "missing") return `${label}: Missing document`;
+  if (state === "unavailable") return `${label}: Source unavailable`;
+  return `${label}: ${count}`;
+}
+
 export function ProjectList({ projects }: { projects: ProjectDetailView[] }) {
   return (
     <div>
@@ -49,11 +77,21 @@ export function ProjectList({ projects }: { projects: ProjectDetailView[] }) {
                   <p className="project-card__desc">
                     {activePhase ? `Active: ${activePhase.title}` : "No active phase"}
                   </p>
+                  {isCode && (
+                    <>
+                      <p className="project-card__desc" style={{ marginTop: "8px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+                        {documentHealthSummary(p.documents)}
+                      </p>
+                      <p className="project-card__desc" style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "4px 12px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+                        <span>{documentMetric("roadmap", p.documents, p.roadmap.length)}</span>
+                        <span>{documentMetric("backlog", p.documents, p.metrics.totalBacklog)}</span>
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <div className="project-card__footer">
                   <span>
-                    {isCode ? `${p.metrics.totalBacklog} Backlog · ` : ""}
                     {p.metrics.activeTasks} Active Tasks
                   </span>
                   <span>{p.project.slug}</span>

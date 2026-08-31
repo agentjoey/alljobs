@@ -91,12 +91,34 @@ describe("resolveCodePlanning", () => {
     await cache();
     const repository = join(paths.config.trustedCodeRoots[0], "code-project");
     await mkdir(join(repository, "docs"), { recursive: true });
-    await writeFile(join(repository, "docs", "ROADMAP.md"), "# Roadmap\n", "utf8");
+    await gitRunner.run(["init", "-b", "main"], { cwd: repository });
+    await gitRunner.run(["config", "user.name", "Test User"], { cwd: repository });
+    await gitRunner.run(["config", "user.email", "test@example.com"], { cwd: repository });
+    await writeFile(join(repository, "docs", "ROADMAP.md"), `# Roadmap\n\n## phase-1: Core\n\n\`\`\`yaml alljobs\nid: phase-1\nkind: phase\nstatus: active\norder: 10\n\`\`\`\n`, "utf8");
+    await gitRunner.run(["add", "docs/ROADMAP.md"], { cwd: repository });
+    await gitRunner.run(["commit", "-m", "Roadmap only"], { cwd: repository });
 
     const result = await resolveCodePlanning({ project: project(repository), paths, gitRunner });
 
     expect(result.source).toMatchObject({ mode: "local-working-tree", writable: false });
+    expect(result.projection.roadmap).toHaveLength(1);
     expect(result.projection.backlog).toEqual([]);
-    expect(result.projection.issues.some((issue) => issue.code === "PLANNING_FILE_MISSING")).toBe(true);
+    expect(result.projection.documents).toContainEqual(expect.objectContaining({
+      document: "backlog",
+      state: "missing",
+      sourcePath: expect.stringMatching(/docs\/BACKLOG\.md$/)
+    }));
+    expect(result.source.mode).toBe("local-working-tree");
+  });
+
+  it("reports unavailable document evidence when no local, mirror, or cache source exists", async () => {
+    const result = await resolveCodePlanning({
+      project: project(join(paths.config.trustedCodeRoots[0], "missing")), paths, gitRunner
+    });
+
+    expect(result.projection.documents).toEqual([
+      expect.objectContaining({ document: "roadmap", state: "unavailable" }),
+      expect.objectContaining({ document: "backlog", state: "unavailable" })
+    ]);
   });
 });
