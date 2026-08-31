@@ -22,8 +22,7 @@ describe("assistant request intent", () => {
       question: "What blocks R2?",
       mode: "standard",
       selected_optional_source_ids: [],
-      expected_manifest_digest: digest,
-      history: []
+      expected_manifest_digest: digest
     });
     expect(parsed.success).toBe(true);
     if (parsed.success && parsed.data.intent === "ask") {
@@ -39,8 +38,31 @@ describe("assistant request intent", () => {
       mode: "standard",
       selected_optional_source_ids: [],
       expected_manifest_digest: digest,
-      history: [],
       workspace_path: "/tmp/escape"
+    }).success).toBe(false);
+  });
+
+  it("rejects a nonempty browser history (no continuous conversation)", () => {
+    expect(assistantRequestIntentSchema.safeParse({
+      intent: "ask",
+      project_slug: "alljobs",
+      question: "What blocks R2?",
+      mode: "standard",
+      selected_optional_source_ids: [],
+      expected_manifest_digest: digest,
+      history: [{ role: "user", text: "previous question" }]
+    }).success).toBe(false);
+  });
+
+  it("rejects an empty browser history field (unknown key)", () => {
+    expect(assistantRequestIntentSchema.safeParse({
+      intent: "ask",
+      project_slug: "alljobs",
+      question: "What blocks R2?",
+      mode: "standard",
+      selected_optional_source_ids: [],
+      expected_manifest_digest: digest,
+      history: []
     }).success).toBe(false);
   });
 
@@ -51,8 +73,7 @@ describe("assistant request intent", () => {
       question: "What blocks R2?",
       mode: "auto",
       selected_optional_source_ids: [],
-      expected_manifest_digest: digest,
-      history: []
+      expected_manifest_digest: digest
     }).success).toBe(false);
   });
 
@@ -63,8 +84,7 @@ describe("assistant request intent", () => {
       question: "x".repeat(4001),
       mode: "standard",
       selected_optional_source_ids: [],
-      expected_manifest_digest: digest,
-      history: []
+      expected_manifest_digest: digest
     }).success).toBe(false);
   });
 
@@ -75,8 +95,7 @@ describe("assistant request intent", () => {
       question: "What blocks R2?",
       mode: "standard",
       selected_optional_source_ids: [],
-      expected_manifest_digest: "not-a-digest",
-      history: []
+      expected_manifest_digest: "not-a-digest"
     }).success).toBe(false);
   });
 
@@ -87,8 +106,7 @@ describe("assistant request intent", () => {
       question: "What blocks R2?",
       mode: "standard",
       selected_optional_source_ids: Array.from({ length: 9 }, (_, i) => `doc-${i}`),
-      expected_manifest_digest: digest,
-      history: []
+      expected_manifest_digest: digest
     }).success).toBe(false);
   });
 

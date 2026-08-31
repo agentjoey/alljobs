@@ -55,6 +55,42 @@ describe("control host assistant config", () => {
     })).toThrow();
   });
 
+  it("rejects a mutated standard budget", () => {
+    expect(() => controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      assistant: {
+        enabled: true,
+        provider: "minimax",
+        model: "MiniMax-M3",
+        standard: {
+          contextBytes: 256 * 1024,
+          outputTokens: 999_999,
+          sourceFiles: 6,
+          sourceBytes: 192 * 1024,
+          toolCalls: 4
+        }
+      }
+    })).toThrow();
+  });
+
+  it("rejects a mutated deep budget", () => {
+    expect(() => controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      assistant: {
+        enabled: true,
+        provider: "minimax",
+        model: "MiniMax-M3",
+        deep: {
+          contextBytes: 512 * 1024,
+          outputTokens: 8192,
+          sourceFiles: 999,
+          sourceBytes: 384 * 1024,
+          toolCalls: 8
+        }
+      }
+    })).toThrow();
+  });
+
   it("accepts an explicitly disabled assistant", () => {
     const parsed = controlHostConfigSchema.parse({
       trustedCodeRoots: ["/workspace"],

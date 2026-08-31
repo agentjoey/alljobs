@@ -239,9 +239,57 @@ standard: <fixed>, deep: <fixed> }` (no credential key).
 - `provider` and `model` are `z.literal(...).default(...)` so the example config's
   `{ "enabled": false }` validates; `enabled` remains required boolean (fail-closed
   explicitness).
-- `standard`/`deep` limits in the Control Host config default to the fixed
-  `ASSISTANT_LIMITS` values; `ASSISTANT_LIMITS` remains the server-authoritative
-  source of truth and is not browser-configurable.
+- `standard`/`deep` limits are locked to the exact `ASSISTANT_LIMITS` values via
+  per-field `z.literal`; config may omit them (defaulted) but cannot mutate them.
+  `ASSISTANT_LIMITS` remains the server-authoritative source of truth and is not
+  browser-configurable.
+- `ASSISTANT_LIMITS.historyMessages`/`historyChars` remain in `limits.ts` verbatim
+  from the plan's fixed-limits block, but the `ask` intent no longer accepts
+  browser history (per Mockup revision 2).
+
+## Reviewer rework (round 2)
+
+Two P1 findings resolved:
+
+1. **P1 security — fixed mode limits.** `controlHostAssistantConfigSchema`
+   previously used positive-number mode-limit objects, letting config override the
+   fixed Standard/Deep budgets. Replaced `standard`/`deep` with strict objects
+   whose every budget field is a `z.literal(...)` bound to `ASSISTANT_LIMITS`
+   (`contextBytes`, `outputTokens`, `sourceFiles`, `sourceBytes`, `toolCalls`),
+   each with `.strict()` and a `.default(ASSISTANT_LIMITS.<mode>)`. Mutated budgets
+   now fail validation. Added rejection tests for mutated `standard` and `deep`.
+
+2. **P1 product boundary — no continuous history.** Mockup revision 2 states every
+   submission is a fresh bounded run with no continuous conversation. Removed the
+   `history` field (and `historyMessageSchema`) from the `ask` intent; the strict
+   schema now rejects any browser-supplied `history` key, empty or nonempty, as an
+   unknown field. Added rejection tests for nonempty and empty `history`.
+
+**RED (new tests vs pre-fix implementation):** reverting only the two source files
+to pre-fix while keeping the updated tests yielded:
+
+```text
+ Test Files  2 failed (2)
+      Tests  4 failed | 35 passed (39)
+```
+
+The 4 failures were exactly the two mutated-budget rejections and the two
+history-rejection tests.
+
+**GREEN (after rework):**
+
+```text
+$ npm test -- lib/planning/domain/schemas.test.ts lib/planning/config.test.ts lib/assistant/contracts.test.ts lib/assistant/digest.test.ts
+ Test Files  4 passed (4)
+      Tests  69 passed (69)
+
+$ npm run typecheck      → exit 0
+$ git diff --check       → exit 0
+```
+
+Example config re-validated: `assistant` → `{ enabled: false, provider: "minimax",
+model: "MiniMax-M3", standard: <fixed literals>, deep: <fixed literals> }`; a
+mutated `standard`/`deep` value is rejected (`safeParse(...).success === false`).
 
 ## Next safe action
 

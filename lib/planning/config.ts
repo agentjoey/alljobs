@@ -4,20 +4,28 @@ import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
 import { ASSISTANT_LIMITS } from "../assistant/limits";
 
-const assistantModeLimitsSchema = z.object({
-  contextBytes: z.number().int().positive(),
-  outputTokens: z.number().int().positive(),
-  sourceFiles: z.number().int().positive(),
-  sourceBytes: z.number().int().positive(),
-  toolCalls: z.number().int().positive()
+const fixedStandardLimitsSchema = z.object({
+  contextBytes: z.literal(ASSISTANT_LIMITS.standard.contextBytes),
+  outputTokens: z.literal(ASSISTANT_LIMITS.standard.outputTokens),
+  sourceFiles: z.literal(ASSISTANT_LIMITS.standard.sourceFiles),
+  sourceBytes: z.literal(ASSISTANT_LIMITS.standard.sourceBytes),
+  toolCalls: z.literal(ASSISTANT_LIMITS.standard.toolCalls)
+}).strict();
+
+const fixedDeepLimitsSchema = z.object({
+  contextBytes: z.literal(ASSISTANT_LIMITS.deep.contextBytes),
+  outputTokens: z.literal(ASSISTANT_LIMITS.deep.outputTokens),
+  sourceFiles: z.literal(ASSISTANT_LIMITS.deep.sourceFiles),
+  sourceBytes: z.literal(ASSISTANT_LIMITS.deep.sourceBytes),
+  toolCalls: z.literal(ASSISTANT_LIMITS.deep.toolCalls)
 }).strict();
 
 export const controlHostAssistantConfigSchema = z.object({
   enabled: z.boolean(),
   provider: z.literal("minimax").default("minimax"),
   model: z.literal("MiniMax-M3").default("MiniMax-M3"),
-  standard: assistantModeLimitsSchema.default(ASSISTANT_LIMITS.standard),
-  deep: assistantModeLimitsSchema.default(ASSISTANT_LIMITS.deep)
+  standard: fixedStandardLimitsSchema.default(ASSISTANT_LIMITS.standard),
+  deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)
 }).strict();
 
 export const controlHostConfigSchema = z.object({

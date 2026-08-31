@@ -75,11 +75,6 @@ const boundedQuestionSchema = z
   .min(1, "question is required")
   .max(ASSISTANT_LIMITS.questionChars, `question exceeds ${ASSISTANT_LIMITS.questionChars} characters`);
 
-const historyMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  text: z.string().min(1, "history message text is required").max(ASSISTANT_LIMITS.historyChars)
-}).strict();
-
 export const assistantRequestIntentSchema = z.discriminatedUnion("intent", [
   z.object({
     intent: z.literal("ask"),
@@ -87,8 +82,7 @@ export const assistantRequestIntentSchema = z.discriminatedUnion("intent", [
     question: boundedQuestionSchema,
     mode: assistantModeSchema,
     selected_optional_source_ids: z.array(z.string().min(1)).max(ASSISTANT_LIMITS.contextPaths),
-    expected_manifest_digest: hexDigestSchema,
-    history: z.array(historyMessageSchema).max(ASSISTANT_LIMITS.historyMessages).default([])
+    expected_manifest_digest: hexDigestSchema
   }).strict(),
   z.object({
     intent: z.literal("inspect_source"),
