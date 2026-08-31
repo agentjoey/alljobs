@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { prepareAssistantEntry } from "../../assistant/context";
 import { NativePlanningStore } from "../native/store";
 import { NodeGitRunner } from "../providers/git-runner";
 import { getProjectDetail } from "./project";
@@ -249,5 +250,83 @@ describe("getProjectDetail", () => {
     const detail = await getProjectDetail("biz-project", { root: tempHome });
     expect(detail).not.toBeNull();
     expect(detail?.issues.some(i => i.code === "DUPLICATE_ROADMAP_ORDER")).toBe(true);
+  });
+});
+
+describe("prepareAssistantEntry (page bridge)", () => {
+  it("is disabled for a project when the control host has no assistant config", async () => {
+    const tempHome = await mkdtemp(join(tmpdir(), "alljobs-entry-"));
+    const store = new NativePlanningStore(tempHome);
+    await store.createProject({
+      slug: "biz-project",
+      name: "Business Project",
+      type: "business",
+      work_modes: ["operations"],
+      execution_locations: [],
+      archived: false
+    });
+
+    try {
+      const entry = await prepareAssistantEntry("biz-project", { root: tempHome });
+      expect(entry).toMatchObject({ enabled: false, code: "NOT_CONFIGURED" });
+    } finally {
+      await rm(tempHome, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a browser-safe enabled entry for a configured code project", async () => {
+    const tempHome = await mkdtemp(join(tmpdir(), "alljobs-entry-"));
+    const trustedRoot = join(tempHome, "trusted");
+    const repository = join(trustedRoot, "code-proj");
+    const runner = new NodeGitRunner();
+    await mkdir(join(repository, "docs"), { recursive: true });
+    await runner.run(["init", "-b", "main"], { cwd: repository });
+    await runner.run(["config", "user.name", "Test User"], { cwd: repository });
+    await runner.run(["config", "user.email", "test@example.com"], { cwd: repository });
+    await writeFile(
+      join(repository, "docs", "ROADMAP.md"),
+      `# Roadmap\n\n## phase-1: Core\n\n\`\`\`yaml alljobs\nid: phase-1\nkind: phase\nstatus: active\norder: 10\n\`\`\`\n`,
+      "utf8"
+    );
+    await writeFile(
+      join(repository, "docs", "BACKLOG.md"),
+      `# Backlog\n\n## AJ-B-001: Local item\n\n\`\`\`yaml alljobs\nid: AJ-B-001\nwork_mode: implementation\nphase: phase-1\nstatus: ready\npriority: P1\ndependencies: []\n\`\`\`\n\nVisible dirty local value\n`,
+      "utf8"
+    );
+    await runner.run(["add", "docs"], { cwd: repository });
+    await runner.run(["commit", "-m", "initial"], { cwd: repository });
+
+    const store = new NativePlanningStore(tempHome);
+    await store.createProject({
+      slug: "code-proj",
+      name: "Code Project",
+      type: "code",
+      work_modes: ["implementation"],
+      execution_locations: [],
+      trusted_path: repository,
+      archived: false
+    });
+    await writeFile(
+      join(tempHome, "config.json"),
+      JSON.stringify({ trustedCodeRoots: [trustedRoot], refreshIntervalSeconds: 300, assistant: { enabled: true } }),
+      "utf8"
+    );
+
+    try {
+      const entry = await prepareAssistantEntry("code-proj", { root: tempHome });
+      expect(entry.enabled).toBe(true);
+      if (!entry.enabled) return;
+
+      expect(entry.manifest_digest).toMatch(/^[a-f0-9]{64}$/);
+      expect(entry.receipt.sources.map(source => source.path)).toEqual(
+        expect.arrayContaining(["docs/ROADMAP.md", "docs/BACKLOG.md"])
+      );
+
+      const serialized = JSON.stringify(entry);
+      expect(serialized).not.toContain("Visible dirty local value");
+      expect(serialized).not.toContain(tempHome);
+    } finally {
+      await rm(tempHome, { recursive: true, force: true });
+    }
   });
 });

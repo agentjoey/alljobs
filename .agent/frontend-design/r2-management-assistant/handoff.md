@@ -312,3 +312,111 @@ Stop for independent review of `r2-contracts` before Task 2 (context assembly).
 ### Gate boundary
 
 Task 1 is accepted. Task 2 (attributable context and receipts) is not dispatched by this review; it requires a separate Pact assignment and its own RED -> GREEN delivery/review cycle. Final build, independent verification, Human walkthrough, and release approval remain separate T3 gates.
+
+---
+
+# Task 2 — attributable context and receipts (`r2-context`)
+
+**Pact task:** `r2-context` (feature `r2-management-assistant`)
+**Seat:** `opencode` (worker)
+**Branch:** `codex/r2-management-assistant`
+**Worktree:** `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator`
+**Base SHA at start:** `532252f` (`pact: ledger sync`)
+
+## Scope audit
+
+Implemented **only** Task 2 from the canonical plan. Files touched:
+
+| File | Change |
+|---|---|
+| `lib/assistant/context.ts` | new — `assembleAssistantContext()`, `prepareAssistantEntry()`, `SourceFragment`, `AssistantContextBundle`, `AssistantContextReceipt`, `AssistantEntryState`, `ContextAssemblyError` |
+| `lib/assistant/context.test.ts` | new — focused RED/GREEN coverage |
+| `lib/planning/queries/project.ts` | `ProjectDetailView.assistant?: AssistantEntryState` (type-only bridge) |
+| `lib/planning/queries/project.test.ts` | `prepareAssistantEntry` page-bridge tests |
+| `app/projects/[slug]/page.tsx` | call `prepareAssistantEntry(slug)` and merge `assistant` into `detail` |
+
+No dependencies installed, no provider/model/credential, no route, no source-gate/tool,
+no activity logging, no write, no UI/panel change. `ProjectDetail` renders nothing new —
+the `assistant` field is non-rendering (Task 6 owns the panel). Mockup artifacts and
+unrelated Human work preserved.
+
+## Design decisions
+
+- **`source_id` = repository-relative path** (`docs/ROADMAP.md`, `docs/BACKLOG.md`,
+  `docs/<allowlist>`) so citation IDs match the receipt paths deterministically.
+- **Manifest = selected documents only** (required canonical + selected optional);
+  **receipt = all documents** (required + every allowlisted optional with `selected`
+  flag); **fragments = selected documents with an attempted raw read**.
+- **Path safety** (`readContainedFile`): reject non-repository-relative paths, symlinks,
+  non-regular files, realpath escapes outside the workspace, invalid UTF-8, and read
+  failures — fail closed, never falling back to cache. Local invalid source uses the
+  resolver's `invalidLocalSource` result (mode `local-working-tree`, no cache fallback).
+- **Read-only labels**: `remote-commit` reads via `git show --end-of-options ref:path`
+  (modified `null`); `cached` exposes provenance digests only (no raw fragments,
+  modified `null`); both remain read-only.
+- **`CONTEXT_LIMIT`** fails explicitly (no silent omission) when selected bytes exceed
+  the mode `contextBytes` budget, or a selected optional file exceeds `contextFileBytes`.
+- **Browser-safety**: the receipt carries only repo-relative paths, digests, byte counts,
+  modified/optional/selected flags, `read_at`, and sanitized issues (absolute `sourcePath`
+  mapped to repository-relative or dropped). Fragments, raw content, authoritative paths,
+  model, budgets, and permissions never enter `AssistantEntryState`.
+
+## RED → GREEN evidence
+
+**RED (implementation absent, tests present):**
+
+```text
+Test Files  2 failed (2)
+     Tests  no tests
+```
+Failed to resolve import `./context` / `../../assistant/context` — the assertions exist
+but the module to reject/assemble them does not.
+
+**GREEN (after implementation):**
+
+```text
+$ npm test -- lib/assistant/context.test.ts lib/planning/queries/project.test.ts
+ Test Files  2 passed (2)
+      Tests  22 passed (22)
+```
+
+Focused coverage proves: real temporary local sources into fragments + browser-safe
+receipt (no fragment content, no absolute workspace path); local dirty precedence
+(`modified: true`, dirty value in fragment but not receipt); exact optional allowlist
+(includes only allowlisted/selected optional; ignores non-allowlisted ids); symlinked
+optional source rejected without reading its target (`CONTEXT_FILE_SYMLINK`); remote
+mirror read-only (`source_mode: remote-commit`, `modified: null`, content present);
+cached read-only (`source_mode: cached`, `modified: null`, no raw fragments); nullable
+raw ranges for a missing required document (null heading/line_start/line_end, empty
+content, `PLANNING_FILE_MISSING` issue); deterministic digest + digest change on one
+selected byte; explicit `CONTEXT_LIMIT` rejection when required context exceeds the
+budget; `PROJECT_NOT_FOUND`; and `prepareAssistantEntry` disabled (`NOT_CONFIGURED`) for
+missing/disabled config, enabled with a browser-safe receipt (no fragment content,
+absolute path, `contextBytes`, `MiniMax-M3`, or `fragments` key).
+
+## Static checks (run after final code)
+
+```text
+$ npm run typecheck      → exit 0
+$ git diff --check       → exit 0
+$ npm test               → 44 files / 272 tests passed
+```
+
+## Plan-file bridge
+
+`ProjectDetailView` gains an optional `assistant?: AssistantEntryState` field (type-only;
+`import type`). The Project page calls `prepareAssistantEntry(slug)` after
+`getProjectDetail()` and passes `detail={{ ...detail, assistant }}`. `ProjectDetail`
+(`components/planning/project-detail.tsx`) is unchanged and renders nothing from it.
+
+## Notes
+
+- `npm run build` was **not** run in this worktree: its `node_modules` is empty
+  (dependencies resolve upward to the main repo's `node_modules` for vitest/tsc), and
+  Turbopack requires a real local `node_modules` (documented in `AGENTS.md`). This is a
+  pre-existing environment condition, not a code issue; `typecheck` is the TS gate here.
+  The prior `r2-contracts` task likewise recorded no build output.
+
+## Next safe action
+
+Stop for independent review of `r2-context` before Task 3 (source gates).

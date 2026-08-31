@@ -5,6 +5,7 @@ import type {
   RoadmapItem,
   Task
 } from "../domain/types";
+import type { AssistantEntryState } from "../../assistant/context";
 import { loadControlHostConfig, type ControlHostResolvedPaths } from "../config";
 import { validateProjectRelations } from "../domain/relations";
 import { NativePlanningStore } from "../native/store";
@@ -57,6 +58,7 @@ export interface ProjectDetailView {
   backlogControl?: BacklogControlState;
   metrics: ProjectDetailMetrics;
   digest: string;
+  assistant?: AssistantEntryState;
 }
 
 function sourceDigest(provenance: SourceProvenance[], location: string) {
