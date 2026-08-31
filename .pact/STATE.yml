@@ -72,7 +72,7 @@ features:
         deps: [r2-contracts]
       - id: r2-source-gates
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-source-gates.md
         evidence: null
