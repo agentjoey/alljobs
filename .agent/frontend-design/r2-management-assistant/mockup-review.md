@@ -150,3 +150,27 @@ No P0–P2 finding. The mockup state-control bar and synthetic data banner are e
 ### Gate boundary
 
 This verdict does **not** approve the rendered Mockup Gate on behalf of the Human Owner. It only accepts the worker's Task 0 delivery. Task 1 remains blocked until the Human Owner approves this rendered desktop/mobile revision; do not install model packages or add production assistant code beforehand.
+
+---
+
+## Independent reviewer result — revision 2 (2026-09-01)
+
+**Reviewer:** Pact seat `claude` (orchestrator review; separate from the `opencode` implementation run)
+**Candidate reviewed:** `7e35563` (`design: r2 mockup revision 2 — persistent companion composer + distinct companion output`)
+**Verdict:** **APPROVE for Human Owner Mockup Gate**
+
+### Independent evidence
+
+- Focused browser-contract test: `node verify-revision-2.mjs` passed **20/20**, including both desktop states and a true 390px viewport with no horizontal overflow.
+- Static checks: `node --check mockup/app.js` and `git diff --check e33999d..HEAD` passed. The Impeccable deterministic detector returned `[]` for `mockup/index.html`.
+- Rendered inspection: the 1440px answer view keeps Backlog as the dominant reading plane while the assistant uses a bordered, ink-headed **Companion output** run record. The 390px capture presents the assistant as the readable full-height Sheet and keeps the composer visible below the answer.
+- Fresh browser interaction: a loopback-only browser session found the labelled `Companion output` region with all seven structural sections, then confirmed that the labelled `Companion composer` contains a textarea and `Ask` control and is the bottom-most companion-plane element after an answer.
+- Scope check: the revision changes only Task 0 mockup artefacts/evidence and Pact records. It adds no model dependency, credential, API route, production component, or persistent/conversational history.
+
+### Findings
+
+No P0–P2 finding. The stronger output boundary clearly distinguishes a completed bounded run from the persistent composer without becoming a chat transcript; the copy continues to state that each submission is a new bounded run.
+
+### Gate boundary
+
+This reviewer acceptance does **not** approve the rendered Mockup Gate for the Human Owner. Task 1 remains blocked until the owner approves the revised desktop and 390px mockup evidence; no production assistant implementation or model dependency may begin before that decision.
