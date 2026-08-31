@@ -45,6 +45,25 @@ const remoteReadOnly: PlanningSourceState = {
   readAt: "2026-08-30T00:00:00.000Z"
 };
 
+const canonicalDocuments: DocumentTriage[] = [
+  {
+    document: "roadmap",
+    state: "canonical",
+    sourcePath: "docs/ROADMAP.md",
+    digest: "roadmap-digest",
+    diagnostics: [],
+    candidates: []
+  },
+  {
+    document: "backlog",
+    state: "canonical",
+    sourcePath: "docs/BACKLOG.md",
+    digest: "backlog-digest",
+    diagnostics: [],
+    candidates: []
+  }
+];
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -64,6 +83,7 @@ describe("DocumentHealth", () => {
     expect(screen.getByText("docs/BACKLOG.md")).toBeVisible();
     expect(screen.getByText("Local working tree")).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy repository-agent handoff" })).toBeEnabled();
+    expect(screen.getByText(/Copy only\. AllJobs will not write, commit, push, merge, fetch, or start an agent\./)).toBeVisible();
   });
 
   it("keeps unstructured candidates visibly outside canonical planning data", () => {
@@ -81,7 +101,57 @@ describe("DocumentHealth", () => {
     expect(screen.getByText("id, kind, status, order")).toBeVisible();
     expect(screen.getByText("abc1234")).toBeVisible();
     expect(screen.getByText("roadmap-digest")).toBeVisible();
+    expect(screen.getByRole("heading", { level: 3, name: "Roadmap document" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 4, name: "Candidate section" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Manage ordering/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps concise canonical health tied to fixed paths, revision, digests, read time, and exact authority", () => {
+    render(
+      <DocumentHealth
+        documents={canonicalDocuments}
+        source={{
+          mode: "local-working-tree",
+          writable: true,
+          headRevision: "abc1234",
+          roadmapDigest: "roadmap-digest",
+          backlogDigest: "backlog-digest",
+          readAt: "2026-08-30T00:00:00.000Z"
+        }}
+        projectSlug="code-project"
+      />
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/Canonical/i);
+    expect(screen.getByText("docs/ROADMAP.md")).toBeVisible();
+    expect(screen.getByText("docs/BACKLOG.md")).toBeVisible();
+    expect(screen.getAllByText("abc1234")).toHaveLength(2);
+    expect(screen.getByText("roadmap-digest")).toBeVisible();
+    expect(screen.getByText("backlog-digest")).toBeVisible();
+    expect(screen.getByText("2026-08-30T00:00:00.000Z")).toBeVisible();
+    expect(screen.getByText("Existing Backlog priority/rank writes allowed")).toBeVisible();
+  });
+
+  it("renders unavailable source coordinates and the known failure reason", () => {
+    render(
+      <DocumentHealth
+        documents={[]}
+        source={{
+          mode: "cached",
+          writable: false,
+          reason: "Registered workspace is unavailable and no cache exists.",
+          readAt: "2026-08-30T01:00:00.000Z"
+        }}
+        projectSlug="code-project"
+      />
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/Source unavailable/i);
+    expect(screen.getByText("docs/ROADMAP.md")).toBeVisible();
+    expect(screen.getByText("docs/BACKLOG.md")).toBeVisible();
+    expect(screen.getByText("2026-08-30T01:00:00.000Z")).toBeVisible();
+    expect(screen.getByText("Registered workspace is unavailable and no cache exists.")).toBeVisible();
+    expect(screen.getByText("Read only · copy handoff only")).toBeVisible();
   });
 
   it("copies the bounded handoff through keyboard activation and announces success", async () => {

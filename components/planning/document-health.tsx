@@ -31,6 +31,10 @@ function documentRevision(document: DocumentTriage, source: PlanningSourceState)
   return document.revision ?? source.headRevision;
 }
 
+function fixedDocumentPath(document: DocumentTriage["document"]) {
+  return document === "roadmap" ? "docs/ROADMAP.md" : "docs/BACKLOG.md";
+}
+
 function HandoffAction({
   document,
   source,
@@ -61,6 +65,9 @@ function HandoffAction({
 
   return (
     <div style={{ display: "grid", gap: "10px", justifyItems: "start" }}>
+      <p style={{ margin: 0, color: "var(--ink-muted)", fontSize: "12.5px", lineHeight: 1.5 }}>
+        Copy only. AllJobs will not write, commit, push, merge, fetch, or start an agent.
+      </p>
       <button
         type="button"
         className="btn"
@@ -114,7 +121,7 @@ function DocumentFacts({ document, source }: { document: DocumentTriage; source:
       }}
     >
       {[
-        ["Path", document.sourcePath],
+        ["Path", fixedDocumentPath(document.document)],
         ["Revision", revision ?? "Not available"],
         ["Digest", digest ?? "Not available"]
       ].map(([term, value]) => (
@@ -196,6 +203,12 @@ export function DocumentHealth({
 }) {
   const headingId = useId();
   const allCanonical = documents.length > 0 && documents.every((document) => document.state === "canonical");
+  const hasDegradedDocument = documents.length === 0 || documents.some((document) => document.state !== "canonical");
+  const authority = source.writable
+    ? "Existing Backlog priority/rank writes allowed"
+    : hasDegradedDocument
+      ? "Read only · copy handoff only"
+      : "Read only · no planning writes";
 
   return (
     <section
@@ -217,53 +230,83 @@ export function DocumentHealth({
         <span className="custody-badge custody-badge--repo">
           <span>{modeLabels[source.mode]}</span>
           <span aria-hidden="true">·</span>
-          <span>{source.writable ? "Writable" : "Read only"}</span>
+          <span>{source.writable ? "Field-limited write source" : "Read-only source"}</span>
         </span>
       </div>
 
+      <dl
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "6px 18px",
+          margin: 0,
+          color: "var(--ink-muted)",
+          fontSize: "10.5px"
+        }}
+      >
+        <div style={{ display: "flex", gap: "6px", minWidth: 0 }}>
+          <dt style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>Read at</dt>
+          <dd style={{ margin: 0, overflowWrap: "anywhere", fontFamily: "var(--font-mono)" }}>{source.readAt}</dd>
+        </div>
+        <div style={{ display: "flex", gap: "6px", minWidth: 0 }}>
+          <dt style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>Authority</dt>
+          <dd style={{ margin: 0 }}>{authority}</dd>
+        </div>
+      </dl>
+
+      {source.reason && (
+        <p style={{ margin: 0, padding: "8px 10px", background: "var(--rust-soft)", border: "1px solid var(--rust-border)", borderRadius: "var(--radius-sm)", color: "var(--ink)", fontSize: "12.5px" }}>
+          <strong>Source reason:</strong> {source.reason}
+        </p>
+      )}
+
       {documents.length === 0 && (
-        <div role="status">
-          <span className="badge badge--blocked">SOURCE UNAVAILABLE</span>
-          <span style={{ marginLeft: "8px", color: "var(--ink-muted)", fontSize: "13px" }}>
-            Planning document evidence is not available from this source.
-          </span>
+        <div style={{ display: "grid", gap: "10px" }}>
+          <div role="status">
+            <span className="badge badge--blocked">Source unavailable</span>
+            <span style={{ marginLeft: "8px", color: "var(--ink-muted)", fontSize: "13px" }}>
+              Planning document evidence is not available from this source.
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            <code style={{ color: "var(--ink)", fontSize: "10.5px" }}>docs/ROADMAP.md</code>
+            <code style={{ color: "var(--ink)", fontSize: "10.5px" }}>docs/BACKLOG.md</code>
+          </div>
         </div>
       )}
 
-      {allCanonical ? (
+      {allCanonical && (
         <div role="status" style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-          <span className="badge badge--active">CANONICAL</span>
+          <span className="badge badge--active">Canonical</span>
           <span style={{ color: "var(--ink-muted)", fontSize: "13px" }}>
             Roadmap and Backlog documents are canonical planning data.
           </span>
         </div>
-      ) : (
-        documents.map((document) => (
-          <article key={document.document} style={{ display: "grid", gap: "12px", paddingTop: "4px" }}>
-            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <div>
-                <strong style={{ display: "block", color: "var(--ink)", textTransform: "capitalize" }}>
-                  {document.document}
-                </strong>
-              </div>
-              <span
-                role="status"
-                className={`badge ${document.state === "canonical" ? "badge--active" : "badge--blocked"}`}
-              >
-                {stateLabels[document.state]}
-              </span>
-            </header>
-
-            {document.state !== "canonical" && (
-              <>
-                <DocumentFacts document={document} source={source} />
-                <DocumentEvidence document={document} />
-                <HandoffAction document={document} source={source} projectSlug={projectSlug} />
-              </>
-            )}
-          </article>
-        ))
       )}
+
+      {documents.map((document) => (
+        <article key={document.document} style={{ display: "grid", gap: "12px", paddingTop: "4px" }}>
+          <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+            <h3 style={{ margin: 0, color: "var(--ink)", fontSize: "14.5px", textTransform: "capitalize" }}>
+              {document.document === "roadmap" ? "Roadmap" : "Backlog"} document
+            </h3>
+            <span
+              role={allCanonical ? undefined : "status"}
+              className={`badge ${document.state === "canonical" ? "badge--active" : "badge--blocked"}`}
+            >
+              {stateLabels[document.state]}
+            </span>
+          </header>
+
+          <DocumentFacts document={document} source={source} />
+          {document.state !== "canonical" && (
+            <>
+              <DocumentEvidence document={document} />
+              <HandoffAction document={document} source={source} projectSlug={projectSlug} />
+            </>
+          )}
+        </article>
+      ))}
     </section>
   );
 }

@@ -18,6 +18,18 @@ function documentHealthSummary(documents: ProjectDetailView["documents"]) {
   return `Planning docs: ${documents.filter((document) => document.state !== "canonical").length} needs review`;
 }
 
+function documentMetric(
+  kind: "roadmap" | "backlog",
+  documents: ProjectDetailView["documents"],
+  count: number
+) {
+  const state = documents.find((document) => document.document === kind)?.state;
+  const label = kind === "roadmap" ? "Roadmap" : "Backlog";
+  if (state === "missing") return `${label}: Missing document`;
+  if (state === "unavailable") return `${label}: Source unavailable`;
+  return `${label}: ${count}`;
+}
+
 export function ProjectList({ projects }: { projects: ProjectDetailView[] }) {
   return (
     <div>
@@ -65,15 +77,20 @@ export function ProjectList({ projects }: { projects: ProjectDetailView[] }) {
                     {activePhase ? `Active: ${activePhase.title}` : "No active phase"}
                   </p>
                   {isCode && (
-                    <p className="project-card__desc" style={{ marginTop: "8px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
-                      {documentHealthSummary(p.documents)}
-                    </p>
+                    <>
+                      <p className="project-card__desc" style={{ marginTop: "8px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+                        {documentHealthSummary(p.documents)}
+                      </p>
+                      <p className="project-card__desc" style={{ marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "4px 12px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+                        <span>{documentMetric("roadmap", p.documents, p.roadmap.length)}</span>
+                        <span>{documentMetric("backlog", p.documents, p.metrics.totalBacklog)}</span>
+                      </p>
+                    </>
                   )}
                 </div>
 
                 <div className="project-card__footer">
                   <span>
-                    {isCode ? `${p.metrics.totalBacklog} Backlog · ` : ""}
                     {p.metrics.activeTasks} Active Tasks
                   </span>
                   <span>{p.project.slug}</span>
