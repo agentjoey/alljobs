@@ -45,7 +45,7 @@ features:
     tasks:
       - id: r2-mockup-gate
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-mockup-gate.md
         evidence: null
