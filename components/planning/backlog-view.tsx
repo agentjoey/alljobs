@@ -67,7 +67,7 @@ export function BacklogView({
   const [managing, setManaging] = useState(false);
   const active = items.filter((item) => !HISTORY_STATUSES.has(item.status));
   const history = items.filter((item) => HISTORY_STATUSES.has(item.status));
-  const documentBlocked = control?.blockers.some((blocker) => blocker.code === "BACKLOG_DOCUMENT_NOT_CANONICAL") ?? false;
+  const orderingAvailable = control?.writable ?? false;
 
   if (items.length === 0) {
     return <section className="backlog-surface"><header className="backlog-surface__header"><div><h2>Backlog ledger</h2><p>Phase → Priority → Rank</p></div></header><StatePanel title="No canonical backlog items currently available" description="Review planning document health above before adding items to docs/BACKLOG.md." /></section>;
@@ -83,7 +83,7 @@ export function BacklogView({
           <p>{active.length} active item{active.length === 1 ? "" : "s"} · Phase → Priority → Rank</p>
           {control && <p className="backlog-source-label">{planningSourceLabel(control.source)}</p>}
         </div>
-        {control && !documentBlocked && <button type="button" className="btn btn--primary" onClick={() => setManaging(true)} disabled={!control.writable}>Manage ordering</button>}
+        {control && orderingAvailable && <button type="button" className="btn btn--primary" onClick={() => setManaging(true)}>Manage ordering</button>}
       </header>
       {control && !control.writable && (
         <div className="backlog-read-only" role="status">

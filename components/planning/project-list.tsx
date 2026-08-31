@@ -23,6 +23,7 @@ function documentMetric(
   documents: ProjectDetailView["documents"],
   count: number
 ) {
+  if (documents.length === 0) return `${kind === "roadmap" ? "Roadmap" : "Backlog"}: Source unavailable`;
   const state = documents.find((document) => document.document === kind)?.state;
   const label = kind === "roadmap" ? "Roadmap" : "Backlog";
   if (state === "missing") return `${label}: Missing document`;

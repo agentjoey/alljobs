@@ -213,6 +213,60 @@ describe("planning UI components", () => {
     expect(screen.queryByText(/0 Backlog/)).not.toBeInTheDocument();
   });
 
+  it("treats no-triage cached evidence as unavailable instead of numeric planning counts or ordering authority", async () => {
+    const user = userEvent.setup();
+    const detail = {
+      project: {
+        slug: "legacy-cache-code",
+        name: "Legacy Cache Code",
+        type: "code" as const,
+        work_modes: ["implementation" as const],
+        execution_locations: [],
+        archived: false
+      },
+      roadmap: [{ id: "phase-1", title: "Retained phase", kind: "phase" as const, status: "active" as const, order: 10 }],
+      backlog: [{ id: "BL-001", title: "Retained item", work_mode: "implementation" as const, phase: "phase-1", status: "ready" as const, priority: "P1" as const, rank: 100, dependencies: [] }],
+      tasks: [],
+      issues: [],
+      attention: [],
+      provenance: [],
+      documents: [],
+      planningSource: {
+        mode: "cached" as const,
+        writable: false,
+        reason: "Legacy cache has no document triage.",
+        readAt: "2026-08-30T00:00:00.000Z"
+      },
+      backlogControl: {
+        source: {
+          mode: "cached" as const,
+          writable: false,
+          reason: "Legacy cache has no document triage.",
+          readAt: "2026-08-30T00:00:00.000Z"
+        },
+        ordering: "initialized" as const,
+        conflictLanes: [],
+        writable: false,
+        blockers: [{ code: "BACKLOG_DOCUMENT_NOT_CANONICAL", message: "Backlog document health is unavailable." }]
+      },
+      metrics: { activeTasks: 0, totalBacklog: 1, doneCount: 0, blockedCount: 0 },
+      digest: "abc"
+    };
+    const { unmount } = render(<ProjectDetail detail={detail} />);
+
+    expect(screen.getByRole("tab", { name: "Roadmap (Source unavailable)" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Backlog (Source unavailable)" })).toBeVisible();
+    await user.click(screen.getByRole("tab", { name: "Backlog (Source unavailable)" }));
+    expect(screen.getByText("Retained item")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Manage ordering" })).not.toBeInTheDocument();
+    unmount();
+
+    render(<ProjectList projects={[detail]} />);
+    expect(screen.getByText("Roadmap: Source unavailable")).toBeVisible();
+    expect(screen.getByText("Backlog: Source unavailable")).toBeVisible();
+    expect(screen.queryByText(/Backlog: 1/)).not.toBeInTheDocument();
+  });
+
   it("withholds Manage ordering for a degraded Backlog while retaining canonical siblings", async () => {
     const user = userEvent.setup();
     render(

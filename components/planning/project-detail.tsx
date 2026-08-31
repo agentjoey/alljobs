@@ -25,6 +25,7 @@ export function ProjectDetail({
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
   const planningTabCount = (document: "roadmap" | "backlog", count: number) => {
+    if (detail.project.type === "code" && detail.documents.length === 0) return "Source unavailable";
     const state = detail.documents.find((item) => item.document === document)?.state;
     if (state === "missing") return "Missing document";
     if (state === "unavailable") return "Source unavailable";
