@@ -58,7 +58,7 @@ features:
         deps: [r2-mockup-gate]
       - id: r2-contracts
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-contracts.md
         evidence: null
