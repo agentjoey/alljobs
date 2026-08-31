@@ -79,7 +79,7 @@ features:
         deps: [r2-context]
       - id: r2-minimax-client
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-minimax-client.md
         evidence: null
