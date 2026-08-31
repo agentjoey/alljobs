@@ -30,6 +30,15 @@ export const taskSourceSchema = z.object({
   ref: z.string().optional()
 }).default({ provider: "native" });
 
+export const projectAssistantConfigSchema = z.object({
+  context_paths: z.array(
+    z.string().min(1).max(240).refine(
+      value => !value.startsWith("/") && !value.split(/[\\/]/).includes(".."),
+      "Assistant context path must be repository-relative"
+    )
+  ).max(8).default([])
+}).strict();
+
 export const roadmapItemSchema = z.object({
   id: idSchema,
   title: titleSchema("RoadmapItem title"),
@@ -112,6 +121,7 @@ export const projectRegistrySchema = z.object({
   git_remote: z.string().optional(),
   git_branch: z.string().optional(),
   trusted_path: z.string().optional(),
+  assistant: projectAssistantConfigSchema.optional(),
   archived: z.boolean().default(false)
 });
 

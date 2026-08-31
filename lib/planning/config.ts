@@ -2,13 +2,31 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
+import { ASSISTANT_LIMITS } from "../assistant/limits";
+
+const assistantModeLimitsSchema = z.object({
+  contextBytes: z.number().int().positive(),
+  outputTokens: z.number().int().positive(),
+  sourceFiles: z.number().int().positive(),
+  sourceBytes: z.number().int().positive(),
+  toolCalls: z.number().int().positive()
+}).strict();
+
+export const controlHostAssistantConfigSchema = z.object({
+  enabled: z.boolean(),
+  provider: z.literal("minimax").default("minimax"),
+  model: z.literal("MiniMax-M3").default("MiniMax-M3"),
+  standard: assistantModeLimitsSchema.default(ASSISTANT_LIMITS.standard),
+  deep: assistantModeLimitsSchema.default(ASSISTANT_LIMITS.deep)
+}).strict();
 
 export const controlHostConfigSchema = z.object({
   trustedCodeRoots: z.array(z.string().min(1, "Trusted code root cannot be empty")).min(1, "At least one trustedCodeRoot is required"),
   refreshIntervalSeconds: z.number().int().min(10, "Minimum refresh interval is 10 seconds").default(300),
   mirrorsDir: z.string().optional(),
   logsDir: z.string().optional(),
-  cacheDir: z.string().optional()
+  cacheDir: z.string().optional(),
+  assistant: controlHostAssistantConfigSchema.optional()
 });
 
 export type ControlHostConfig = z.infer<typeof controlHostConfigSchema>;

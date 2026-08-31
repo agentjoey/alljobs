@@ -39,6 +39,68 @@ describe("domain schemas", () => {
         work_modes: []
       })).toThrowError(/at least one work_mode/);
     });
+
+    it("parses an optional assistant context allowlist", () => {
+      const p = parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: { context_paths: ["docs/architecture.md"] }
+      });
+      expect(p.assistant?.context_paths).toEqual(["docs/architecture.md"]);
+    });
+
+    it("defaults the assistant context allowlist to empty when omitted", () => {
+      const p = parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: {}
+      });
+      expect(p.assistant?.context_paths).toEqual([]);
+    });
+
+    it("rejects a non-repository-relative assistant context path", () => {
+      expect(() => parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: { context_paths: ["../outside.md"] }
+      })).toThrowError(/repository-relative/);
+    });
+
+    it("rejects an absolute assistant context path", () => {
+      expect(() => parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: { context_paths: ["/etc/passwd"] }
+      })).toThrowError(/repository-relative/);
+    });
+
+    it("rejects more than eight assistant context paths", () => {
+      expect(() => parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: { context_paths: Array.from({ length: 9 }, (_, i) => `docs/doc-${i}.md`) }
+      })).toThrow();
+    });
+
+    it("rejects an unknown assistant config key", () => {
+      expect(() => parseProjectRegistry({
+        slug: "alljobs",
+        name: "AllJobs",
+        type: "code",
+        work_modes: ["implementation"],
+        assistant: { context_paths: [], prompt: "hidden prompt" }
+      })).toThrow();
+    });
   });
 
   describe("roadmapItemSchema", () => {
