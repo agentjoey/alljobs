@@ -566,3 +566,137 @@ client).
 - Independent verification passed: focused source tests **2 files / 33 tests**, `npm run typecheck`, and `git diff --check 67da67f..HEAD`.
 
 Task 4 requires a separate dependency/provider compatibility gate and Pact review.
+
+---
+
+# Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
+
+**Pact task:** `r2-minimax-client` (feature `r2-management-assistant`)
+**Seat:** `opencode` (worker)
+**Branch:** `codex/r2-management-assistant`
+**Worktree:** `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/r2-pact-orchestrator`
+**Base SHA at start:** `e95a82b` (`pact: ledger sync`)
+**Status:** **BLOCKED** — the installed provider cannot transmit the MiniMax-M3
+adaptive-thinking option. No adapter/prompt/smoke code was written, per the task
+spec: "If any proof is absent, checkpoint as blocked; never substitute provider,
+protocol or model."
+
+## Install + inspect (required step, completed)
+
+Installed in the plan's required order (`ai` alone first, inspect, then the
+provider), then inspected the installed source before writing any code:
+
+```text
+$ node -e "console.log(require('./node_modules/ai/package.json').version)"
+7.0.87
+
+$ node -e "console.log(require('./node_modules/vercel-minimax-ai-provider/package.json').version)"
+0.0.2
+
+$ node -e "console.log(JSON.stringify(require('./node_modules/vercel-minimax-ai-provider/package.json').dependencies, null, 2))"
+{
+  "@ai-sdk/anthropic": "3.0.6",
+  "@ai-sdk/provider": "3.0.2",
+  "@ai-sdk/provider-utils": "4.0.4"
+}
+```
+
+`ai` (AI SDK v7) exposes: `streamText` (`node_modules/ai/src/generate-text/stream-text.ts`),
+`Output.object({ schema, name, description })` (`.../generate-text/output.ts`),
+`tool()`, `stepCountIs()`, `providerOptions`, `abortSignal`, `maxOutputTokens`,
+`stopWhen`; result streams `textStream`, `fullStream`, `partialOutputStream`, and
+promises `text`, `usage`, `finishReason`, `reasoning`/`reasoningText`.
+
+`vercel-minimax-ai-provider@0.0.2` exports (`dist/index.d.ts`):
+
+```ts
+minimax            → alias of minimaxAnthropic   (Anthropic-compatible, DEFAULT)
+minimaxAnthropic   → createMinimaxAnthropic()
+minimaxOpenAI      → createMinimax()             (OpenAI-compatible; NOT to be used)
+createMinimax      → alias of createMinimaxAnthropic
+createMinimaxOpenAI
+```
+
+## Proof table
+
+| # | Required proof | Result | Evidence |
+|---|---|---|---|
+| 1 | MiniMax-M3 | ✅ PROVEN | `MinimaxChatModelId = 'MiniMax-M2' \| ... \| string`; `minimax("MiniMax-M3")` returns a `LanguageModelV3`. Official MiniMax docs list MiniMax-M3 (context 1M) for both the Anthropic and AI SDK interfaces. |
+| 2 | default Anthropic-compatible protocol | ✅ PROVEN | `minimax === minimaxAnthropic`; `createMinimaxAnthropic` wraps `@ai-sdk/anthropic/internal` `AnthropicMessagesLanguageModel`, base URL `https://api.minimax.io/anthropic/v1`, headers `anthropic-version: 2023-06-01` + `x-api-key`, env var `MINIMAX_API_KEY`. |
+| 3 | streaming | ✅ PROVEN | `streamText` → `fullStream`/`textStream`/`partialOutputStream`; provider `doStream` maps Anthropic SSE `text_delta`/`thinking_delta`. MiniMax docs: `stream` "Fully supported". |
+| 4 | tools | ✅ PROVEN | `streamText({ tools })` → provider maps to Anthropic `tools`/`tool_choice`. MiniMax docs: `tools`/`tool_choice` "Fully supported". |
+| 5 | structured output | ⚠️ mechanism only | `Output.object({ schema })` → `responseFormat:{type:'json',schema}`. For "MiniMax-M3" `getModelCapabilities` → `isKnownModel=false`, `supportsStructuredOutput=false`, so the anthropic provider falls back to a `jsonResponseTool` ("json" function tool) + SDK-side JSON parse/Zod validation. Native `output_format`/json_schema is **not** listed in MiniMax's Anthropic supported-parameters table. Workable, but not native structured output. |
+| 6 | exact adaptive-thinking option | ❌ **ABSENT — BLOCKER** | See below. |
+
+## Blocker — the exact adaptive-thinking option is not reachable
+
+The MiniMax-M3 Anthropic-compatible API documents exactly one way to enable
+thinking (platform.minimax.io/docs/api-reference/text-anthropic-api, "Thinking
+Control"):
+
+> - If `thinking` is omitted, thinking is off by default.
+> - Set `thinking: {"type": "adaptive"}` to explicitly enable thinking. For
+>   MiniMax-M3, `adaptive` is equivalent to thinking on.
+> - Set `thinking: {"type": "disabled"}` to explicitly keep thinking off.
+
+The installed provider cannot emit `{"type": "adaptive"}`:
+
+1. `vercel-minimax-ai-provider@0.0.2` reuses `@ai-sdk/anthropic@3.0.6` verbatim
+   (`createMinimaxAnthropic` → `AnthropicMessagesLanguageModel`, provider
+   `"minimax.messages"`). The string `adaptive` appears **nowhere** in either
+   package (`rg -c "adaptive"` = no matches in both `dist/index.js`).
+2. `@ai-sdk/anthropic@3.0.6`'s provider options schema
+   (`node_modules/@ai-sdk/anthropic/dist/index.js:757-760`) is:
+
+   ```ts
+   thinking: z.object({
+     type: z.union([z.literal("enabled"), z.literal("disabled")]),
+     budgetTokens: z.number().optional()
+   }).optional()
+   ```
+
+   `parseProviderOptions` (`@ai-sdk/provider-utils`, `safeValidateTypes`) rejects
+   any other `type` — passing `thinking:{type:"adaptive"}` throws
+   `invalid anthropic provider options` before any request is sent.
+3. The only `enabled` path maps to Claude's extended thinking, not MiniMax's
+   adaptive form (`@ai-sdk/anthropic/dist/index.js:2452-2466, 2549-2586`):
+
+   ```ts
+   const isThinking = anthropicOptions?.thinking?.type === "enabled";
+   ...
+   thinking: { type: "enabled", budget_tokens: thinkingBudget }   // budget_tokens
+   ```
+
+   MiniMax documents no `enabled` value and no `budget_tokens`; sending
+   `{type:"enabled", budget_tokens:1024}` would be an unverified provider
+   behavior, not the documented `adaptive` option.
+
+Consequence: there is no verified way to enable MiniMax-M3 adaptive thinking
+through the installed provider. Both substitution paths are forbidden by the
+task ("never substitute provider, protocol or model"; "Do not import
+`minimaxOpenAI`"). The provider pins `@ai-sdk/anthropic@3.0.6` exactly, so this
+cannot be fixed by upgrading that transitive dependency without changing the
+provider's own published contract.
+
+## What was deliberately NOT done
+
+No `model-client.ts`, `minimax-client.ts`, `prompt.ts`, smoke script, or focused
+tests were written, because the adapter's "Deep only verified adaptive option"
+requirement cannot be satisfied without an unverifiable thinking substitution.
+
+## Recommended next action (for the orchestrator/reviewer)
+
+Reopen the spec to resolve one of:
+
+1. **Provider update** — wait for / request a `vercel-minimax-ai-provider`
+   release that maps `providerOptions.anthropic.thinking.type === "adaptive"` to
+   MiniMax's `thinking: {"type": "adaptive"}` (or adds a MiniMax-native thinking
+   passthrough), then re-run this Task 4 proof.
+2. **Spec clarification** — if the intent was actually "enable thinking", have
+   the Human Owner re-authorize the exact wire form for Standard/Deep and record
+   it in `brief.md` before implementation.
+
+Either way, the fixed `minimax("MiniMax-M3")` + default Anthropic-compatible
+protocol + `Output.object` + tools + streaming + `abortSignal` + `maxOutputTokens`
+surface all remain intact and ready for the adapter once the adaptive option is
+resolvable.
