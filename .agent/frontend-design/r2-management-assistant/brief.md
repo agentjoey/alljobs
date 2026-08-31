@@ -1,7 +1,7 @@
 # R2 Planning / Management Assistant — T3 Brief
 
 **Revision:** Approved 17 · Mockup revision 2 (2026-09-01)
-**Status:** Approved design input — formal spec approved; rendered Mockup Gate produced (Task 0) and reopened as Mockup revision 2 (persistent Companion composer + distinct Companion output); pending Human Owner approval
+**Status:** Approved design input — formal spec and rendered Mockup revision 2 approved by the Human Owner; Task 1 may begin
 **Date:** 2026-08-30 (rev 2 interaction decision recorded 2026-09-01)
 **Rendered mockup (Task 0):** `mockup/index.html` · `mockup/styles.css` · `mockup/app.js` · evidence `mockup-screens/*.png` · `mockup-review.md` · `handoff.md` · focused contract check `verify-revision-2.mjs`
 
@@ -158,7 +158,7 @@ Because this introduces a core model-backed journey and changes the Project Deta
 
 ### Companion interaction direction — Mockup revision 2 (approved 2026-09-01)
 
-The rendered Mockup Gate (Task 0) was reopened before Human Owner approval with a corrected interaction direction. The Human Owner's decision, recorded for a fresh reviewer:
+The rendered Mockup Gate (Task 0) was reopened with a corrected interaction direction. The Human Owner's decision, recorded for a fresh reviewer:
 
 - **No continuous or cross-project conversation history is requested.** The Companion is not a chat transcript and does not accumulate cross-run or cross-project memory.
 - **The project-scoped Companion input is persistent.** The composer is anchored at the bottom of the companion plane on desktop and mobile and remains visible and usable after an answer renders — the owner never has to close and reopen the panel to ask a follow-up.
@@ -427,4 +427,4 @@ The mockups retain the current AllJobs design system and Paper Workbench languag
 
 ## Discovery status
 
-All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate artifacts are produced (Task 0: `mockup/`, `mockup-screens/`, `mockup-review.md`, `handoff.md`) and were reopened as Mockup revision 2 (persistent Companion composer + distinct `Companion output` run-record; focused contract check `verify-revision-2.mjs`). They remain pending Human Owner approval. No model package, credential, route, or production component may be added before that gate is approved.
+All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate artifacts are produced (Task 0: `mockup/`, `mockup-screens/`, `mockup-review.md`, `handoff.md`) and were reopened as Mockup revision 2 (persistent Companion composer + distinct `Companion output` run-record; focused contract check `verify-revision-2.mjs`). The Human Owner approved that rendered revision by directing R2 to continue on 2026-09-01; Task 1 may therefore begin. Subsequent Task 1+ changes remain subject to their own review, verification, final build walkthrough, and separate release approval.
