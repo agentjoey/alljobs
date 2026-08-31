@@ -552,3 +552,17 @@ $ npm run lint           → 0 errors (65 pre-existing warnings in unrelated fil
 
 Stop for independent review of `r2-source-gates` before Task 4 (MiniMax-M3 model
 client).
+
+---
+
+## Independent reviewer result — Task 3 (2026-09-01)
+
+**Reviewer:** Pact seat `claude` (separate from the `opencode` implementation run)
+**Candidate reviewed:** `afd33d6`
+**Verdict:** **ACCEPT**
+
+- Gate and read-tool scope is limited to Task 3; no provider, credential, route, UI, activity, write, Git/shell, or history addition.
+- Review confirmed digest-bound single-use/expiry/rejection state and fail-closed handling for traversal, sensitive files, symlinks, non-regular/binary content and budgets.
+- Independent verification passed: focused source tests **2 files / 33 tests**, `npm run typecheck`, and `git diff --check 67da67f..HEAD`.
+
+Task 4 requires a separate dependency/provider compatibility gate and Pact review.
