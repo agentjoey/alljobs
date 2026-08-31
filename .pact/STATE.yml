@@ -51,7 +51,7 @@ features:
         evidence: Task 0 完成：状态驱动独立 mockup + 6 张渲染证据 + review packet，已提交于 codex/r2-management-assistant（commit bfc1406）。  【交付物】mockup/{index.html,styles.css,app.js}（data-state 驱动：ready/answer/source-gate/exceptions + ?state= URL 参数）；mockup-screens/ 6 张（ready-1440 / answer-1440 / answer-900 / source-gate-1440 / exceptions-1440 / mobile-390）；mockup-review.md（含 paste-ready 独立 review prompt）；handoff.md；brief.md 仅做非实质性 Task 0 更新（status + 制品指针）。  【验收命令输出】 - node --check mockup/app.js → exit 0 - git diff --check → exit 0（无空白错误） - node scripts/shot.mjs …1440/900/390 六次 → 全部 OK（ready 513243b / answer-1440 853647b / answer-900 750139b / source-gate 622520b / exceptions 573190b / mobile-390 510714b，均 scale=2，mobile-390 mobile=true） - CDP 390px 溢出探测 → {"clientWidth":390,"scrollWidth":390,"innerWidth":390,"bodyScroll":390}（无横向滚动）  【四组场景】desktop ready（receipt+Standard/Deep+可选文档+composer）、desktop answer（facts/citations/inferences/unknowns/questions/recommendations+Task/Backlog 动作+usage）、safety（source gate 模态 Human Gate + STALE/INCOMPLETE/INVALID SOURCE/PROVIDER ERROR 紧凑治疗）、mobile 全高 Sheet（可读 answer + 底部动作）。无 chat bubble/gradient/glass/card wall/装饰动效/新视觉方向；Backlog 主导；44px 移动控件；reduced-motion 已覆盖。  【边界】未安装 ai/minimax/shadcn；未写生产代码/route/凭证；未碰其他 task 文件；未碰无关 Human 改动（.pact/seat、opencode.json 未提交）。下一安全动作：独立 design review → Human Mockup Gate 批准。
       - id: r2-mockup-gate-revision-2
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-mockup-revision-2.md
         evidence: null
