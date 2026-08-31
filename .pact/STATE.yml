@@ -58,8 +58,8 @@ features:
         deps: [r2-mockup-gate]
       - id: r2-contracts
         owner: opencode
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-contracts.md
-        evidence: null
+        evidence: Task 1 (contracts/limits/digests) complete. Commit 19fdb2e (feat: define r2 assistant contracts) + 94d4713 (handoff). RED (impl absent, tests present): 4 failed files / 6 failed tests. GREEN: npm test -- lib/planning/domain/schemas.test.ts lib/planning/config.test.ts lib/assistant/contracts.test.ts lib/assistant/digest.test.ts → 4 passed / 65 tests passed. npm run typecheck → exit 0. git diff --check → exit 0. Scope: only Task 1 files (lib/assistant/{limits,contracts,digest}.ts + tests, lib/planning/domain/schemas.ts/.test.ts, lib/planning/config.ts/config.test.ts, config/alljobs.example.json assistant.enabled:false no credential). No deps installed, no provider/credentials/API routes/UI. Tests prove strict rejection (workspace_path/unknown keys/api_key/literal provider+model/enum/bounds), repository-relative context_paths (absolute + ../ rejected, max 8), both outcome kinds, citation-source requirement, and question/answer/reasoning/fragments/draft/proposal/credential cannot enter AssistantRunRecord. Digest tests prove key-ordering invariance + array-order preservation. Full evidence in .agent/frontend-design/r2-management-assistant/handoff.md.
         deps: [r2-mockup-gate-revision-2]
