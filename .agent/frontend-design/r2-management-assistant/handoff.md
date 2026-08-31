@@ -420,3 +420,17 @@ $ npm test               → 44 files / 272 tests passed
 ## Next safe action
 
 Stop for independent review of `r2-context` before Task 3 (source gates).
+
+---
+
+## Independent reviewer result — Task 2 (2026-09-01)
+
+**Reviewer:** Pact seat `claude` (orchestrator review; separate from the `opencode` implementation run)
+**Candidate reviewed:** `c72d03a`
+**Verdict:** **ACCEPT**
+
+- Scope remains within Task 2. The page supplies only browser-safe entry state; `ProjectDetail` has no new rendering behavior.
+- Inspection found receipt/manifest fragments remain server-side; the browser state excludes fragment content, authoritative paths, model and budgets.
+- Independent verification passed: Task 2 focused tests **2 files / 22 tests**, `npm run typecheck`, and `git diff --check 6344651..HEAD`.
+
+Task 3 is not covered by this acceptance and requires a separate Pact assignment/review cycle.
