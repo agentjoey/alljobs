@@ -65,7 +65,7 @@ features:
         deps: [r2-mockup-gate-revision-2]
       - id: r2-context
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r2-management-assistant-context.md
         evidence: null
