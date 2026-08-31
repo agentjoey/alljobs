@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>AllJobs — R2 Management Assistant Mockup</title>
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!--
+      R2 Management Assistant — rendered Mockup Gate (Task 0).
+      Paper Workbench language: the assistant is a subordinate document/ledger panel beside
+      the dominant Backlog/Task reading plane. No chat bubbles, no new visual direction.
+    -->
+    <a class="skip-link" href="#main-content">Skip to planning content</a>
+
+    <div class="mockup-banner" role="note">
+      <span>R2 Management Assistant · rendered Mockup Gate</span>
+      <span>Synthetic project data · no model call · no canonical write</span>
+    </div>
+
+    <header class="app-header">
+      <button class="brand" type="button" aria-label="AllJobs portfolio">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="7" width="18" height="18"/><path d="M7 16h5M20 16h5M16 7v5M16 20v5"/></svg>
+        <span>alljobs</span>
+      </button>
+      <nav class="primary-nav" aria-label="Primary navigation">
+        <a href="#" aria-current="false">Portfolio</a>
+        <a href="#" aria-current="false">Projects</a>
+        <a href="#" aria-current="false">Tasks</a>
+        <a href="#" aria-current="false">Register</a>
+      </nav>
+      <div class="header-search">
+        <div class="universal-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search tasks, backlog, projects… (⌘K)" aria-label="Universal search" />
+          <kbd aria-hidden="true">⌘K</kbd>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span><strong>4/4</strong> sources</span>
+      </div>
+    </header>
+
+    <div id="status-strip" class="status-strip" aria-label="Provenance and freshness">
+      <span class="status-strip__item"><strong>ROUTE</strong> /projects/tradelinks</span>
+      <span class="status-strip__sep">·</span>
+      <span class="status-strip__item"><strong>SOURCE</strong> local-working-tree</span>
+      <span class="status-strip__sep">·</span>
+      <span class="status-strip__item"><strong>HEAD</strong> d712551</span>
+      <span class="status-strip__sep">·</span>
+      <span class="status-strip__item"><strong>MODIFIED</strong> 1 file</span>
+      <span class="status-strip__sep">·</span>
+      <span class="status-strip__item"><strong>FRESH</strong> 2026-08-31 14:02Z</span>
+    </div>
+
+    <div class="scenario-bar" aria-label="Mockup state control">
+      <span class="scenario-bar__label">Preview state</span>
+      <nav class="scenario-nav" aria-label="Assistant mockup states">
+        <button type="button" data-state="ready" aria-pressed="false">Ready</button>
+        <button type="button" data-state="answer" aria-pressed="false">Answer</button>
+        <button type="button" data-state="source-gate" aria-pressed="false">Source access</button>
+        <button type="button" data-state="exceptions" aria-pressed="false">Exceptions</button>
+      </nav>
+      <div class="scenario-sub" id="scenario-sub" hidden>
+        <label for="exception-select">Exception variant</label>
+        <select id="exception-select" aria-label="Exception variant"></select>
+      </div>
+      <span class="scenario-help">State controls are mockup evidence and do not ship as product chrome.</span>
+    </div>
+
+    <main id="main-content" tabindex="-1">
+      <!-- Project Detail header -->
+      <div class="view-header">
+        <div class="view-header__copy">
+          <div class="view-header__badges">
+            <span class="badge badge--type">CODE</span>
+            <span class="custody-badge custody-badge--repo">REPO: GIT-MIRROR</span>
+            <span class="badge badge--active">ACTIVE</span>
+          </div>
+          <h1 class="view-title">tradelinks</h1>
+          <p class="view-subtitle">
+            Slug: <code>tradelinks</code> · Work modes: implementation
+          </p>
+        </div>
+        <div class="view-header__actions">
+          <button type="button" class="btn">↻ Refresh Mirror</button>
+          <button type="button" class="btn btn--primary" id="open-assistant">+ Management assistant</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist" aria-label="Project sections">
+        <button type="button" role="tab" aria-selected="false">Roadmap (3)</button>
+        <button type="button" role="tab" aria-selected="true">Backlog (5)</button>
+        <button type="button" role="tab" aria-selected="false">Tasks (7)</button>
+        <button type="button" role="tab" aria-selected="false">Provenance (2)</button>
+      </div>
+
+      <div class="project-grid">
+        <!-- Dominant planning ledger -->
+        <section class="planning-ledger" aria-label="Project Backlog">
+          <div class="surface surface--flush">
+            <div class="surface__header">
+              <div>
+                <h2>Backlog</h2>
+                <p>canonical · docs/BACKLOG.md · read-only projection</p>
+              </div>
+              <span class="badge badge--external">EXTERNAL</span>
+            </div>
+            <ul class="ledger-list" id="backlog-list">
+              <li class="backlog-item">
+                <div class="backlog-row">
+                  <span class="ledger-id">TR-B-005</span>
+                  <span class="ledger-title"><strong>Reconcile settlement webhooks</strong><span>Reporting · P1</span></span>
+                  <span class="ledger-phase">Phase 2</span>
+                  <span class="ledger-status"><span class="badge badge--doing">DOING</span></span>
+                  <span class="ledger-due">due 09-04</span>
+                  <span class="ledger-open" aria-hidden="true">→</span>
+                </div>
+              </li>
+              <li class="backlog-item">
+                <div class="backlog-row">
+                  <span class="ledger-id">TR-B-004</span>
+                  <span class="ledger-title"><strong>Daily position roll-up export</strong><span>Reporting · P2</span></span>
+                  <span class="ledger-phase">Phase 2</span>
+                  <span class="ledger-status"><span class="badge badge--todo">TODO</span></span>
+                  <span class="ledger-due">due 09-11</span>
+                  <span class="ledger-open" aria-hidden="true">→</span>
+                </div>
+              </li>
+              <li class="backlog-item backlog-item--attention">
+                <div class="backlog-row">
+                  <span class="ledger-id">TR-B-003</span>
+                  <span class="ledger-title"><strong>Order routing rate-limit retries</strong><span>Core · P1</span></span>
+                  <span class="ledger-phase">Phase 1</span>
+                  <span class="ledger-status"><span class="badge badge--blocked">BLOCKED</span></span>
+                  <span class="ledger-due">overdue</span>
+                  <span class="ledger-open" aria-hidden="true">→</span>
+                </div>
+              </li>
+              <li class="backlog-item">
+                <div class="backlog-row">
+                  <span class="ledger-id">TR-B-002</span>
+                  <span class="ledger-title"><strong>Instrument position feed latency</strong><span>Core · P1</span></span>
+                  <span class="ledger-phase">Phase 1</span>
+                  <span class="ledger-status"><span class="badge badge--done">DONE</span></span>
+                  <span class="ledger-due">done 08-28</span>
+                  <span class="ledger-open" aria-hidden="true">→</span>
+                </div>
+              </li>
+              <li class="backlog-item">
+                <div class="backlog-row">
+                  <span class="ledger-id">TR-B-001</span>
+                  <span class="ledger-title"><strong>Canonical order ledger schema</strong><span>Core · P1</span></span>
+                  <span class="ledger-phase">Phase 1</span>
+                  <span class="ledger-status"><span class="badge badge--done">DONE</span></span>
+                  <span class="ledger-due">done 08-21</span>
+                  <span class="ledger-open" aria-hidden="true">→</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Assistant side panel (state-driven) -->
+        <aside id="assistant-panel" class="assistant-panel" aria-labelledby="assistant-title">
+          <div id="assistant-root"></div>
+        </aside>
+      </div>
+    </main>
+
+    <dialog id="source-gate-dialog" aria-labelledby="gate-title"></dialog>
+
+    <div class="live-region" aria-live="polite" aria-atomic="true"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

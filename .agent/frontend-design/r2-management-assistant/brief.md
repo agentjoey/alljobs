@@ -1,8 +1,9 @@
 # R2 Planning / Management Assistant — T3 Brief
 
 **Revision:** Approved 17
-**Status:** Approved design input — formal spec approved; rendered Mockup Gate pending
+**Status:** Approved design input — formal spec approved; rendered Mockup Gate produced (Task 0) and pending Human Owner approval
 **Date:** 2026-08-30
+**Rendered mockup (Task 0):** `mockup/index.html` · `mockup/styles.css` · `mockup/app.js` · evidence `mockup-screens/*.png` · `mockup-review.md` · `handoff.md`
 
 ## Start Card
 
@@ -414,4 +415,4 @@ The mockups retain the current AllJobs design system and Paper Workbench languag
 
 ## Discovery status
 
-All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate remains pending. No model package, credential, route, or production component may be added before that gate is approved.
+All Brief sections and the formal written spec are approved by the Human Owner. The rendered Mockup Gate artifacts are produced (Task 0: `mockup/`, `mockup-screens/`, `mockup-review.md`, `handoff.md`) and remain pending Human Owner approval. No model package, credential, route, or production component may be added before that gate is approved.
