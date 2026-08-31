@@ -70,3 +70,10 @@ features:
         spec: .pact/tasks/r2-management-assistant-context.md
         evidence: Task 2 (attributable context and receipts) complete. Commit c72d03a. Scope: lib/assistant/context.ts (new: assembleAssistantContext, prepareAssistantEntry, SourceFragment, AssistantContextBundle, AssistantContextReceipt, AssistantEntryState, ContextAssemblyError), lib/assistant/context.test.ts (new), lib/planning/queries/project.ts (+ProjectDetailView.assistant type-only bridge), lib/planning/queries/project.test.ts (+prepareAssistantEntry page-bridge tests), app/projects/[slug]/page.tsx (calls prepareAssistantEntry, merges assistant into detail), handoff.md. No deps/provider/credential/route/UI change. RED (tests present, impl absent): 2 failed / no tests (unresolved ./context). GREEN: npm test -- lib/assistant/context.test.ts lib/planning/queries/project.test.ts -> 2 passed / 22 tests. Coverage: real temp local sources + browser-safe receipt (no fragment content/absolute path), local dirty precedence (modified true, dirty value only in fragment), exact optional allowlist (+ non-allowlisted id ignored), symlink rejection (CONTEXT_FILE_SYMLINK, target not read), remote mirror read-only (modified null, content present), cached read-only (modified null, no raw fragments), nullable raw ranges for missing required doc (null heading/line_start/line_end + PLANNING_FILE_MISSING), deterministic digest + change on one byte, explicit CONTEXT_LIMIT rejection, PROJECT_NOT_FOUND, prepareAssistantEntry disabled NOT_CONFIGURED + enabled browser-safe (no fragment/content/path/contextBytes/MiniMax-M3 key). Static: npm run typecheck exit 0; git diff --check exit 0; npm test 44 files / 272 passed. Build not run (worktree has empty node_modules; Turbopack needs real local deps per AGENTS.md — pre-existing env, typecheck is the TS gate here).
         deps: [r2-contracts]
+      - id: r2-source-gates
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r2-management-assistant-source-gates.md
+        evidence: null
+        deps: [r2-context]
