@@ -69,3 +69,12 @@ The rendered revision must visibly distinguish canonical planning data from cand
 - **Preview:** local static server at `http://127.0.0.1:4173`.
 - **Evidence:** `screenshots/desktop-1440.png`, `screenshots/mid-900.png`, `screenshots/mobile-390.png`.
 - **Human Owner decision:** **APPROVED — rendered Mockup Gate passed.** The approved direction is limited to the reviewed Paper Workbench document-health hierarchy and state contract; it does not authorize deployment, source-document writes, push, merge, or service changes.
+
+## Task 5 implementation evidence
+
+- **Bound implementation build:** `1b3dbdcf94a36ddf44db7f8fe67207759d8c8e30`.
+- **Final evidence:** `screenshots/final-canonical-1440.png`, `screenshots/final-missing-900.png`, `screenshots/final-missing-390.png`.
+- **Primary validation:** 10 focused test files / 59 tests; lint 0 errors with 64 pre-existing warnings; typecheck; Webpack production build; 5 isolated Playwright journeys.
+- **Responsive correction:** the true-390 journey exposed an unbroken local diagnostic path; `1b3dbdc` makes that evidence wrap without hiding it.
+- **Approved interface reconciliation:** degraded Backlog health hides `Manage ordering`; canonical remote read-only health keeps it visible and disabled.
+- **Current gate:** primary evidence is ready for an explicitly independent `impeccable critique` and browser/a11y verification. This brief does not claim those gates passed.

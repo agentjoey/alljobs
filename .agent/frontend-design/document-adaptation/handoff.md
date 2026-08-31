@@ -1,18 +1,13 @@
-# Document adaptation mockup — Handoff Record
+# Document adaptation — Handoff Record
 
-- **Task / Brief / revision:** Document adaptation and degradation · `.agent/frontend-design/document-adaptation/brief.md` · revision 1
-- **Agent role / harness / session:** Primary Agent · Codex isolated Task 0 session
-- **Branch / worktree:** `codex/document-adaptation` · `.worktrees/document-adaptation`
-- **Base / current commit:** `fded5e7de22c6765360fc7d05e0e4906388f37c6` / Task 0 artifact commit recorded in `task-0-report.md` after creation
-- **Files changed:** Task 0 artifacts only under `.agent/frontend-design/document-adaptation/`
-- **Decisions:** strict canonical output remains the only planning authority; non-canonical candidates are ruled evidence sheets; all adaptation actions are copy-only; mockup uses synthetic data; revision 2 derives copied evidence from the selected scenario and includes the appropriate canonical template only for missing documents
-- **Assumptions:** the approved design and current Paper Workbench visual world settle direction; no production component is authorized before the Human Mockup Gate
-- **Commands / checks:** dependency install: 0 vulnerabilities; Impeccable detector: advisory-only findings reviewed against the approved `DESIGN.md`; 11 rendered states present; 1440/900/390 horizontal overflow: none; copy handoff: keyboard-reachable; three required screenshots captured and visually inspected
-- **Evidence:** `screenshots/desktop-1440.png`, `screenshots/mid-900.png`, `screenshots/mobile-390.png`
-- **Known failures / open questions:** revision 1 received `PASS_WITH_FIXES` with I-1; revision 2 fixes I-1. The Human Owner approved the rendered Mockup Gate; implementation remains subject to its own independent review and verification. Impeccable reported the existing `.impeccable/design.json` sidecar is older than `DESIGN.md`, and refreshing it is outside Task 0.
-- **Uncommitted state:** Task 0 report is intentionally written after the artifact commit and remains outside that commit; final status is recorded there
-- **Next safe action:** launch a fresh independent Review/Verification session with `review-packet.md`, then present the rendered evidence and review result to the Human Owner. Stop before production implementation.
-
-## Gate status
-
-**APPROVED — rendered mockup revision 2 passed the Human Owner Mockup Gate.** Independent implementation review and verification remain required.
+- **Task / Brief / revision:** Document adaptation and degradation · `.agent/frontend-design/document-adaptation/brief.md` · brief revision 1 / approved mockup revision 2.
+- **Agent role / harness:** Task 5 implementation and primary verification agent · Codex isolated worktree.
+- **Branch / worktree:** `codex/document-adaptation` · `.worktrees/document-adaptation`.
+- **Base / implementation build:** `fded5e7de22c6765360fc7d05e0e4906388f37c6` / `1b3dbdcf94a36ddf44db7f8fe67207759d8c8e30`.
+- **Task 5 files:** `tests/e2e/document-adaptation-fixtures.ts`, `tests/e2e/document-adaptation.spec.ts`, `playwright.document-adaptation.config.ts`, this T2 record, and `screenshots/final-*`.
+- **Decisions:** fixed strict parsers remain the only canonical authority; degraded candidates remain evidence; local missing/invalid state does not fall back to cache; repository-agent action is copy-only; degraded ordering control is absent, while canonical remote ordering remains visible and disabled.
+- **Checks:** focused Vitest 10 files / 59 tests; lint 0 errors / 64 pre-existing warnings; typecheck; standard Turbopack build blocked by the documented sandbox helper-port restriction; Webpack production build passed; isolated Playwright 5/5 passed.
+- **Evidence:** `verification.md`, `screenshots/final-canonical-1440.png`, `screenshots/final-missing-900.png`, `screenshots/final-missing-390.png`.
+- **Known open gate:** fresh independent Review and Verification must run the packet in `review-packet.md`; no self-approval is recorded.
+- **Uncommitted state:** older Task 4 screenshots and the separate mobile-regression test/config may remain untracked and are outside Task 5 ownership. They must not be staged with this task.
+- **Next safe action:** bind the Task 5 artifact commit in the independent dispatch, run `impeccable critique` plus browser/a11y verification, write findings into `verification.md`, and fix/retest any Critical or Important finding. Stop before push, merge, deploy, or production changes.
