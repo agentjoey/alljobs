@@ -148,7 +148,7 @@ function DocumentEvidence({ document }: { document: DocumentTriage }) {
           <h4 style={{ margin: "0 0 6px", fontSize: "13px" }}>Diagnostics</h4>
           <ul style={{ margin: 0, paddingLeft: "18px", color: "var(--ink-muted)", fontSize: "12.5px" }}>
             {document.diagnostics.map((diagnostic, index) => (
-              <li key={`${diagnostic.code}-${diagnostic.objectId ?? index}`}>
+              <li key={`${diagnostic.code}-${diagnostic.objectId ?? index}`} style={{ overflowWrap: "anywhere" }}>
                 <code>{diagnostic.code}</code> — {diagnostic.message}
               </li>
             ))}
