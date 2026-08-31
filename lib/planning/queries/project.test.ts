@@ -106,6 +106,11 @@ describe("getProjectDetail", () => {
         writable: false
       });
       expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "SOURCE_NOT_WRITABLE" }));
+      expect(detail?.documents).toEqual([]);
+      expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({
+        code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
+        message: "Backlog control is unavailable because document health evidence is unavailable."
+      }));
     } finally {
       delete process.env.ALLJOBS_DATA_ROOT;
       delete process.env.ALLJOBS_HOME;

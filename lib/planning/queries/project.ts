@@ -81,7 +81,7 @@ function deriveBacklogControlState(input: {
   const backlogIds = new Set(backlog.map((item) => item.id));
   const controlIssues = issues.filter((issue) => isBacklogControlIssue(issue, backlogIds));
   const backlogDocument = documents.find((document) => document.document === "backlog");
-  const backlogDocumentBlocked = Boolean(backlogDocument && backlogDocument.state !== "canonical");
+  const backlogDocumentBlocked = !backlogDocument || backlogDocument.state !== "canonical";
 
   if (project.archived) {
     blockers.push({ code: "PROJECT_ARCHIVED", message: "Archived projects cannot change Backlog ordering." });
@@ -95,10 +95,12 @@ function deriveBacklogControlState(input: {
   for (const issue of controlIssues) {
     blockers.push({ code: issue.code, message: issue.message });
   }
-  if (backlogDocumentBlocked && backlogDocument) {
+  if (backlogDocumentBlocked) {
     blockers.push({
       code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
-      message: `Backlog control is unavailable while ${backlogDocument.sourcePath} is ${backlogDocument.state}.`
+      message: backlogDocument
+        ? `Backlog control is unavailable while ${backlogDocument.sourcePath} is ${backlogDocument.state}.`
+        : "Backlog control is unavailable because document health evidence is unavailable."
     });
   }
   if (ordering === "uninitialized") {
