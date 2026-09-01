@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AssistantContextBundle } from "./context";
 import type { AssistantOutcome, AssistantRequestIntent, AssistantStreamEvent } from "./contracts";
-import { createAssistantService } from "./service";
+import { createAssistantService, parseAssistantModelJson } from "./service";
 
 const DIGEST = "a".repeat(64);
 const NEXT_DIGEST = "b".repeat(64);
@@ -72,6 +72,11 @@ async function collect(stream: AsyncIterable<AssistantStreamEvent>): Promise<Ass
 }
 
 describe("assistant service", () => {
+  it("accepts only a terminal JSON object from the MiniMax text stream", () => {
+    expect(parseAssistantModelJson(JSON.stringify(validAnswer))).toEqual(validAnswer);
+    expect(() => parseAssistantModelJson("```json\n{}\n``` ")).toThrow("OUTCOME_INVALID_MODEL_JSON");
+  });
+
   it("rejects a pre-call manifest mismatch without invoking the model", async () => {
     const generate = vi.fn();
     const service = createAssistantService({ assembleContext: vi.fn().mockResolvedValue(bundle()), generate });
@@ -109,6 +114,21 @@ describe("assistant service", () => {
     expect(JSON.stringify(recordActivity.mock.calls[0][0])).not.toContain(ask.question);
     expect(JSON.stringify(recordActivity.mock.calls[0][0])).not.toContain(validAnswer.direct_answer);
     expect(recordActivity.mock.calls[0][0]).toMatchObject({ project: "sample-code", model: "MiniMax-M3", status: "complete" });
+  });
+
+  it("forwards structured partial output before the validated terminal result", async () => {
+    async function* partials() {
+      yield { direct_answer: "Partial planning evidence." };
+    }
+    const service = createAssistantService({
+      assembleContext: vi.fn().mockResolvedValue(bundle()),
+      generate: (() => ({ partials: partials(), result: Promise.resolve({ outcome: validAnswer }) })) as never
+    });
+
+    const events = await collect(service.respond(ask, new AbortController().signal));
+
+    expect(events).toContainEqual({ type: "assistant_partial", partial: { direct_answer: "Partial planning evidence." } });
+    expect(events.findIndex((event) => event.type === "assistant_partial")).toBeLessThan(events.findIndex((event) => event.type === "assistant_complete"));
   });
 
   it("keeps a readable answer but marks it stale when the post-call manifest changed", async () => {

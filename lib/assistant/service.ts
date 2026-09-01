@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { generateText, Output, stepCountIs, tool } from "ai";
+import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import type { AssistantContextBundle } from "./context";
 import { assembleAssistantContext } from "./context";
@@ -13,6 +13,7 @@ import {
   type AssistantRunRecord,
   type AssistantSourceGateState,
   type AssistantStreamEvent,
+  type AssistantPartialView,
   type SourceAccessProposal,
   type TaskDraft,
   type BacklogProposal,
@@ -34,6 +35,11 @@ export interface AssistantModelResult {
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
+export interface AssistantModelStream {
+  partials: AsyncIterable<AssistantPartialView>;
+  result: Promise<AssistantModelResult>;
+}
+
 export interface AssistantModelInput {
   context: AssistantContextBundle;
   intent: AssistantRequestIntent;
@@ -41,7 +47,7 @@ export interface AssistantModelInput {
   sourceGate?: SourceGateRecord;
 }
 
-export type AssistantModelGenerator = (input: AssistantModelInput) => Promise<AssistantModelResult>;
+export type AssistantModelGenerator = (input: AssistantModelInput) => Promise<AssistantModelResult | AssistantModelStream> | AssistantModelStream;
 
 export interface AssistantServiceDependencies {
   assembleContext?: (input: Parameters<typeof assembleAssistantContext>[0]) => Promise<AssistantContextBundle>;
@@ -61,6 +67,21 @@ function outputSchemaFor(intent: AssistantRequestIntent) {
   if (intent.intent === "draft_task") return taskDraftSchema;
   if (intent.intent === "draft_backlog") return backlogProposalSchema;
   return assistantOutcomeSchema;
+}
+
+/**
+ * MiniMax-M3 supports OpenAI-compatible streaming but not json_schema. Keep
+ * unstructured stream text server-side until it is a complete JSON object,
+ * then let the existing intent schema validate it before anything is emitted.
+ */
+export function parseAssistantModelJson(text: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("NOT_OBJECT");
+    return parsed;
+  } catch {
+    throw new Error("OUTCOME_INVALID_MODEL_JSON");
+  }
 }
 
 function validateDraftCitations(ids: string[], context: AssistantContextBundle): void {
@@ -122,21 +143,24 @@ function safeErrorMessage(code: ReturnType<typeof safeErrorCode>): string {
   return "Management assistant is temporarily unavailable.";
 }
 
-async function generateWithMiniMax(input: AssistantModelInput): Promise<AssistantModelResult> {
+async function generateWithMiniMax(input: AssistantModelInput): Promise<AssistantModelStream> {
   const mode = modeFor(input.intent, input.sourceGate);
   const sourceTools = input.sourceGate
     ? await createSourceTools(input.intent.project_slug, input.sourceGate)
     : undefined;
-  const result = await generateText({
+  const result = streamText({
     model: createMiniMaxTokenPlanModel(),
     instructions: buildAssistantPrompt(),
     prompt: JSON.stringify({
       request: input.intent,
       manifest: input.context.manifest,
       sources: input.context.fragments,
-      source_gate: input.sourceGate
+      source_gate: input.sourceGate,
+      output_contract: {
+        format: "Return exactly one JSON object with no Markdown fences or surrounding text.",
+        schema: z.toJSONSchema(outputSchemaFor(input.intent))
+      }
     }),
-    output: Output.object({ schema: outputSchemaFor(input.intent) as any, name: input.intent.intent === "draft_task" ? "task_draft" : input.intent.intent === "draft_backlog" ? "backlog_proposal" : "management_outcome" }),
     maxOutputTokens: ASSISTANT_LIMITS[mode].outputTokens,
     maxRetries: 0,
     abortSignal: input.signal,
@@ -144,12 +168,24 @@ async function generateWithMiniMax(input: AssistantModelInput): Promise<Assistan
   });
 
   return {
-    outcome: result.output as AssistantModelResult["outcome"],
-    usage: {
-      input_tokens: result.totalUsage.inputTokens,
-      output_tokens: result.totalUsage.outputTokens
-    }
+    partials: (async function* () {})(),
+    result: (async () => {
+      let text = "";
+      for await (const chunk of result.textStream) text += chunk;
+      const usage = await result.totalUsage;
+      return {
+        outcome: parseAssistantModelJson(text) as AssistantModelResult["outcome"],
+        usage: {
+          input_tokens: usage.inputTokens,
+          output_tokens: usage.outputTokens
+        }
+      };
+    })()
   };
+}
+
+function isAssistantModelStream(value: AssistantModelResult | AssistantModelStream): value is AssistantModelStream {
+  return typeof value === "object" && value !== null && "partials" in value && "result" in value;
 }
 
 async function createSourceTools(projectSlug: string, gate: SourceGateRecord) {
@@ -214,12 +250,21 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
       if (manifestDigest !== intent.expected_manifest_digest) throw new Error("OUTCOME_STALE_CONTEXT");
 
       yield { type: "run_status", stage: "generating" };
-      const generated = await generate({
+      const generatedRequest = await generate({
         context: firstContext,
         intent,
         signal,
         sourceGate: intent.intent === "inspect_source" ? gate : undefined
       });
+      let generated: AssistantModelResult;
+      if (isAssistantModelStream(generatedRequest)) {
+        for await (const partial of generatedRequest.partials) {
+          yield { type: "assistant_partial", partial };
+        }
+        generated = await generatedRequest.result;
+      } else {
+        generated = await generatedRequest;
+      }
       usage = generated.usage;
       const outcome = outputSchemaFor(intent).parse(generated.outcome);
       if (intent.intent === "draft_task") {
