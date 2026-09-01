@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AssistantRequestIntent, AssistantStreamEvent } from "@/lib/assistant/contracts";
-import { createAssistantResponseRoute } from "./route";
+import { createAssistantResponseRoute } from "./route-factory";
 
 const DIGEST = "a".repeat(64);
 const validAsk: AssistantRequestIntent = {

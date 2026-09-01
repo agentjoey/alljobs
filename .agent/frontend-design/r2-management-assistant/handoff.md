@@ -647,6 +647,102 @@ agent dispatch, deployment, merge, push, or release action.
 
 ---
 
+## Task 6 Start Card (2026-09-01)
+
+```md
+Workflow: 3.3
+Task: R2 Task 6 — Project Detail management-assistant panel
+Role: Primary Agent (Codex)
+Tier / reason: T3 — a model-backed, project-scoped interaction added to the Planning Core journey
+Canonical record: .agent/frontend-design/r2-management-assistant/
+Branch / worktree: codex/r2-management-assistant · .worktrees/r2-pact-orchestrator
+Mockup Gate: Required — approved Task 0 revision 2; companion is a persistent composer, not a continuous conversation
+Review path: focused client tests, final-build desktop/mobile evidence, then independent review and verification
+Human checkpoints: approved R2 brief + Mockup Gate; explicit continuation while Task 5 awaits review; no merge, release, or deployment authorization
+```
+
+**State matrix:** disabled configuration entry; default and optional-source selection; empty-question
+validation; one active loading request; structured success; source-access gate; provider/request error;
+stale result; incomplete transport; session persistence limited to mode and current visible direct answer;
+project switch closes and clears the panel. All source bodies, reasoning, prompts, credentials, gates,
+and action authority remain outside browser storage.
+
+**Design direction:** approved Paper Workbench. Backlog/Task reading remains in the dominant page
+column; the assistant is a right-side 420–520px companion Sheet (full-height at 390px). Its result is
+a dark-ink-headed structured document record labelled `Companion output`, never conversational bubbles.
+The Sheet uses the generated accessible Radix primitive with Paper tokens and no decorative blur.
+
+## Task 6 implementation evidence (2026-09-01)
+
+**Implementation:** Codex primary agent; no implementation worker dispatched
+**Candidate:** pending commit on `codex/r2-management-assistant`
+
+- Added the project-scoped `Management assistant` entry to Project Detail and an accessible Radix
+  Sheet with heading focus, Escape/close behavior, a persistent composer, Standard/Deep choice,
+  optional-document selectors, one active request, and a labelled Companion output record. The
+  composer sends a fresh strict intent only; it has no history, browser-supplied source body,
+  prompt, reasoning, credential, gate, or action authority.
+- The client stores only `mode` and the current visible direct answer/digest in project-scoped
+  `sessionStorage`, rejects malformed, oversized, and authority-bearing records, clears the panel
+  on project switch, and treats stale, incomplete, validation, source-gate, and request-error
+  states explicitly. The NDJSON decoder accepts the service's real terminal ordering
+  (`assistant_complete` followed by `run_status: complete`).
+- Added only the required shadcn Radix Sheet/Button primitive after `info` and `sheet --dry-run`;
+  reviewed the generated overlay and removed its decorative backdrop blur. Companion styling uses
+  existing Paper Workbench tokens, a dense document layout, and full-height mobile Sheet rules.
+- A final build caught the existing Task 5 Route Handler export violation. The testable route
+  factory now lives in `route-factory.ts`; `route.ts` exports only Next-compatible route members.
+  A focused route test remains the contract proof for that move.
+
+**Focused verification:**
+
+```text
+npm test -- app/api/assistant/respond/route.test.ts components/planning/assistant-session.test.ts components/planning/assistant-panel.test.tsx components/planning/components.test.tsx
+  → 4 files / 19 tests passed
+npm run typecheck
+  → passed
+git diff --check
+  → passed
+./node_modules/.bin/next build --webpack
+  → passed (final candidate build)
+```
+
+**Final build visual evidence:**
+
+- `mockup-screens/task6-final-desktop-1440.png` — 1440×1000, final build.
+- `mockup-screens/task6-final-mobile-390.png` — true 390×844 viewport, final build.
+- The current Control Host `config.json` has no `assistant` section. The final build therefore
+  correctly displays the disabled entry and its explanation at both widths; a non-secret visual
+  placeholder was used only to start the isolated loopback server, and no model request occurred.
+  This is separate from the LaunchAgent's configured key. Enabled, source-gate, stale, validation,
+  incomplete, error, and project-switch behavior are covered by the focused component tests above.
+
+**Review packet — required independent review / verification:**
+
+```text
+Task / revision: R2 Task 6 — approved Project Detail panel, Mockup Gate revision 2
+Tier: T3
+Candidate: pending commit on codex/r2-management-assistant
+Worktree: .worktrees/r2-pact-orchestrator
+Authoritative inputs: brief.md; mockup/; .pact/tasks/r2-management-assistant-panel.md;
+  Task 1 strict fresh-run contract; Task 4 official Token Plan adapter; Task 5 route contract
+Review scope: diff for Task 6 plus route-factory extraction; verify no conversation history,
+  source body, reasoning, credentials, gates, or action authority enter sessionStorage/request;
+  confirm Sheet focus/close, state matrix, desktop dominance, true-390px full-height behavior,
+  and no Task 7 mutation surface.
+Evidence: 4 focused test files / 19 tests; typecheck; diff check; final Webpack build; canonical
+  final-build 1440px and 390px screenshots above.
+Required output: independent findings and verification result written to this handoff, then Pact
+  reviewer acceptance only if all required checks pass. Do not merge, release, or deploy.
+Independence: no independent reviewer/verification run has yet occurred.
+```
+
+**Next safe action:** have a new independent review/verification session assess this candidate,
+write its conclusion here, and use the Pact reviewer path. Human Owner still owns final walkthrough,
+configuration enablement, merge, release, and deployment decisions.
+
+---
+
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
 
 **Pact task:** `r2-minimax-client` (feature `r2-management-assistant`)

@@ -10,6 +10,7 @@ import { NativeTaskForm } from "./native-task-form";
 import { ProvenancePanel } from "./provenance-panel";
 import { RoadmapView } from "./roadmap-view";
 import { TaskList } from "./task-list";
+import { AssistantPanel } from "./assistant-panel";
 
 export function ProjectDetail({
   detail
@@ -73,6 +74,7 @@ export function ProjectDetail({
         </div>
 
         <div className="view-header__actions">
+          <AssistantPanel key={project.slug} projectSlug={project.slug} entry={detail.assistant} />
           {isCode && (
             <button
               type="button"
