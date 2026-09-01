@@ -587,8 +587,15 @@ The earlier Vercel-provider blocker is superseded. Task 5 remains a separate imp
 The historical task owner was `opencode`, but the corrected Token Plan implementation was
 performed directly by the orchestrator after the Human Owner instructed that no worker be
 dispatched. On 2026-09-01, the Human Owner explicitly authorized a **Human Owner direct
-acceptance exception** for Task 4. The task must be reassigned to the `human` owner identity
-for its review-state transition; no worker identity may be used to represent this delivery.
+acceptance exception** for Task 4.
+
+Pactify v1 has no operation to reassign an existing task owner and this project's roster has
+no `human` seat. It correctly refused both cancelling the `changes_requested` historical task
+with unreviewed commits and reviewer acceptance before an owner checkpoint. No worker identity
+was used or simulated. The human-acceptance record is therefore committed as
+`.pact/tasks/r2-management-assistant-token-plan-human-acceptance.md`; the code verdict is
+accepted by Human Owner direction, while the Pact ledger remains `changes_requested` until the
+protocol supports a compliant migration or the historical owner submits a checkpoint.
 
 ---
 
