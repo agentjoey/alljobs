@@ -492,7 +492,12 @@ export async function assembleAssistantContext(input: AssembleAssistantContextIn
     documents: manifestDocuments,
     context_policy_version: CONTEXT_POLICY_VERSION
   };
-  const manifestDigest = assistantDigest(manifestBody);
+  // `read_at` is receipt metadata, not source authority. Including a fresh
+  // timestamp here would make an otherwise identical page/API re-read stale.
+  const manifestDigest = assistantDigest({
+    ...manifestBody,
+    documents: manifestDocuments.map(({ read_at: _readAt, ...document }) => document)
+  });
   const manifest: AssistantContextManifest = assistantContextManifestSchema.parse({
     ...manifestBody,
     manifest_digest: manifestDigest

@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { AssistantRequestIntent, AssistantStreamEvent } from "@/lib/assistant/contracts";
 import { createAssistantResponseRoute } from "./route-factory";
 
@@ -18,6 +21,26 @@ async function* complete(): AsyncGenerator<AssistantStreamEvent> {
 }
 
 describe("POST /api/assistant/respond", () => {
+  it("blocks the real production route before provider creation when the Control Host disables the assistant", async () => {
+    const previousHome = process.env.ALLJOBS_HOME;
+    const home = await mkdtemp(join(tmpdir(), "alljobs-disabled-route-"));
+    try {
+      await writeFile(join(home, "config.json"), JSON.stringify({ trustedCodeRoots: [home], refreshIntervalSeconds: 300, assistant: { enabled: false } }), "utf8");
+      process.env.ALLJOBS_HOME = home;
+      const { POST } = await import("./route");
+      const response = await POST(new Request("http://127.0.0.1:3456/api/assistant/respond", {
+        method: "POST", headers: { origin: "http://127.0.0.1:3456", "content-type": "application/json" }, body: JSON.stringify(validAsk)
+      }));
+      expect(response.status).toBe(503);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.text()).not.toContain("MINIMAX_API_KEY");
+    } finally {
+      if (previousHome === undefined) delete process.env.ALLJOBS_HOME;
+      else process.env.ALLJOBS_HOME = previousHome;
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("rejects invalid origin, media type, oversize input, and unknown browser authority", async () => {
     const respond = vi.fn(() => complete());
     const POST = createAssistantResponseRoute({ respond, maxBodyBytes: 64 });

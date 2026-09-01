@@ -99,7 +99,7 @@ describe("AssistantPanel", () => {
     await user.click(screen.getByRole("button", { name: "Management assistant" }));
     await user.type(screen.getByLabelText("Ask management assistant"), "Draft it");
     await user.click(screen.getByRole("button", { name: "Ask Companion" }));
-    expect(await screen.findByText("Task draft is ready for normal-form review.")).toBeVisible();
     expect(onUseTaskDraft).toHaveBeenCalledWith(expect.objectContaining({ title: "Verify citations", provenance: expect.objectContaining({ manifest_digest: DIGEST }) }));
+    expect(screen.queryByRole("heading", { name: "Management assistant" })).not.toBeInTheDocument();
   });
 });

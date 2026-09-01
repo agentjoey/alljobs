@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createOpenAI } from "@ai-sdk/openai";
 
 export const MINIMAX_TOKEN_PLAN_BASE_URL = "https://api.minimax.io/v1";

@@ -34,5 +34,31 @@ if (!cfConfig.includes("alljobs.agentjoey.ai") || !cfConfig.includes("http://loc
   process.exit(1);
 }
 
+// 4. R2 assistant must keep provider credentials and responses server-only.
+const assistantRoute = readFileSync(resolve(root, "app/api/assistant/respond/route.ts"), "utf8");
+const assistantRouteFactory = readFileSync(resolve(root, "app/api/assistant/respond/route-factory.ts"), "utf8");
+const minimaxProvider = readFileSync(resolve(root, "lib/assistant/minimax-token-plan.ts"), "utf8");
+const clientSources = [
+  resolve(root, "components/planning/assistant-panel.tsx"),
+  resolve(root, "components/planning/assistant-session.ts"),
+  resolve(root, "components/planning/assistant-answer.tsx")
+].map((path) => readFileSync(path, "utf8")).join("\n");
+if (!assistantRoute.includes('export const dynamic = "force-dynamic"') || !assistantRoute.includes("assistantIsEnabled")) {
+  console.error("[verify-deployment-config] assistant route MUST be dynamic and reject disabled Control Host configuration");
+  process.exit(1);
+}
+if (!assistantRouteFactory.includes('"cache-control": "no-store"') || !assistantRouteFactory.includes('"x-content-type-options": "nosniff"')) {
+  console.error("[verify-deployment-config] assistant responses MUST be no-store and nosniff");
+  process.exit(1);
+}
+if (!minimaxProvider.startsWith('import "server-only";') || !minimaxProvider.includes("MINIMAX_API_KEY")) {
+  console.error("[verify-deployment-config] MINIMAX_API_KEY MUST remain in the server-only MiniMax provider module");
+  process.exit(1);
+}
+if (/NEXT_PUBLIC_MINIMAX|MINIMAX_API_KEY|api[_-]?key|credential/i.test(clientSources)) {
+  console.error("[verify-deployment-config] assistant client sources MUST NOT reference provider credentials");
+  process.exit(1);
+}
+
 console.log("[verify-deployment-config] All deployment configs and invariants verified successfully.");
 process.exit(0);

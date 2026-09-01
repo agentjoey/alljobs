@@ -7,5 +7,6 @@ describe("verify-deployment-config script", () => {
     const scriptPath = resolve(process.cwd(), "scripts/verify-deployment-config.mjs");
     const output = execFileSync("node", [scriptPath], { encoding: "utf8" });
     expect(output).toContain("All deployment configs and invariants verified successfully.");
+    expect(output).toContain("Checking deployment manifests and safety invariants");
   });
 });

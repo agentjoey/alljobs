@@ -85,7 +85,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
         if (event.type === "assistant_complete" && event.outcome.kind === "management_answer") { nextAnswer = event.outcome; nextStale = event.stale; }
         if (event.type === "source_access_requested") nextProposal = event.proposal;
         if (event.type === "assistant_error") nextMessage = event.message;
-        if (event.type === "task_draft" && !event.stale) { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); nextMessage = "Task draft is ready for normal-form review."; }
+        if (event.type === "task_draft" && !event.stale) { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); setOpen(false); nextMessage = "Task draft is ready for normal-form review."; }
         if (event.type === "backlog_proposal" && !event.stale) { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
       }
       if (nextAnswer) { setAnswer(nextAnswer); setStale(nextStale); persist(mode, nextAnswer); }
