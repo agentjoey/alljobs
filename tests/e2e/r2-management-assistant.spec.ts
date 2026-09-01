@@ -122,6 +122,9 @@ test.describe("R2 management assistant browser and authority boundaries", () => 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.getByRole("heading", { name: "Management assistant" })).toBeVisible();
+    const optionalPath = page.getByRole("region", { name: "Context receipt" }).getByText("docs/ARCHITECTURE.md", { exact: true });
+    await expect(optionalPath).toBeVisible();
+    expect(await optionalPath.evaluate((element) => element.getBoundingClientRect().height)).toBeLessThan(40);
     await assertNoHorizontalScroll(page);
     const sheet = page.locator(".assistant-sheet");
     await expect(sheet).toHaveCSS("height", "844px");
