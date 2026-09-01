@@ -90,4 +90,16 @@ describe("AssistantPanel", () => {
     rerender(<AssistantPanel projectSlug="other-project" entry={{ ...enabled, receipt: { ...enabled.receipt, project_slug: "other-project" } }} request={request} />);
     expect(screen.queryByRole("heading", { name: "Management assistant" })).not.toBeInTheDocument();
   });
+
+  it("hands a non-stale server-validated task draft to the normal Task form callback", async () => {
+    const user = userEvent.setup();
+    const onUseTaskDraft = vi.fn();
+    const request = vi.fn().mockResolvedValue([{ type: "task_draft", stale: false, model: "MiniMax-M3", mode: "standard", draft: { title: "Verify citations", status: "todo", evidence: [], assumptions: [], citation_source_ids: [], manifest_digest: DIGEST } }]);
+    render(<AssistantPanel projectSlug="sample-code" entry={enabled} request={request} onUseTaskDraft={onUseTaskDraft} />);
+    await user.click(screen.getByRole("button", { name: "Management assistant" }));
+    await user.type(screen.getByLabelText("Ask management assistant"), "Draft it");
+    await user.click(screen.getByRole("button", { name: "Ask Companion" }));
+    expect(await screen.findByText("Task draft is ready for normal-form review.")).toBeVisible();
+    expect(onUseTaskDraft).toHaveBeenCalledWith(expect.objectContaining({ title: "Verify citations", provenance: expect.objectContaining({ manifest_digest: DIGEST }) }));
+  });
 });

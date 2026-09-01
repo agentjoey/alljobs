@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createTaskAction } from "@/app/actions/native-planning";
+import type { NativeTaskDraftInitialValues } from "@/lib/assistant/draft-client";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -9,22 +10,24 @@ const FOCUSABLE_SELECTOR =
 export function NativeTaskForm({
   projectSlug,
   defaultBacklogId,
+  initialDraft,
   onClose,
   onSuccess
 }: {
   projectSlug: string;
   defaultBacklogId?: string;
+  initialDraft?: NativeTaskDraftInitialValues;
   onClose: () => void;
   onSuccess?: () => void;
 }) {
   const [taskId, setTaskId] = useState("");
-  const [title, setTitle] = useState("");
-  const [status, setStatus] = useState("todo");
-  const [workMode, setWorkMode] = useState("implementation");
-  const [backlog, setBacklog] = useState(defaultBacklogId || "");
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [status, setStatus] = useState<string>(initialDraft?.status ?? "todo");
+  const [workMode, setWorkMode] = useState<string>(initialDraft?.work_mode ?? "implementation");
+  const [backlog, setBacklog] = useState(initialDraft?.backlog ?? defaultBacklogId ?? "");
   const [blockedReason, setBlockedReason] = useState("");
   const [waitingOn, setWaitingOn] = useState("");
-  const [due, setDue] = useState("");
+  const [due, setDue] = useState(initialDraft?.due ?? "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -132,6 +135,8 @@ export function NativeTaskForm({
           </div>
         )}
 
+        {initialDraft && <p style={{ margin: "0 0 16px", padding: "8px 10px", background: "var(--amber-soft)", border: "1px solid var(--amber-border)", borderRadius: "var(--radius-sm)", fontSize: "12px" }}><strong>Assistant draft provenance</strong><br />{initialDraft.provenance.model} · {initialDraft.provenance.mode} · manifest {initialDraft.provenance.manifest_digest.slice(0, 12)}…<br />Review and submit through this normal form; no task has been created.</p>}
+
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
             <label htmlFor="ntf-task-id" style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
@@ -150,10 +155,11 @@ export function NativeTaskForm({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
+            <label htmlFor="ntf-title" style={{ display: "block", fontSize: "12px", fontFamily: "var(--font-mono)", marginBottom: "4px", color: "var(--ink)" }}>
               Title *
             </label>
             <input
+              id="ntf-title"
               type="text"
               required
               placeholder="What needs to be done?"

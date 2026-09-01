@@ -120,6 +120,11 @@ describe("assistant request intent", () => {
     }).success).toBe(false);
   });
 
+  it("accepts only a bounded task candidate and mode for a fresh draft request", () => {
+    expect(assistantRequestIntentSchema.safeParse({ intent: "draft_task", project_slug: "alljobs", candidate: { id: "r1", title: "Verify citations", rationale: "Evidence is incomplete.", candidate_kind: "task" }, mode: "standard", expected_manifest_digest: digest }).success).toBe(true);
+    expect(assistantRequestIntentSchema.safeParse({ intent: "draft_task", project_slug: "alljobs", candidate: { id: "r1", title: "Verify citations", rationale: "Evidence is incomplete.", candidate_kind: "backlog" }, mode: "standard", expected_manifest_digest: digest }).success).toBe(false);
+  });
+
   it("requires the current bounded question for source follow-up intents without allowing history", () => {
     expect(assistantRequestIntentSchema.safeParse({
       intent: "inspect_source",

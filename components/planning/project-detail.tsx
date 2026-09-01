@@ -11,6 +11,7 @@ import { ProvenancePanel } from "./provenance-panel";
 import { RoadmapView } from "./roadmap-view";
 import { TaskList } from "./task-list";
 import { AssistantPanel } from "./assistant-panel";
+import type { NativeTaskDraftInitialValues } from "@/lib/assistant/draft-client";
 
 export function ProjectDetail({
   detail
@@ -24,6 +25,7 @@ export function ProjectDetail({
   const [prefilledBacklogId, setPrefilledBacklogId] = useState<string | undefined>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  const [assistantTaskDraft, setAssistantTaskDraft] = useState<NativeTaskDraftInitialValues | undefined>();
 
   const planningTabCount = (document: "roadmap" | "backlog", count: number) => {
     if (detail.project.type === "code" && detail.documents.length === 0) return "Source unavailable";
@@ -34,6 +36,7 @@ export function ProjectDetail({
   };
 
   const handleCreateTaskForBacklog = (backlogId: string) => {
+    setAssistantTaskDraft(undefined);
     setPrefilledBacklogId(backlogId);
     setShowTaskModal(true);
   };
@@ -74,7 +77,7 @@ export function ProjectDetail({
         </div>
 
         <div className="view-header__actions">
-          <AssistantPanel key={project.slug} projectSlug={project.slug} entry={detail.assistant} />
+          <AssistantPanel key={project.slug} projectSlug={project.slug} entry={detail.assistant} onUseTaskDraft={(draft) => { setAssistantTaskDraft(draft); setShowTaskModal(true); }} />
           {isCode && (
             <button
               type="button"
@@ -90,6 +93,7 @@ export function ProjectDetail({
               type="button"
               className="btn btn--primary"
               onClick={() => {
+                setAssistantTaskDraft(undefined);
                 setPrefilledBacklogId(undefined);
                 setShowTaskModal(true);
               }}
@@ -182,6 +186,7 @@ export function ProjectDetail({
         <NativeTaskForm
           projectSlug={project.slug}
           defaultBacklogId={prefilledBacklogId}
+          initialDraft={assistantTaskDraft}
           onClose={() => setShowTaskModal(false)}
         />
       )}

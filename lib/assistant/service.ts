@@ -13,7 +13,11 @@ import {
   type AssistantRunRecord,
   type AssistantSourceGateState,
   type AssistantStreamEvent,
-  type SourceAccessProposal
+  type SourceAccessProposal,
+  type TaskDraft,
+  type BacklogProposal,
+  taskDraftSchema,
+  backlogProposalSchema
 } from "./contracts";
 import { assistantDigest } from "./digest";
 import { ASSISTANT_LIMITS } from "./limits";
@@ -23,9 +27,10 @@ import { createSourceGate, consumeSourceGate, rejectSourceGate, type SourceGateR
 import { createAssistantReadTools } from "./source-files";
 import { recordAssistantRun } from "../planning/native/activity";
 import { NativePlanningStore } from "../planning/native/store";
+import { buildAssistantBacklogHandoff } from "./handoff";
 
 export interface AssistantModelResult {
-  outcome: AssistantOutcome;
+  outcome: AssistantOutcome | TaskDraft | BacklogProposal;
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
@@ -47,9 +52,20 @@ export interface AssistantServiceDependencies {
 }
 
 function modeFor(intent: AssistantRequestIntent, gate?: SourceGateRecord): AssistantMode {
-  if (intent.intent === "ask") return intent.mode;
+  if (intent.intent === "ask" || intent.intent === "draft_task" || intent.intent === "draft_backlog") return intent.mode;
   if (gate?.max_files === ASSISTANT_LIMITS.deep.sourceFiles) return "deep";
   return "standard";
+}
+
+function outputSchemaFor(intent: AssistantRequestIntent) {
+  if (intent.intent === "draft_task") return taskDraftSchema;
+  if (intent.intent === "draft_backlog") return backlogProposalSchema;
+  return assistantOutcomeSchema;
+}
+
+function validateDraftCitations(ids: string[], context: AssistantContextBundle): void {
+  const available = new Set(context.manifest.documents.map((document) => document.source_id));
+  if (ids.some((id) => !available.has(id))) throw new Error("OUTCOME_UNKNOWN_CITATION");
 }
 
 function contextInput(intent: AssistantRequestIntent, mode: AssistantMode) {
@@ -120,7 +136,7 @@ async function generateWithMiniMax(input: AssistantModelInput): Promise<Assistan
       sources: input.context.fragments,
       source_gate: input.sourceGate
     }),
-    output: Output.object({ schema: assistantOutcomeSchema, name: "management_outcome" }),
+    output: Output.object({ schema: outputSchemaFor(input.intent) as any, name: input.intent.intent === "draft_task" ? "task_draft" : input.intent.intent === "draft_backlog" ? "backlog_proposal" : "management_outcome" }),
     maxOutputTokens: ASSISTANT_LIMITS[mode].outputTokens,
     maxRetries: 0,
     abortSignal: input.signal,
@@ -128,7 +144,7 @@ async function generateWithMiniMax(input: AssistantModelInput): Promise<Assistan
   });
 
   return {
-    outcome: result.output,
+    outcome: result.output as AssistantModelResult["outcome"],
     usage: {
       input_tokens: result.totalUsage.inputTokens,
       output_tokens: result.totalUsage.outputTokens
@@ -165,7 +181,7 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
     const startedAt = now();
     const runId = createRunId();
     let manifestDigest = intent.expected_manifest_digest;
-    let mode: AssistantMode = intent.intent === "ask" ? intent.mode : "standard";
+    let mode: AssistantMode = (intent.intent === "ask" || intent.intent === "draft_task" || intent.intent === "draft_backlog") ? intent.mode : "standard";
     let sourceGate: AssistantSourceGateState = "none";
     let terminal: AssistantRunRecord["status"] = "error";
     let errorCode: AssistantRunRecord["error_code"];
@@ -201,13 +217,37 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
         sourceGate: intent.intent === "inspect_source" ? gate : undefined
       });
       usage = generated.usage;
-      const outcome = assistantOutcomeSchema.parse(generated.outcome);
-      validateCitations(outcome, firstContext);
+      const outcome = outputSchemaFor(intent).parse(generated.outcome);
+      if (intent.intent === "draft_task") {
+        const draft = taskDraftSchema.parse(outcome);
+        if (draft.manifest_digest !== manifestDigest) throw new Error("OUTCOME_STALE_CONTEXT");
+        validateDraftCitations(draft.citation_source_ids, firstContext);
+        yield { type: "run_status", stage: "validating" };
+        const secondContext = await assemble(contextInput(intent, mode));
+        yield { type: "task_draft", stale: secondContext.manifest.manifest_digest !== manifestDigest, draft, model: MINIMAX_TOKEN_PLAN_MODEL, mode };
+        terminal = secondContext.manifest.manifest_digest !== manifestDigest ? "stale" : "complete";
+        yield { type: "run_status", stage: "complete" };
+        return;
+      }
+      if (intent.intent === "draft_backlog") {
+        const proposal = backlogProposalSchema.parse(outcome);
+        const { proposal_digest, ...unsigned } = proposal;
+        if (proposal.manifest_digest !== manifestDigest || assistantDigest(unsigned) !== proposal_digest) throw new Error("OUTCOME_INVALID_PROPOSAL");
+        validateDraftCitations(proposal.citation_source_ids, firstContext);
+        yield { type: "run_status", stage: "validating" };
+        const secondContext = await assemble(contextInput(intent, mode));
+        yield { type: "backlog_proposal", stale: secondContext.manifest.manifest_digest !== manifestDigest, proposal, handoff: buildAssistantBacklogHandoff(proposal) };
+        terminal = secondContext.manifest.manifest_digest !== manifestDigest ? "stale" : "complete";
+        yield { type: "run_status", stage: "complete" };
+        return;
+      }
+      const managementOutcome = assistantOutcomeSchema.parse(outcome);
+      validateCitations(managementOutcome, firstContext);
 
       yield { type: "run_status", stage: "validating" };
       const secondContext = await assemble(contextInput(intent, mode));
       const stale = secondContext.manifest.manifest_digest !== manifestDigest;
-      if (outcome.kind === "source_access_proposal") {
+      if (managementOutcome.kind === "source_access_proposal") {
         const createdGate = createSourceGate({
           projectSlug: intent.project_slug,
           questionDigest: assistantDigest("question" in intent ? intent.question : ""),
@@ -216,10 +256,10 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
           now: now()
         });
         sourceGate = "requested";
-        yield { type: "source_access_requested", proposal: sourceGateProposal(outcome, createdGate) };
+        yield { type: "source_access_requested", proposal: sourceGateProposal(managementOutcome, createdGate) };
       }
       terminal = stale ? "stale" : "complete";
-      yield { type: "assistant_complete", stale, outcome };
+      yield { type: "assistant_complete", stale, outcome: managementOutcome };
       yield { type: "run_status", stage: "complete" };
     } catch (error) {
       const code = safeErrorCode(error, signal);

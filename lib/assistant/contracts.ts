@@ -67,6 +67,9 @@ export const managementRecommendationSchema = z.object({
 }).strict();
 export type ManagementRecommendation = z.infer<typeof managementRecommendationSchema>;
 
+const taskCandidateSchema = managementRecommendationSchema.extend({ candidate_kind: z.literal("task") });
+const backlogCandidateSchema = managementRecommendationSchema.extend({ candidate_kind: z.literal("backlog") });
+
 // ---------------------------------------------------------------------------
 // Request intent
 // ---------------------------------------------------------------------------
@@ -102,13 +105,15 @@ export const assistantRequestIntentSchema = z.discriminatedUnion("intent", [
   z.object({
     intent: z.literal("draft_task"),
     project_slug: projectSlugSchema,
-    candidate_id: z.string().min(1, "candidate_id is required"),
+    candidate: taskCandidateSchema,
+    mode: assistantModeSchema,
     expected_manifest_digest: hexDigestSchema
   }).strict(),
   z.object({
     intent: z.literal("draft_backlog"),
     project_slug: projectSlugSchema,
-    candidate_id: z.string().min(1, "candidate_id is required"),
+    candidate: backlogCandidateSchema,
+    mode: assistantModeSchema,
     expected_manifest_digest: hexDigestSchema
   }).strict()
 ]);
@@ -293,6 +298,8 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
     stale: z.boolean(),
     outcome: assistantOutcomeSchema
   }).strict(),
+  z.object({ type: z.literal("task_draft"), stale: z.boolean(), draft: taskDraftSchema, model: z.string().min(1), mode: assistantModeSchema }).strict(),
+  z.object({ type: z.literal("backlog_proposal"), stale: z.boolean(), proposal: backlogProposalSchema, handoff: z.string().min(1) }).strict(),
   z.object({
     type: z.literal("assistant_error"),
     code: assistantErrorCodeSchema,

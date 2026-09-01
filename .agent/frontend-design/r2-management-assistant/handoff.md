@@ -765,6 +765,50 @@ release, or deployment approval.
 
 ---
 
+## Task 7 Start Card (2026-09-01)
+
+```md
+Workflow: 3.3
+Task: R2 Task 7 — safe Task prefill and copy-only Backlog handoff
+Role: Primary Agent (Codex, direct Human Owner authorization)
+Tier / reason: T3 — a consequential proposal may enter the existing task-creation journey
+Canonical record: .agent/frontend-design/r2-management-assistant/
+Branch / worktree: codex/r2-management-assistant · .worktrees/r2-pact-orchestrator
+Mockup Gate: Required — approved Task 0 revision 2 candidate actions; no new visual direction
+Review path: focused contract/service/component tests, final-build screenshots, independent review
+Human checkpoints: direct continuation while Tasks 5/6 await review; no Task/Backlog write, merge, release, or deployment authorization
+```
+
+**Pact audit:** `pactify assign r2-draft-handoffs …` was refused because this `opencode` seat has no
+orchestrator role. The draft task specification is retained as an audit artifact; no seat switch or
+identity simulation occurred. The Human Owner's direct Task 7 execution request is the authorization
+for implementation, not a waiver of independent review/verification or release gates.
+
+## Task 7 implementation evidence (2026-09-01)
+
+- Reconciled the approved fresh-run/no-history contract with Task 7: draft requests carry only a
+  bounded recommendation (`id`, `title`, `rationale`, and fixed candidate kind) plus mode and
+  manifest digest as untrusted owner intent. The service re-reads context, validates source IDs and
+  digest, calls once, and emits only a dedicated `task_draft` or `backlog_proposal` event.
+- A non-stale TaskDraft becomes `NativeTaskDraftInitialValues` and opens the existing form with a
+  blank Task ID and visible provenance. The normal form remains the only code path that can call
+  `createTaskAction`; its ordinary validation is unchanged.
+- BacklogProposal is re-hashed before display. The resulting repository-agent handoff explicitly
+  says AllJobs did not edit `docs/BACKLOG.md`, includes planning fields/evidence/unknowns/citations,
+  manifest/proposal digests, model/mode/time, and requires repository inspection before applying.
+  It is copy-only; no assistant path writes a Backlog, invokes Git/shell/agents, or creates a Task.
+- RED→GREEN: missing handoff module and missing form prefill behavior failed first; candidate intent
+  contract and Task-draft callback each then failed before their minimal implementation. Focused
+  verification: `npm test -- lib/assistant/contracts.test.ts lib/assistant/service.test.ts
+  lib/assistant/handoff.test.ts components/planning/assistant-panel.test.tsx
+  components/planning/native-task-form.test.tsx` → 5 files / 48 tests passed; `npm run typecheck`,
+  `git diff --check`, and final `./node_modules/.bin/next build --webpack` passed. A first final
+  build failed because client code imported the server-only digest helper (`node:crypto`); the
+  corrected boundary keeps digest verification and handoff construction server-side and sends only
+  validated copy text to the browser. No merge, release, deployment, or Task 8 work occurred.
+
+---
+
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
 
 **Pact task:** `r2-minimax-client` (feature `r2-management-assistant`)

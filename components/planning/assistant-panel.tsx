@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { AssistantEntryState } from "@/lib/assistant/context";
-import type { AssistantMode, AssistantRequestIntent, AssistantStreamEvent, ManagementAnswer, SourceAccessProposal } from "@/lib/assistant/contracts";
+import type { AssistantMode, AssistantRequestIntent, AssistantStreamEvent, BacklogProposal, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
 import { AssistantAnswer } from "./assistant-answer";
 import { AssistantContextReceiptView } from "./assistant-context-receipt";
 import { AssistantSourceGate } from "./assistant-source-gate";
 import { defaultAssistantMode, parseAssistantNdjson, readAssistantSession, writeAssistantSession } from "./assistant-session";
+import { toNativeTaskDraftInitialValues, type NativeTaskDraftInitialValues } from "@/lib/assistant/draft-client";
 
 export type AssistantRequester = (intent: AssistantRequestIntent) => Promise<AssistantStreamEvent[]>;
 
@@ -29,7 +30,7 @@ async function requestAssistant(intent: AssistantRequestIntent): Promise<Assista
   return parsed.events;
 }
 
-export function AssistantPanel({ projectSlug, entry, request = requestAssistant }: { projectSlug: string; entry?: AssistantEntryState; request?: AssistantRequester }) {
+export function AssistantPanel({ projectSlug, entry, request = requestAssistant, onUseTaskDraft }: { projectSlug: string; entry?: AssistantEntryState; request?: AssistantRequester; onUseTaskDraft?: (draft: NativeTaskDraftInitialValues) => void }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AssistantMode>("standard");
   const [question, setQuestion] = useState("");
@@ -38,6 +39,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant 
   const [proposal, setProposal] = useState<SourceAccessProposal | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [backlogProposal, setBacklogProposal] = useState<{ proposal: BacklogProposal; handoff: string } | null>(null);
   const [selectedOptionalSourceIds, setSelectedOptionalSourceIds] = useState<string[]>(() => selectedOptionalSources(entry));
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -83,6 +85,8 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant 
         if (event.type === "assistant_complete" && event.outcome.kind === "management_answer") { nextAnswer = event.outcome; nextStale = event.stale; }
         if (event.type === "source_access_requested") nextProposal = event.proposal;
         if (event.type === "assistant_error") nextMessage = event.message;
+        if (event.type === "task_draft" && !event.stale) { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); nextMessage = "Task draft is ready for normal-form review."; }
+        if (event.type === "backlog_proposal" && !event.stale) { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
       }
       if (nextAnswer) { setAnswer(nextAnswer); setStale(nextStale); persist(mode, nextAnswer); }
       if (nextProposal) setProposal(nextProposal);
@@ -103,6 +107,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant 
     if (!proposal) return;
     void consume({ intent, project_slug: projectSlug, gate_id: proposal.gate_id, question: question.trim(), expected_manifest_digest: entry.manifest_digest });
   };
+  const draftRecommendation = (candidate: ManagementRecommendation, intent: "draft_task" | "draft_backlog") => void consume({ intent, project_slug: projectSlug, candidate: candidate as any, mode, expected_manifest_digest: entry.manifest_digest });
 
   return <>
     <button type="button" className="btn" onClick={() => setOpen(true)}>Management assistant</button>
@@ -121,7 +126,8 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant 
               <code>{source.path}</code>
             </label>)}
           </fieldset>}
-          {answer && <AssistantAnswer answer={answer} stale={stale} />}
+          {answer && <AssistantAnswer answer={answer} stale={stale} onUseTaskDraft={(candidate) => draftRecommendation(candidate, "draft_task")} onDraftBacklog={(candidate) => draftRecommendation(candidate, "draft_backlog")} />}
+          {backlogProposal && <section className="assistant-source-gate" aria-label="Repository-agent Backlog handoff"><h3>Copy-only Backlog handoff</h3><textarea aria-label="Repository-agent handoff" readOnly value={backlogProposal.handoff} rows={10} /><button className="btn" type="button" onClick={() => void navigator.clipboard?.writeText(backlogProposal.handoff)}>Copy repository-agent handoff</button></section>}
           {proposal && <AssistantSourceGate proposal={proposal} disabled={running} onInspect={() => respondToGate("inspect_source")} onDecline={() => respondToGate("answer_without_source")} />}
           {message && <p className="assistant-message" role="status">{message}</p>}
         </div>
