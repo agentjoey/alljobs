@@ -6,6 +6,7 @@ const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
 export interface AssistantResponseRouteDependencies {
   respond: (intent: AssistantRequestIntent, signal: AbortSignal) => AsyncIterable<AssistantStreamEvent>;
   maxBodyBytes?: number;
+  allowedOrigins?: readonly string[];
 }
 
 function safeError(status: number, message: string): Response {
@@ -22,9 +23,11 @@ async function readBoundedJson(request: Request, maxBodyBytes: number): Promise<
 
 export function createAssistantResponseRoute(deps: AssistantResponseRouteDependencies) {
   const maxBodyBytes = deps.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
+  const allowedOrigins = new Set(deps.allowedOrigins ?? []);
   return async function POST(request: Request): Promise<Response> {
     const requestUrl = new URL(request.url);
-    if (request.headers.get("origin") !== requestUrl.origin) return safeError(403, "Assistant request origin is not allowed.");
+    const origin = request.headers.get("origin");
+    if (origin !== requestUrl.origin && !allowedOrigins.has(origin ?? "")) return safeError(403, "Assistant request origin is not allowed.");
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return safeError(415, "Assistant request must use JSON.");
 
     let raw: unknown;

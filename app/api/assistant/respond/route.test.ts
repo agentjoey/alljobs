@@ -58,6 +58,27 @@ describe("POST /api/assistant/respond", () => {
     expect(await foreign.text()).not.toContain("example.test");
   });
 
+  it("accepts the explicit public Control Host origin when the route is reached through its loopback proxy", async () => {
+    const respond = vi.fn(() => complete());
+    const POST = createAssistantResponseRoute({
+      respond,
+      allowedOrigins: ["https://alljobs.agentjoey.ai"]
+    });
+
+    const response = await POST(new Request("http://localhost:3456/api/assistant/respond", {
+      method: "POST",
+      headers: { origin: "https://alljobs.agentjoey.ai", "content-type": "application/json" },
+      body: JSON.stringify(validAsk)
+    }));
+
+    expect(response.status).toBe(200);
+    expect((await response.text()).trim().split("\n").map((line) => JSON.parse(line))).toEqual([
+      { type: "run_status", stage: "preparing" },
+      { type: "assistant_error", code: "PROVIDER_UNAVAILABLE", message: "Assistant is temporarily unavailable." }
+    ]);
+    expect(respond).toHaveBeenCalledWith(validAsk, expect.any(AbortSignal));
+  });
+
   it("streams strict NDJSON with no-store and nosniff through a real Request and propagates the signal", async () => {
     const respond = vi.fn((_intent: AssistantRequestIntent, signal: AbortSignal) => {
       expect(signal).toBeInstanceOf(AbortSignal);

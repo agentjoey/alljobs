@@ -7,6 +7,9 @@
   "assistant": {
     "enabled": false,
     "protocol": "openai-compatible",
-    "base_url": "https://api.minimax.io/v1"
+    "base_url": "https://api.minimax.io/v1",
+    "allowedOrigins": [
+      "https://alljobs.agentjoey.ai"
+    ]
   }
 }

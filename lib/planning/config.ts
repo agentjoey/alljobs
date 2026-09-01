@@ -4,6 +4,11 @@ import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
 import { ASSISTANT_LIMITS } from "../assistant/limits";
 
+const assistantAllowedOriginSchema = z.string().url().refine((value) => {
+  const origin = new URL(value);
+  return origin.protocol === "https:" && origin.origin === value;
+}, "Assistant allowed origins must be exact HTTPS origins without a path.");
+
 const fixedStandardLimitsSchema = z.object({
   contextBytes: z.literal(ASSISTANT_LIMITS.standard.contextBytes),
   outputTokens: z.literal(ASSISTANT_LIMITS.standard.outputTokens),
@@ -26,6 +31,7 @@ export const controlHostAssistantConfigSchema = z.object({
   protocol: z.literal("openai-compatible").default("openai-compatible"),
   base_url: z.literal("https://api.minimax.io/v1").default("https://api.minimax.io/v1"),
   model: z.literal("MiniMax-M3").default("MiniMax-M3"),
+  allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
   standard: fixedStandardLimitsSchema.default(ASSISTANT_LIMITS.standard),
   deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)
 }).strict();

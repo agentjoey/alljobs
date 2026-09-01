@@ -6,22 +6,22 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const service = createAssistantService();
-const respond = createAssistantResponseRoute(service);
 
-function assistantIsEnabled(): boolean {
+function getAssistantConfig() {
   try {
-    return loadControlHostConfig().config.assistant?.enabled === true;
+    return loadControlHostConfig().config.assistant;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
 export async function POST(request: Request): Promise<Response> {
-  if (!assistantIsEnabled()) {
+  const assistant = getAssistantConfig();
+  if (assistant?.enabled !== true) {
     return Response.json(
       { error: "Management assistant is not configured on this Control Host." },
       { status: 503, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } }
     );
   }
-  return respond(request);
+  return createAssistantResponseRoute({ ...service, allowedOrigins: assistant.allowedOrigins })(request);
 }
