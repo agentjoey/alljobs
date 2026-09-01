@@ -30,6 +30,10 @@ Internet → Cloudflare Access (Email OTP) → Cloudflare Tunnel (cloudflared)
 - Plist: `deploy/com.agentjoey.alljobs.plist`
 - Command: `npm run start:prod` (`next start -p 3456 -H 127.0.0.1`)
 - Logs: `~/Library/Logs/alljobs/{stdout,stderr}.log`
+- MiniMax Token Plan: maintain `MINIMAX_API_KEY=sk-cp-...` only in the installed
+  `~/Library/LaunchAgents/com.agentjoey.alljobs.plist` `EnvironmentVariables` dictionary;
+  set that file to mode `600`, then reload the service. Never add the key to repository JSON,
+  `.env` committed files, browser configuration, or logs.
 
 ### Refresh Worker Service (`com.agentjoey.alljobs-refresh`)
 - Plist: `deploy/com.agentjoey.alljobs-refresh.plist`
