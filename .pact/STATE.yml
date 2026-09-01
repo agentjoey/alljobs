@@ -91,3 +91,10 @@ features:
         spec: .pact/tasks/r2-management-assistant-orchestration.md
         evidence: Task 5 implemented by claude seat (no implementation worker). Commit 5ad39c1. Official Token Plan adapter remains server-only; no history restored. RED: missing service/stream/route modules; regression tests caught denied-source gate authority pass-through and preflight stale misclassification. GREEN: npm test -- lib/assistant/contracts.test.ts lib/assistant/service.test.ts lib/assistant/stream.test.ts app/api/assistant/respond/route.test.ts => 4 files / 41 tests passed; npm run typecheck passed; git diff --check passed. Real loopback Next probe: invalid cross-origin POST returned 403 with no-store and nosniff; no provider request. No Task 6, merge, push, deploy, or release.
         deps: [r2-source-gates]
+      - id: r2-panel
+        owner: claude
+        status: assigned
+        reviewer: opencode
+        spec: .pact/tasks/r2-management-assistant-panel.md
+        evidence: null
+        deps: [r2-orchestration]
