@@ -23,6 +23,8 @@ const fixedDeepLimitsSchema = z.object({
 export const controlHostAssistantConfigSchema = z.object({
   enabled: z.boolean(),
   provider: z.literal("minimax").default("minimax"),
+  protocol: z.literal("openai-compatible").default("openai-compatible"),
+  base_url: z.literal("https://api.minimax.io/v1").default("https://api.minimax.io/v1"),
   model: z.literal("MiniMax-M3").default("MiniMax-M3"),
   standard: fixedStandardLimitsSchema.default(ASSISTANT_LIMITS.standard),
   deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)

@@ -5,6 +5,8 @@
   ],
   "refreshIntervalSeconds": 300,
   "assistant": {
-    "enabled": false
+    "enabled": false,
+    "protocol": "openai-compatible",
+    "base_url": "https://api.minimax.io/v1"
   }
 }

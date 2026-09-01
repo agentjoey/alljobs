@@ -10,6 +10,8 @@ describe("control host assistant config", () => {
     });
     expect(parsed.assistant?.model).toBe("MiniMax-M3");
     expect(parsed.assistant?.provider).toBe("minimax");
+    expect(parsed.assistant?.protocol).toBe("openai-compatible");
+    expect(parsed.assistant?.base_url).toBe("https://api.minimax.io/v1");
     expect(parsed.assistant?.enabled).toBe(true);
   });
 
@@ -31,6 +33,17 @@ describe("control host assistant config", () => {
     expect(() => controlHostConfigSchema.parse({
       trustedCodeRoots: ["/workspace"],
       assistant: { enabled: true, provider: "openai", model: "MiniMax-M3" }
+    })).toThrow();
+  });
+
+  it("rejects a non-Token-Plan protocol or base URL", () => {
+    expect(() => controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      assistant: { enabled: true, provider: "minimax", model: "MiniMax-M3", protocol: "anthropic-compatible" }
+    })).toThrow();
+    expect(() => controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      assistant: { enabled: true, provider: "minimax", model: "MiniMax-M3", base_url: "https://example.test/v1" }
     })).toThrow();
   });
 
