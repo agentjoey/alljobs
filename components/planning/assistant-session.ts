@@ -48,7 +48,7 @@ export function parseAssistantNdjson(body: string): ParsedAssistantNdjson {
     .split("\n")
     .filter(Boolean)
     .map((line) => decodeAssistantEvent(line));
-  const hasTerminalOutcome = events.some((event) => event.type === "assistant_complete" || event.type === "assistant_error");
+  const hasTerminalOutcome = events.some((event) => event.type === "assistant_complete" || event.type === "task_draft" || event.type === "backlog_proposal" || event.type === "assistant_error");
   return { events, incomplete: !hasTerminalOutcome };
 }
 
