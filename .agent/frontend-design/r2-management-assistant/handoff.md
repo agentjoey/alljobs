@@ -755,6 +755,14 @@ identity simulation, reviewer self-acceptance, merge, release, or deployment was
 Pact ledger remains `assigned`; an owner checkpoint or an explicit Human Owner exception is required
 before the independent reviewer can accept it.
 
+### Human Owner audit exception (2026-09-01)
+
+The Human Owner explicitly authorized the owner/seat mismatch audit exception. The durable record is
+`.pact/tasks/r2-management-assistant-panel-human-audit-exception.md`. It allows `ab966a7` and
+`ca33780` to enter the independent review packet without an owner checkpoint, but does not waive
+independent T3 review/verification, final Human Owner walkthrough, configuration enablement, merge,
+release, or deployment approval.
+
 ---
 
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
