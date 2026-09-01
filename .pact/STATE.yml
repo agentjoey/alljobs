@@ -84,3 +84,10 @@ features:
         spec: .pact/tasks/r2-management-assistant-minimax-client.md
         evidence: BLOCKED — installed provider cannot transmit MiniMax-M3 adaptive thinking. Install+inspect completed first (ai@7.0.87, vercel-minimax-ai-provider@0.0.2 → @ai-sdk/anthropic@3.0.6). Proofs: MiniMax-M3 ✓ (minimax("MiniMax-M3") → LanguageModelV3), default Anthropic-compatible ✓ (minimax===minimaxAnthropic, baseURL https://api.minimax.io/anthropic/v1, anthropic-version 2023-06-01, x-api-key, MINIMAX_API_KEY), streaming ✓, tools ✓, structured output ⚠ (json-tool fallback; native output_format not documented), adaptive thinking ❌ BLOCKER. MiniMax docs: only thinking {"type":"adaptive"} enables M3 thinking. Installed @ai-sdk/anthropic@3.0.6 thinking schema = z.union([enabled,disabled]) (+budgetTokens) and maps enabled→{type:"enabled",budget_tokens} (Claude form). 'adaptive' appears nowhere in either package (rg -c adaptive = no matches). Passing type:"adaptive" throws 'invalid anthropic provider options' at parseProviderOptions. No verified path; substituting enabled/OpenAI forbidden by task. No adapter/prompt/smoke code written. Evidence: node versions printed; rg -c adaptive (0); grep z.literal("enabled") line 758; git diff --check clean. Commit a7e3c0b (handoff + package.json + package-lock.json only).
         deps: [r2-source-gates]
+      - id: r2-orchestration
+        owner: claude
+        status: assigned
+        reviewer: opencode
+        spec: .pact/tasks/r2-management-assistant-orchestration.md
+        evidence: null
+        deps: [r2-source-gates]
