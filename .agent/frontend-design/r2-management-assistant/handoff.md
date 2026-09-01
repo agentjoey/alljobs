@@ -599,6 +599,54 @@ protocol supports a compliant migration or the historical owner submits a checkp
 
 ---
 
+## Task 5 Start Card (2026-09-01)
+
+```md
+Workflow: 3.3
+Task: R2 Task 5 — bounded orchestration and streaming response route
+Role: Primary Agent (Codex)
+Tier / reason: T3 — new server Route Handler on the model-backed Project Detail journey
+Canonical record: .agent/frontend-design/r2-management-assistant/
+Branch / worktree: codex/r2-management-assistant · .worktrees/r2-pact-orchestrator
+Mockup Gate: Required — approved Task 0 revision 2; Task 5 has no visual divergence
+Review path: focused service/stream/real Request-Response tests, then independent review
+Human checkpoints: approved R2 brief + Mockup Gate; no merge, release, or deployment authorization
+```
+
+**Current contract reconciliation:** Task 5 is implemented against Task 1's strict fresh-run
+intent (no `history`) and Task 4's accepted official MiniMax Token Plan OpenAI-compatible adapter,
+not the superseded Vercel-provider/history examples retained in the older canonical plan text.
+
+## Task 5 implementation evidence (2026-09-01)
+
+**Implementation:** Codex primary agent; no implementation worker dispatched
+**Candidate:** pending commit on `codex/r2-management-assistant`
+
+- Added the server-only bounded service, strict NDJSON codec, and `POST /api/assistant/respond`.
+  The route accepts only same-origin, bounded JSON that parses as the strict intent contract; it
+  returns `application/x-ndjson`, `Cache-Control: no-store`, and `X-Content-Type-Options: nosniff`.
+- The service rebuilds and compares context before model invocation, invokes MiniMax at most once
+  (`maxRetries: 0`), validates output citations against manifest sources, rebuilds context after
+  output, records a metadata-only `ASSISTANT_RUN` receipt, and marks stale output non-actionable.
+  The new `STALE_CONTEXT` code represents a pre-call mismatch without invoking the provider.
+- A source request receives a server-created digest-only single-use gate. Only `inspect_source`
+  receives the gate's bounded Task 3 read tools; `answer_without_source` re-sends its current
+  bounded question with no gate/tool authority. No history field was restored.
+- RED → GREEN: missing service/stream/route modules first failed as expected. Additional RED tests
+  caught an initially incorrect denied-source gate pass-through and an overly broad preflight error
+  code; both now pass.
+- Final focused verification: `npm test -- lib/assistant/contracts.test.ts lib/assistant/service.test.ts lib/assistant/stream.test.ts app/api/assistant/respond/route.test.ts` → **4 files / 41 tests passed**;
+  `npm run typecheck` → passed; `git diff --check` → passed.
+- Real boundary probe: a temporary loopback-only Next development server on `127.0.0.1:3458`
+  received one deliberately invalid cross-origin POST. It returned **403** with `no-store` and
+  `nosniff`; no valid intent, provider call, credential, or model output was involved. The server
+  was then stopped.
+
+**Scope:** Task 5 only. No UI/Task 6, planning mutation, Backlog application, Git/shell execution,
+agent dispatch, deployment, merge, push, or release action.
+
+---
+
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
 
 **Pact task:** `r2-minimax-client` (feature `r2-management-assistant`)

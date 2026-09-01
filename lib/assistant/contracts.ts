@@ -30,6 +30,7 @@ export const assistantErrorCodeSchema = z.enum([
   "TIMEOUT",
   "PROVIDER_UNAVAILABLE",
   "ABORTED",
+  "STALE_CONTEXT",
   "INVALID_OUTPUT"
 ]);
 export type AssistantErrorCode = z.infer<typeof assistantErrorCodeSchema>;
@@ -88,12 +89,14 @@ export const assistantRequestIntentSchema = z.discriminatedUnion("intent", [
     intent: z.literal("inspect_source"),
     project_slug: projectSlugSchema,
     gate_id: z.string().min(1, "gate_id is required"),
+    question: boundedQuestionSchema,
     expected_manifest_digest: hexDigestSchema
   }).strict(),
   z.object({
     intent: z.literal("answer_without_source"),
     project_slug: projectSlugSchema,
     gate_id: z.string().min(1, "gate_id is required"),
+    question: boundedQuestionSchema,
     expected_manifest_digest: hexDigestSchema
   }).strict(),
   z.object({
@@ -166,6 +169,7 @@ export type ManagementAnswer = z.infer<typeof managementAnswerSchema>;
 
 export const sourceAccessProposalSchema = z.object({
   kind: z.literal("source_access_proposal"),
+  gate_id: z.string().min(1, "source access requires a server-bound gate id"),
   purpose: z.string().min(1, "purpose is required"),
   unanswered_question: z.string().min(1, "unanswered_question is required"),
   requested_capabilities: z.array(sourceCapabilitySchema).min(1, "at least one capability is required"),

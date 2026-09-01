@@ -119,6 +119,23 @@ describe("assistant request intent", () => {
       workspace_path: "/tmp/escape"
     }).success).toBe(false);
   });
+
+  it("requires the current bounded question for source follow-up intents without allowing history", () => {
+    expect(assistantRequestIntentSchema.safeParse({
+      intent: "inspect_source",
+      project_slug: "alljobs",
+      gate_id: randomUUID(),
+      expected_manifest_digest: digest
+    }).success).toBe(false);
+    expect(assistantRequestIntentSchema.safeParse({
+      intent: "answer_without_source",
+      project_slug: "alljobs",
+      gate_id: randomUUID(),
+      question: "What blocks R2?",
+      expected_manifest_digest: digest,
+      history: []
+    }).success).toBe(false);
+  });
 });
 
 describe("assistant context manifest", () => {
@@ -200,6 +217,7 @@ describe("assistant outcome", () => {
       purpose: "Inspect the parser entry point",
       unanswered_question: "How does the parser reject invalid input?",
       requested_capabilities: ["list_project_files", "read_project_files"],
+      gate_id: "server-bound-gate",
       max_files: 6,
       max_bytes: 192 * 1024,
       max_tool_calls: 4,
@@ -208,6 +226,21 @@ describe("assistant outcome", () => {
       expires_at: "2026-09-01T00:10:00.000Z"
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a source access proposal without a server-bound gate id", () => {
+    expect(sourceAccessProposalSchema.safeParse({
+      kind: "source_access_proposal",
+      purpose: "Inspect",
+      unanswered_question: "Why?",
+      requested_capabilities: ["list_project_files"],
+      max_files: 1,
+      max_bytes: 1,
+      max_tool_calls: 1,
+      expected_facts: [],
+      manifest_digest: digest,
+      expires_at: "2026-09-01T00:10:00.000Z"
+    }).success).toBe(false);
   });
 
   it("rejects a source access proposal with an empty capability set", () => {

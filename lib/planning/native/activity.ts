@@ -1,8 +1,10 @@
 import { appendFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { assistantRunRecordSchema, type AssistantRunRecord } from "../../assistant/contracts";
 import { getLogDir } from "../paths";
 
 export const BACKLOG_ORDERING_APPLIED = "BACKLOG_ORDERING_APPLIED";
+export const ASSISTANT_RUN = "ASSISTANT_RUN";
 
 export interface ActivityEvent {
   timestamp?: string;
@@ -23,4 +25,10 @@ export async function recordActivity(event: ActivityEvent, root?: string): Promi
   };
 
   await appendFile(logFile, `${JSON.stringify(entry)}\n`, "utf8");
+}
+
+/** Records only the strict operational receipt; callers must never pass model or source bodies. */
+export async function recordAssistantRun(run: AssistantRunRecord, root?: string): Promise<void> {
+  const receipt = assistantRunRecordSchema.parse(run);
+  await recordActivity({ type: ASSISTANT_RUN, project: receipt.project, details: receipt }, root);
 }
