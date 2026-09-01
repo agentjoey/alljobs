@@ -106,6 +106,17 @@ describe("assembleAssistantContext", () => {
     expect(JSON.stringify(bundle.receipt)).not.toContain("Visible dirty local value");
   });
 
+  it("keeps an invalid local planning document visible in the receipt but out of model fragments", async () => {
+    const invalid = `# Backlog\n\n## AJ-B-INVALID: Invalid priority\n\n\`\`\`yaml alljobs\nid: AJ-B-INVALID\nwork_mode: implementation\nphase: phase-1\nstatus: ready\npriority: P9\ndependencies: []\n\`\`\`\n`;
+    const { tempHome } = await setupWorkspace({ files: { "docs/BACKLOG.md": invalid } });
+
+    const bundle = await assembleAssistantContext({ projectSlug: "sample-code", root: tempHome });
+
+    expect(bundle.receipt.sources.some((source) => source.path === "docs/BACKLOG.md")).toBe(true);
+    expect(bundle.receipt.issues.some((issue) => issue.sourcePath === "docs/BACKLOG.md")).toBe(true);
+    expect(bundle.fragments.some((fragment) => fragment.path === "docs/BACKLOG.md")).toBe(false);
+  });
+
   it("includes only allowlisted optional sources when selected", async () => {
     const { tempHome } = await setupWorkspace({
       files: { "docs/architecture.md": "# Architecture\n\nApproved design details\n" },

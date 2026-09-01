@@ -82,8 +82,8 @@ export interface ReadProjectFilesResult {
 }
 
 export interface AssistantReadTools {
-  list_project_files(input: { prefix?: string }): Promise<ListProjectFilesResult>;
-  read_project_files(input: { paths: string[] }): Promise<ReadProjectFilesResult>;
+  list_project_files?: (input: { prefix?: string }) => Promise<ListProjectFilesResult>;
+  read_project_files?: (input: { paths: string[] }) => Promise<ReadProjectFilesResult>;
 }
 
 export function sourceBudgetFromGate(gate: SourceGateRecord): SourceReadBudget {
@@ -104,10 +104,14 @@ export function createAssistantReadTools(input: {
 }): AssistantReadTools {
   const budget = sourceBudgetFromGate(input.gate);
   return {
-    list_project_files: (opts = {}) =>
-      listProjectFiles({ project: input.project, budget, prefix: opts.prefix, root: input.root }),
-    read_project_files: (opts) =>
-      readProjectFiles({ project: input.project, paths: opts.paths, budget, root: input.root })
+    ...(input.gate.capabilities.includes("list_project_files") ? {
+      list_project_files: (opts = {}) =>
+        listProjectFiles({ project: input.project, budget, prefix: opts.prefix, root: input.root })
+    } : {}),
+    ...(input.gate.capabilities.includes("read_project_files") ? {
+      read_project_files: (opts) =>
+        readProjectFiles({ project: input.project, paths: opts.paths, budget, root: input.root })
+    } : {})
   };
 }
 
@@ -325,7 +329,7 @@ export async function listProjectFiles(input: ListProjectFilesInput): Promise<Li
 
   const filtered = prefix ? paths.filter((p) => p === prefix || p.startsWith(`${prefix}/`)) : paths;
 
-  return { paths: filtered, remaining_tool_calls: budget.remaining_tool_calls };
+  return { paths: filtered.slice(0, budget.remaining_files), remaining_tool_calls: budget.remaining_tool_calls };
 }
 
 export async function readProjectFiles(input: ReadProjectFilesInput): Promise<ReadProjectFilesResult> {

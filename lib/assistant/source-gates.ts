@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import type { AssistantMode } from "./contracts";
+import type { AssistantMode, SourceCapability } from "./contracts";
 import { ASSISTANT_LIMITS } from "./limits";
 
 export interface SourceGateRecord {
@@ -9,7 +9,7 @@ export interface SourceGateRecord {
   project_slug: string;
   question_digest: string;
   manifest_digest: string;
-  capabilities: readonly ["list_project_files", "read_project_files"];
+  capabilities: readonly SourceCapability[];
   max_files: number;
   max_bytes: number;
   max_tool_calls: number;
@@ -21,6 +21,7 @@ export interface CreateSourceGateInput {
   questionDigest: string;
   manifestDigest: string;
   mode: AssistantMode;
+  capabilities?: readonly SourceCapability[];
   now?: Date;
 }
 
@@ -89,7 +90,7 @@ export function createSourceGate(input: CreateSourceGateInput): SourceGateRecord
     project_slug: input.projectSlug,
     question_digest: input.questionDigest,
     manifest_digest: input.manifestDigest,
-    capabilities: ["list_project_files", "read_project_files"],
+    capabilities: [...new Set(input.capabilities ?? ["list_project_files", "read_project_files"])].sort() as SourceCapability[],
     max_files: limits.sourceFiles,
     max_bytes: limits.sourceBytes,
     max_tool_calls: limits.toolCalls,

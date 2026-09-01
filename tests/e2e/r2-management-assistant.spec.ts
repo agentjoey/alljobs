@@ -1,4 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
+import { existsSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import type { AssistantRequestIntent, AssistantStreamEvent, BacklogProposal } from "@/lib/assistant/contracts";
 import { mutateR2Manifest, readR2Activity, setR2AssistantEnabled } from "./r2-fixtures";
@@ -177,6 +179,27 @@ test.describe("R2 management assistant browser and authority boundaries", () => 
     await page.getByLabel("Ask management assistant").fill("Retry safely.");
     await page.getByRole("button", { name: "Ask Companion" }).click();
     await expect(page.getByRole("status")).toHaveText("Management assistant is temporarily unavailable.");
+  });
+
+  test("captures final R2 evidence", async ({ page }) => {
+    test.skip(process.env.R2_CAPTURE_EVIDENCE !== "1", "Set R2_CAPTURE_EVIDENCE=1 to write final screenshots.");
+    const evidenceDir = resolve(process.cwd(), ".agent/frontend-design/r2-management-assistant/final-screens");
+    mkdirSync(evidenceDir, { recursive: true });
+    await interceptAssistant(page, (intent) => [{ type: "assistant_complete", stale: false, outcome: answer(intent.expected_manifest_digest) }]);
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await openAssistant(page);
+    await page.getByLabel("Ask management assistant").fill("What is ready for review?");
+    await page.getByRole("button", { name: "Ask Companion" }).click();
+    await expect(page.getByRole("region", { name: "Companion output" })).toBeVisible();
+    await page.screenshot({ path: resolve(evidenceDir, "r2-assistant-output-1440.png"), fullPage: true });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.getByRole("heading", { name: "Management assistant" })).toBeVisible();
+    await assertNoHorizontalScroll(page);
+    await page.screenshot({ path: resolve(evidenceDir, "r2-assistant-output-390.png"), fullPage: true });
+    expect(existsSync(resolve(evidenceDir, "r2-assistant-output-390.png"))).toBe(true);
   });
 
 });

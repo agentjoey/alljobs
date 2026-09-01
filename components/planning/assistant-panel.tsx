@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { AssistantEntryState } from "@/lib/assistant/context";
 import type { AssistantMode, AssistantRequestIntent, AssistantStreamEvent, BacklogProposal, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
@@ -10,7 +10,7 @@ import { AssistantSourceGate } from "./assistant-source-gate";
 import { defaultAssistantMode, parseAssistantNdjson, readAssistantSession, writeAssistantSession } from "./assistant-session";
 import { toNativeTaskDraftInitialValues, type NativeTaskDraftInitialValues } from "@/lib/assistant/draft-client";
 
-export type AssistantRequester = (intent: AssistantRequestIntent) => Promise<AssistantStreamEvent[]>;
+export type AssistantRequester = (intent: AssistantRequestIntent, signal?: AbortSignal) => Promise<AssistantStreamEvent[]>;
 
 function selectedOptionalSources(entry?: AssistantEntryState): string[] {
   return entry && entry.enabled
@@ -18,11 +18,12 @@ function selectedOptionalSources(entry?: AssistantEntryState): string[] {
     : [];
 }
 
-async function requestAssistant(intent: AssistantRequestIntent): Promise<AssistantStreamEvent[]> {
+async function requestAssistant(intent: AssistantRequestIntent, signal?: AbortSignal): Promise<AssistantStreamEvent[]> {
   const response = await fetch("/api/assistant/respond", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(intent)
+    body: JSON.stringify(intent),
+    signal
   });
   if (!response.ok) throw new Error(`Assistant request failed (${response.status}).`);
   const parsed = parseAssistantNdjson(await response.text());
@@ -42,25 +43,21 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const [backlogProposal, setBacklogProposal] = useState<{ proposal: BacklogProposal; handoff: string } | null>(null);
   const [selectedOptionalSourceIds, setSelectedOptionalSourceIds] = useState<string[]>(() => selectedOptionalSources(entry));
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const abortRunRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    setOpen(false);
-    setQuestion("");
-    setAnswer(null);
-    setProposal(null);
-    setMessage(null);
-    setSelectedOptionalSourceIds(selectedOptionalSources(entry));
-  }, [projectSlug]);
-
-  useEffect(() => {
-    if (!open) return;
+  const openPanel = () => {
     const stored = readAssistantSession(projectSlug, window.sessionStorage);
     setMode(defaultAssistantMode(stored));
     if (stored?.currentRun?.manifestDigest === (entry && entry.enabled ? entry.manifest_digest : "")) {
       setAnswer({ kind: "management_answer", direct_answer: stored.currentRun.directAnswer, confirmed_facts: [], inferences: [], unknowns: [], questions: [], recommendations: [], citations: [] });
+    } else {
+      setAnswer(null);
     }
-    headingRef.current?.focus();
-  }, [open, projectSlug, entry]);
+    setProposal(null);
+    setMessage(null);
+    setSelectedOptionalSourceIds(selectedOptionalSources(entry));
+    setOpen(true);
+  };
 
   if (!entry || !entry.enabled) {
     const disabledMessage = entry?.message ?? "Management assistant is unavailable for this project.";
@@ -74,9 +71,11 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   };
 
   const consume = async (intent: AssistantRequestIntent) => {
-    setRunning(true); setMessage(null); setProposal(null);
+    const abortController = new AbortController();
+    abortRunRef.current = abortController;
+    setRunning(true); setMessage(null); setProposal(null); setBacklogProposal(null); setStale(false);
     try {
-      const events = await request(intent);
+      const events = await request(intent, abortController.signal);
       let nextAnswer: ManagementAnswer | null = null;
       let nextProposal: SourceAccessProposal | null = null;
       let nextMessage: string | null = null;
@@ -89,12 +88,17 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
         if (event.type === "backlog_proposal" && !event.stale) { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
       }
       if (nextAnswer) { setAnswer(nextAnswer); setStale(nextStale); persist(mode, nextAnswer); }
-      if (nextProposal) setProposal(nextProposal);
+      if (nextProposal && !nextStale) setProposal(nextProposal);
       if (nextMessage) setMessage(nextMessage);
       if (!nextAnswer && !nextProposal && !nextMessage) setMessage("The run ended before a complete result was received. Try again.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Assistant request failed. Try again.");
-    } finally { setRunning(false); }
+      setMessage(error instanceof DOMException && error.name === "AbortError"
+        ? "This assistant run was cancelled. No result was retained."
+        : error instanceof Error ? error.message : "Assistant request failed. Try again.");
+    } finally {
+      if (abortRunRef.current === abortController) abortRunRef.current = null;
+      setRunning(false);
+    }
   };
 
   const submit = () => {
@@ -110,7 +114,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const draftRecommendation = (candidate: ManagementRecommendation, intent: "draft_task" | "draft_backlog") => void consume({ intent, project_slug: projectSlug, candidate: candidate as any, mode, expected_manifest_digest: entry.manifest_digest });
 
   return <>
-    <button type="button" className="btn" onClick={() => setOpen(true)}>Management assistant</button>
+    <button type="button" className="btn" onClick={openPanel}>Management assistant</button>
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className="assistant-sheet" onOpenAutoFocus={(event) => { event.preventDefault(); headingRef.current?.focus(); }}>
         <SheetHeader className="assistant-sheet__header">
@@ -139,7 +143,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
           </fieldset>
           <label htmlFor={`assistant-question-${projectSlug}`}>Ask management assistant</label>
           <textarea id={`assistant-question-${projectSlug}`} value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={2_000} rows={3} placeholder="Ask about the current project evidence." />
-          <div className="assistant-composer__footer"><span aria-live="polite">{running ? "Companion is preparing a bounded run…" : "One request at a time."}</span><button type="button" className="btn btn--primary" onClick={submit} disabled={running}>Ask Companion</button></div>
+          <div className="assistant-composer__footer"><span aria-live="polite">{running ? "Companion is preparing a bounded run…" : "One request at a time."}</span>{running && <button type="button" className="btn" onClick={() => abortRunRef.current?.abort()}>Cancel run</button>}<button type="button" className="btn btn--primary" onClick={submit} disabled={running}>Ask Companion</button></div>
         </div>
       </SheetContent>
     </Sheet>

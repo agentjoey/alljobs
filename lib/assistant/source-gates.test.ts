@@ -16,6 +16,7 @@ function makeGate(
     questionDigest: string;
     manifestDigest: string;
     mode: "standard" | "deep";
+    capabilities: readonly ["list_project_files"] | readonly ["read_project_files"] | readonly ["list_project_files", "read_project_files"];
     now: Date;
   }> = {}
 ): SourceGateRecord {
@@ -67,6 +68,11 @@ describe("createSourceGate", () => {
     expect(gate.max_files).toBe(12);
     expect(gate.max_bytes).toBe(384 * 1024);
     expect(gate.max_tool_calls).toBe(8);
+  });
+
+  it("binds only the capability set that the model requested", () => {
+    const gate = makeGate({ capabilities: ["list_project_files"] });
+    expect(gate.capabilities).toEqual(["list_project_files"]);
   });
 
   it("stores only digests, never the question text", () => {

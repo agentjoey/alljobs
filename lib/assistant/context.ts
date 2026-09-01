@@ -237,7 +237,7 @@ function toDocument(input: {
       optional: input.optional,
       selected: input.selected,
       content: input.read.content,
-      produceFragment: true,
+      produceFragment: input.issues.length === 0,
       issues: input.issues
     };
   }

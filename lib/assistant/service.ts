@@ -157,16 +157,20 @@ async function createSourceTools(projectSlug: string, gate: SourceGateRecord) {
   if (!project) throw new Error("OUTCOME_PROJECT_NOT_FOUND");
   const readTools = createAssistantReadTools({ project, gate });
   return {
-    list_project_files: tool({
-      description: "List safe repository-relative source files for the approved inspection only.",
-      inputSchema: z.object({ prefix: z.string().max(240).optional() }).strict(),
-      execute: ({ prefix }) => readTools.list_project_files({ prefix })
-    }),
-    read_project_files: tool({
-      description: "Read approved safe repository-relative source files within the gate budget only.",
-      inputSchema: z.object({ paths: z.array(z.string().min(1).max(240)).min(1).max(gate.max_files) }).strict(),
-      execute: ({ paths }) => readTools.read_project_files({ paths })
-    })
+    ...(gate.capabilities.includes("list_project_files") ? {
+      list_project_files: tool({
+        description: "List safe repository-relative source files for the approved inspection only.",
+        inputSchema: z.object({ prefix: z.string().max(240).optional() }).strict(),
+        execute: ({ prefix }) => readTools.list_project_files?.({ prefix })
+      })
+    } : {}),
+    ...(gate.capabilities.includes("read_project_files") ? {
+      read_project_files: tool({
+        description: "Read approved safe repository-relative source files within the gate budget only.",
+        inputSchema: z.object({ paths: z.array(z.string().min(1).max(240)).min(1).max(gate.max_files) }).strict(),
+        execute: ({ paths }) => readTools.read_project_files?.({ paths })
+      })
+    } : {})
   };
 }
 
@@ -247,12 +251,13 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
       yield { type: "run_status", stage: "validating" };
       const secondContext = await assemble(contextInput(intent, mode));
       const stale = secondContext.manifest.manifest_digest !== manifestDigest;
-      if (managementOutcome.kind === "source_access_proposal") {
+      if (managementOutcome.kind === "source_access_proposal" && !stale) {
         const createdGate = createSourceGate({
           projectSlug: intent.project_slug,
           questionDigest: assistantDigest("question" in intent ? intent.question : ""),
           manifestDigest,
           mode,
+          capabilities: managementOutcome.requested_capabilities,
           now: now()
         });
         sourceGate = "requested";

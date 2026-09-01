@@ -118,6 +118,12 @@ describe("listProjectFiles", () => {
     expect(result.paths.every((p) => p.startsWith("src/"))).toBe(true);
   });
 
+  it("never returns more paths than the source-file budget permits", async () => {
+    const fixture = await setupFixture();
+    const result = await list(fixture, undefined, budget({ remaining_files: 1 }));
+    expect(result.paths).toHaveLength(1);
+  });
+
   it("exhausts the tool-call budget", async () => {
     const fixture = await setupFixture();
     await expect(list(fixture, undefined, budget({ remaining_tool_calls: 0 }))).rejects.toMatchObject({
@@ -254,12 +260,12 @@ describe("readProjectFiles", () => {
     });
     const tools = createAssistantReadTools({ project: fixture.project, gate, root: fixture.tempHome });
 
-    await tools.list_project_files({ prefix: "src" });
-    await tools.list_project_files({});
-    await tools.read_project_files({ paths: ["src/index.ts"] });
-    await tools.read_project_files({ paths: ["src/util.ts"] });
+    await tools.list_project_files!({ prefix: "src" });
+    await tools.list_project_files!({});
+    await tools.read_project_files!({ paths: ["src/index.ts"] });
+    await tools.read_project_files!({ paths: ["src/util.ts"] });
 
-    await expect(tools.read_project_files({ paths: ["src/index.ts"] })).rejects.toMatchObject({
+    await expect(tools.read_project_files!({ paths: ["src/index.ts"] })).rejects.toMatchObject({
       code: "SOURCE_TOOL_CALLS_EXHAUSTED"
     });
   });

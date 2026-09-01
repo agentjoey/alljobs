@@ -9,7 +9,8 @@ export function AssistantContextReceiptView({ receipt }: { receipt: AssistantCon
         {receipt.sources.map((source) => (
           <li key={source.source_id}>
             <code>{source.path}</code>
-            <span>{source.selected ? "Included" : "Available"}</span>
+            <span>{source.selected ? "Included" : "Available"} · {source.bytes.toLocaleString()} B · {source.modified === null ? "source state unavailable" : source.modified ? "modified" : "unchanged"}</span>
+            <small>digest {source.digest.slice(0, 12)}… · read {source.read_at}</small>
           </li>
         ))}
       </ul>

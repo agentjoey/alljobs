@@ -120,6 +120,31 @@ describe("assistant service", () => {
     expect(events).toContainEqual(expect.objectContaining({ type: "assistant_complete", stale: true, outcome: validAnswer }));
   });
 
+  it("does not create a consequential source gate after post-call context becomes stale", async () => {
+    const sourceRequest: AssistantOutcome = {
+      kind: "source_access_proposal",
+      gate_id: "model-placeholder",
+      purpose: "Inspect implementation details",
+      unanswered_question: "Which module owns this?",
+      requested_capabilities: ["list_project_files"],
+      max_files: 1,
+      max_bytes: 1,
+      max_tool_calls: 1,
+      expected_facts: [],
+      manifest_digest: DIGEST,
+      expires_at: "never"
+    };
+    const service = createAssistantService({
+      assembleContext: vi.fn().mockResolvedValueOnce(bundle()).mockResolvedValueOnce(bundle(NEXT_DIGEST)),
+      generate: vi.fn().mockResolvedValue({ outcome: sourceRequest })
+    });
+
+    const events = await collect(service.respond(ask, new AbortController().signal));
+
+    expect(events).not.toContainEqual(expect.objectContaining({ type: "source_access_requested" }));
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_complete", stale: true }));
+  });
+
   it("fails closed when a model outcome cites a source outside the current manifest", async () => {
     const service = createAssistantService({
       assembleContext: vi.fn().mockResolvedValue(bundle()),
