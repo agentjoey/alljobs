@@ -741,6 +741,20 @@ Independence: no independent reviewer/verification run has yet occurred.
 write its conclusion here, and use the Pact reviewer path. Human Owner still owns final walkthrough,
 configuration enablement, merge, release, and deployment decisions.
 
+### Pact checkpoint audit (2026-09-01)
+
+After committing the candidate as `ab966a7`, the orchestrator attempted the required checkpoint:
+
+```text
+pactify checkpoint r2-panel --evidence "…"
+→ pactify checkpoint: opencode is not the owner of r2-panel (owner: claude)
+```
+
+The task is assigned to `claude` but this worktree is bound to the `opencode` seat. No seat switch,
+identity simulation, reviewer self-acceptance, merge, release, or deployment was attempted. The
+Pact ledger remains `assigned`; an owner checkpoint or an explicit Human Owner exception is required
+before the independent reviewer can accept it.
+
 ---
 
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
