@@ -569,6 +569,21 @@ Task 4 requires a separate dependency/provider compatibility gate and Pact revie
 
 ---
 
+## Task 4 Token Plan correction and acceptance (2026-09-01)
+
+**Implementation:** Human Owner-directed orchestrator correction (no worker dispatched)
+**Reviewed candidate:** `45e70df` and `b446a89`
+**Verdict:** **ACCEPTED by Human Owner direction**
+
+- Replaced the incorrect `vercel-minimax-ai-provider` integration with the official Token Plan OpenAI-compatible contract: `https://api.minimax.io/v1`, `MiniMax-M3`, and server-only `MINIMAX_API_KEY`.
+- The installed LaunchAgent stores the key in its private `EnvironmentVariables`; adapter code fails closed if it is missing. No key exists in repository configuration, tests, logs, prompt output, or activity.
+- Focused verification: `npm test -- lib/assistant/minimax-token-plan.test.ts lib/assistant/prompt.test.ts lib/planning/config.test.ts` passed **3 files / 15 tests**; `npm run typecheck` and whitespace/removed-provider checks passed.
+- Live synthetic validation (explicit Token Plan authorization): official `POST /v1/chat/completions` returned HTTP 200, `model: MiniMax-M3`, `object: chat.completion`, and usage metadata. The key, prompt, reasoning, and response body were not recorded or printed.
+
+The earlier Vercel-provider blocker is superseded. Task 5 remains a separate implementation and review boundary.
+
+---
+
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
 
 **Pact task:** `r2-minimax-client` (feature `r2-management-assistant`)
