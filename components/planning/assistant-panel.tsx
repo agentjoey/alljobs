@@ -3,14 +3,15 @@
 import { useRef, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { AssistantEntryState } from "@/lib/assistant/context";
-import type { AssistantMode, AssistantRequestIntent, AssistantStreamEvent, BacklogProposal, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
+import type { AssistantMode, AssistantPartialView, AssistantRequestIntent, AssistantStreamEvent, BacklogProposal, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
+import { decodeAssistantEvent } from "@/lib/assistant/stream";
 import { AssistantAnswer } from "./assistant-answer";
 import { AssistantContextReceiptView } from "./assistant-context-receipt";
 import { AssistantSourceGate } from "./assistant-source-gate";
-import { defaultAssistantMode, parseAssistantNdjson, readAssistantSession, writeAssistantSession } from "./assistant-session";
+import { defaultAssistantMode, readAssistantSession, writeAssistantSession } from "./assistant-session";
 import { toNativeTaskDraftInitialValues, type NativeTaskDraftInitialValues } from "@/lib/assistant/draft-client";
 
-export type AssistantRequester = (intent: AssistantRequestIntent, signal?: AbortSignal) => Promise<AssistantStreamEvent[]>;
+export type AssistantRequester = (intent: AssistantRequestIntent, signal?: AbortSignal, onEvent?: (event: AssistantStreamEvent) => void) => Promise<AssistantStreamEvent[]>;
 
 function selectedOptionalSources(entry?: AssistantEntryState): string[] {
   return entry && entry.enabled
@@ -18,7 +19,11 @@ function selectedOptionalSources(entry?: AssistantEntryState): string[] {
     : [];
 }
 
-async function requestAssistant(intent: AssistantRequestIntent, signal?: AbortSignal): Promise<AssistantStreamEvent[]> {
+function isTerminalEvent(event: AssistantStreamEvent): boolean {
+  return event.type === "assistant_complete" || event.type === "task_draft" || event.type === "backlog_proposal" || event.type === "assistant_error";
+}
+
+async function requestAssistant(intent: AssistantRequestIntent, signal?: AbortSignal, onEvent?: (event: AssistantStreamEvent) => void): Promise<AssistantStreamEvent[]> {
   const response = await fetch("/api/assistant/respond", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,9 +31,36 @@ async function requestAssistant(intent: AssistantRequestIntent, signal?: AbortSi
     signal
   });
   if (!response.ok) throw new Error(`Assistant request failed (${response.status}).`);
-  const parsed = parseAssistantNdjson(await response.text());
-  if (parsed.incomplete) throw new Error("The run ended before a complete result was received. Try again.");
-  return parsed.events;
+  if (!response.body) throw new Error("The run ended before a complete result was received. Try again.");
+
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  const events: AssistantStreamEvent[] = [];
+  let pending = "";
+  const consumeLine = (line: string) => {
+    if (!line) return;
+    const event = decodeAssistantEvent(line);
+    events.push(event);
+    onEvent?.(event);
+  };
+  const consumeAvailableLines = () => {
+    const lines = pending.split("\n");
+    pending = lines.pop() ?? "";
+    lines.forEach(consumeLine);
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (value) {
+      pending += decoder.decode(value, { stream: !done });
+      consumeAvailableLines();
+    }
+    if (done) break;
+  }
+  pending += decoder.decode();
+  if (pending) consumeLine(pending);
+  if (!events.some(isTerminalEvent)) throw new Error("The run ended before a complete result was received. Try again.");
+  return events;
 }
 
 export function AssistantPanel({ projectSlug, entry, request = requestAssistant, onUseTaskDraft }: { projectSlug: string; entry?: AssistantEntryState; request?: AssistantRequester; onUseTaskDraft?: (draft: NativeTaskDraftInitialValues) => void }) {
@@ -40,6 +72,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const [proposal, setProposal] = useState<SourceAccessProposal | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [partial, setPartial] = useState<AssistantPartialView | null>(null);
   const [backlogProposal, setBacklogProposal] = useState<{ proposal: BacklogProposal; handoff: string } | null>(null);
   const [selectedOptionalSourceIds, setSelectedOptionalSourceIds] = useState<string[]>(() => selectedOptionalSources(entry));
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -73,9 +106,11 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const consume = async (intent: AssistantRequestIntent) => {
     const abortController = new AbortController();
     abortRunRef.current = abortController;
-    setRunning(true); setMessage(null); setProposal(null); setBacklogProposal(null); setStale(false);
+    setRunning(true); setMessage(null); setAnswer(null); setPartial(null); setProposal(null); setBacklogProposal(null); setStale(false);
     try {
-      const events = await request(intent, abortController.signal);
+      const events = await request(intent, abortController.signal, (event) => {
+        if (event.type === "assistant_partial") setPartial(event.partial);
+      });
       let nextAnswer: ManagementAnswer | null = null;
       let nextProposal: SourceAccessProposal | null = null;
       let nextMessage: string | null = null;
@@ -84,10 +119,17 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
         if (event.type === "assistant_complete" && event.outcome.kind === "management_answer") { nextAnswer = event.outcome; nextStale = event.stale; }
         if (event.type === "source_access_requested") nextProposal = event.proposal;
         if (event.type === "assistant_error") nextMessage = event.message;
-        if (event.type === "task_draft" && !event.stale) { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); setOpen(false); nextMessage = "Task draft is ready for normal-form review."; }
-        if (event.type === "backlog_proposal" && !event.stale) { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
+        if (event.type === "task_draft") {
+          if (event.stale) nextMessage = "Stale — refresh context before using this proposed change.";
+          else { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); setOpen(false); nextMessage = "Task draft is ready for normal-form review."; }
+        }
+        if (event.type === "backlog_proposal") {
+          if (event.stale) nextMessage = "Stale — refresh context before using this proposed change.";
+          else { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
+        }
       }
       if (nextAnswer) { setAnswer(nextAnswer); setStale(nextStale); persist(mode, nextAnswer); }
+      if (events.some(isTerminalEvent)) setPartial(null);
       if (nextProposal && !nextStale) setProposal(nextProposal);
       if (nextMessage) setMessage(nextMessage);
       if (!nextAnswer && !nextProposal && !nextMessage) setMessage("The run ended before a complete result was received. Try again.");
@@ -131,6 +173,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
             </label>)}
           </fieldset>}
           {answer && <AssistantAnswer answer={answer} stale={stale} onUseTaskDraft={(candidate) => draftRecommendation(candidate, "draft_task")} onDraftBacklog={(candidate) => draftRecommendation(candidate, "draft_backlog")} />}
+          {!answer && partial && <AssistantPartialOutput partial={partial} />}
           {backlogProposal && <section className="assistant-source-gate" aria-label="Repository-agent Backlog handoff"><h3>Copy-only Backlog handoff</h3><textarea aria-label="Repository-agent handoff" readOnly value={backlogProposal.handoff} rows={10} /><button className="btn" type="button" onClick={() => void navigator.clipboard?.writeText(backlogProposal.handoff)}>Copy repository-agent handoff</button></section>}
           {proposal && <AssistantSourceGate proposal={proposal} disabled={running} onInspect={() => respondToGate("inspect_source")} onDecline={() => respondToGate("answer_without_source")} />}
           {message && <p className="assistant-message" role="status">{message}</p>}
@@ -148,4 +191,11 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
       </SheetContent>
     </Sheet>
   </>;
+}
+
+function AssistantPartialOutput({ partial }: { partial: AssistantPartialView }) {
+  return <section className="assistant-output" aria-label="Companion output">
+    <div className="assistant-output__header"><strong>Companion output</strong><span>Incomplete — not actionable</span></div>
+    <p className="assistant-output__answer">{partial.direct_answer ?? "Partial response received; wait for a complete result before taking action."}</p>
+  </section>;
 }

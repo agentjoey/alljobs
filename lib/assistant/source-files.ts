@@ -329,7 +329,9 @@ export async function listProjectFiles(input: ListProjectFilesInput): Promise<Li
 
   const filtered = prefix ? paths.filter((p) => p === prefix || p.startsWith(`${prefix}/`)) : paths;
 
-  return { paths: filtered.slice(0, budget.remaining_files), remaining_tool_calls: budget.remaining_tool_calls };
+  const listedPaths = filtered.slice(0, budget.remaining_files);
+  budget.remaining_files -= listedPaths.length;
+  return { paths: listedPaths, remaining_tool_calls: budget.remaining_tool_calls };
 }
 
 export async function readProjectFiles(input: ReadProjectFilesInput): Promise<ReadProjectFilesResult> {

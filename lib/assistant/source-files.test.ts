@@ -124,6 +124,17 @@ describe("listProjectFiles", () => {
     expect(result.paths).toHaveLength(1);
   });
 
+  it("spends the shared source-file budget across repeated listings", async () => {
+    const fixture = await setupFixture();
+    const sharedBudget = budget({ remaining_files: 2 });
+
+    const first = await list(fixture, undefined, sharedBudget);
+    const second = await list(fixture, undefined, sharedBudget);
+
+    expect(first.paths).toHaveLength(2);
+    expect(second.paths).toEqual([]);
+  });
+
   it("exhausts the tool-call budget", async () => {
     const fixture = await setupFixture();
     await expect(list(fixture, undefined, budget({ remaining_tool_calls: 0 }))).rejects.toMatchObject({
@@ -262,10 +273,10 @@ describe("readProjectFiles", () => {
 
     await tools.list_project_files!({ prefix: "src" });
     await tools.list_project_files!({});
-    await tools.read_project_files!({ paths: ["src/index.ts"] });
-    await tools.read_project_files!({ paths: ["src/util.ts"] });
+    await tools.list_project_files!({ prefix: "docs" });
+    await tools.list_project_files!({ prefix: "src/deep" });
 
-    await expect(tools.read_project_files!({ paths: ["src/index.ts"] })).rejects.toMatchObject({
+    await expect(tools.list_project_files!({})).rejects.toMatchObject({
       code: "SOURCE_TOOL_CALLS_EXHAUSTED"
     });
   });

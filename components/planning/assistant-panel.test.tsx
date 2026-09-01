@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { AssistantEntryState } from "@/lib/assistant/context";
+import type { AssistantStreamEvent } from "@/lib/assistant/contracts";
 import { AssistantPanel } from "./assistant-panel";
 
 const DIGEST = "a".repeat(64);
@@ -48,7 +49,7 @@ describe("AssistantPanel", () => {
     await user.type(screen.getByLabelText("Ask management assistant"), "What is ready?");
     await user.click(screen.getByRole("button", { name: "Ask Companion" }));
 
-    expect(request).toHaveBeenCalledWith(expect.objectContaining({ intent: "ask", question: "What is ready?", mode: "standard", expected_manifest_digest: DIGEST }), expect.any(AbortSignal));
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({ intent: "ask", question: "What is ready?", mode: "standard", expected_manifest_digest: DIGEST }), expect.any(AbortSignal), expect.any(Function));
     expect(request).not.toHaveBeenCalledWith(expect.objectContaining({ history: expect.anything() }));
     expect(screen.getByText("Companion output")).toBeVisible();
     expect(screen.getByText("One ready item.")).toBeVisible();
@@ -69,10 +70,10 @@ describe("AssistantPanel", () => {
     await user.type(screen.getByLabelText("Ask management assistant"), "What is ready?");
     await user.click(screen.getByRole("button", { name: "Ask Companion" }));
     expect(await screen.findByRole("region", { name: "Additional source access" })).toBeVisible();
-    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({ intent: "ask", selected_optional_source_ids: ["docs/NOTES.md"] }), expect.any(AbortSignal));
+    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({ intent: "ask", selected_optional_source_ids: ["docs/NOTES.md"] }), expect.any(AbortSignal), expect.any(Function));
 
     await user.click(screen.getByRole("button", { name: "Inspect source" }));
-    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({ intent: "inspect_source", gate_id: "gate-1", question: "What is ready?" }), expect.any(AbortSignal));
+    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({ intent: "inspect_source", gate_id: "gate-1", question: "What is ready?" }), expect.any(AbortSignal), expect.any(Function));
     expect(await screen.findByText("Checked.")).toBeVisible();
   });
 
@@ -101,6 +102,20 @@ describe("AssistantPanel", () => {
     await user.click(screen.getByRole("button", { name: "Ask Companion" }));
     expect(onUseTaskDraft).toHaveBeenCalledWith(expect.objectContaining({ title: "Verify citations", provenance: expect.objectContaining({ manifest_digest: DIGEST }) }));
     expect(screen.queryByRole("heading", { name: "Management assistant" })).not.toBeInTheDocument();
+  });
+
+  it("names a stale draft as non-actionable instead of treating it as an incomplete run", async () => {
+    const user = userEvent.setup();
+    const onUseTaskDraft = vi.fn();
+    const request = vi.fn().mockResolvedValue([{ type: "task_draft", stale: true, model: "MiniMax-M3", mode: "standard", draft: { title: "Do not use", status: "todo", evidence: [], assumptions: [], citation_source_ids: [], manifest_digest: DIGEST } }]);
+    render(<AssistantPanel projectSlug="sample-code" entry={enabled} request={request} onUseTaskDraft={onUseTaskDraft} />);
+
+    await user.click(screen.getByRole("button", { name: "Management assistant" }));
+    await user.type(screen.getByLabelText("Ask management assistant"), "Draft this");
+    await user.click(screen.getByRole("button", { name: "Ask Companion" }));
+
+    expect(await screen.findByText("Stale — refresh context before using this proposed change.")).toBeVisible();
+    expect(onUseTaskDraft).not.toHaveBeenCalled();
   });
 
   it("removes an older Backlog handoff before a later stale result can be shown", async () => {
@@ -135,5 +150,22 @@ describe("AssistantPanel", () => {
     await user.click(screen.getByRole("button", { name: "Cancel run" }));
     expect(await screen.findByText("This assistant run was cancelled. No result was retained.")).toBeVisible();
     expect(screen.queryByText("Companion output")).not.toBeInTheDocument();
+  });
+
+  it("keeps streamed partial output visible but non-actionable when transport ends incomplete", async () => {
+    const user = userEvent.setup();
+    const request = vi.fn(async (_intent: unknown, _signal?: AbortSignal, onEvent?: (event: AssistantStreamEvent) => void) => {
+      onEvent?.({ type: "assistant_partial", partial: { direct_answer: "Partial evidence only." } });
+      throw new Error("The run ended before a complete result was received. Try again.");
+    });
+    render(<AssistantPanel projectSlug="sample-code" entry={enabled} request={request} />);
+
+    await user.click(screen.getByRole("button", { name: "Management assistant" }));
+    await user.type(screen.getByLabelText("Ask management assistant"), "Show partial");
+    await user.click(screen.getByRole("button", { name: "Ask Companion" }));
+
+    expect(await screen.findByText("Partial evidence only.")).toBeVisible();
+    expect(screen.getByText("Incomplete — not actionable")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Use as Task draft" })).not.toBeInTheDocument();
   });
 });
