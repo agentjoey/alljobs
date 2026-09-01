@@ -582,6 +582,14 @@ Task 4 requires a separate dependency/provider compatibility gate and Pact revie
 
 The earlier Vercel-provider blocker is superseded. Task 5 remains a separate implementation and review boundary.
 
+### Pact audit exception
+
+The historical task owner was `opencode`, but the corrected Token Plan implementation was
+performed directly by the orchestrator after the Human Owner instructed that no worker be
+dispatched. On 2026-09-01, the Human Owner explicitly authorized a **Human Owner direct
+acceptance exception** for Task 4. The task must be reassigned to the `human` owner identity
+for its review-state transition; no worker identity may be used to represent this delivery.
+
 ---
 
 # Task 4 — MiniMax-M3 provider proof + adapter (`r2-minimax-client`) — **BLOCKED**
