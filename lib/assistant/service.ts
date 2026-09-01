@@ -84,6 +84,18 @@ export function parseAssistantModelJson(text: string): unknown {
   }
 }
 
+/** Only a fully closed JSON direct_answer string may reach the incomplete UI. */
+export function extractAssistantPartial(text: string): AssistantPartialView | null {
+  const match = /"direct_answer"\s*:\s*"((?:\\.|[^"\\])*)"/.exec(text);
+  if (!match) return null;
+  try {
+    const directAnswer: unknown = JSON.parse(`"${match[1]}"`);
+    return typeof directAnswer === "string" ? { direct_answer: directAnswer } : null;
+  } catch {
+    return null;
+  }
+}
+
 function validateDraftCitations(ids: string[], context: AssistantContextBundle): void {
   const available = new Set(context.manifest.documents.map((document) => document.source_id));
   if (ids.some((id) => !available.has(id))) throw new Error("OUTCOME_UNKNOWN_CITATION");
@@ -149,7 +161,7 @@ async function generateWithMiniMax(input: AssistantModelInput): Promise<Assistan
     ? await createSourceTools(input.intent.project_slug, input.sourceGate)
     : undefined;
   const result = streamText({
-    model: createMiniMaxTokenPlanModel(),
+    model: createMiniMaxTokenPlanModel({ mode }),
     instructions: buildAssistantPrompt(),
     prompt: JSON.stringify({
       request: input.intent,
@@ -164,23 +176,42 @@ async function generateWithMiniMax(input: AssistantModelInput): Promise<Assistan
     maxOutputTokens: ASSISTANT_LIMITS[mode].outputTokens,
     maxRetries: 0,
     abortSignal: input.signal,
-    ...(sourceTools ? { tools: sourceTools, stopWhen: stepCountIs(input.sourceGate!.max_tool_calls) } : {})
+    ...(sourceTools ? { tools: sourceTools, stopWhen: stepCountIs(input.sourceGate!.max_tool_calls + 1) } : {})
+  });
+
+  let resolveTerminal!: (value: AssistantModelResult) => void;
+  let rejectTerminal!: (reason?: unknown) => void;
+  const terminal = new Promise<AssistantModelResult>((resolve, reject) => {
+    resolveTerminal = resolve;
+    rejectTerminal = reject;
   });
 
   return {
-    partials: (async function* () {})(),
-    result: (async () => {
-      let text = "";
-      for await (const chunk of result.textStream) text += chunk;
-      const usage = await result.totalUsage;
-      return {
-        outcome: parseAssistantModelJson(text) as AssistantModelResult["outcome"],
-        usage: {
-          input_tokens: usage.inputTokens,
-          output_tokens: usage.outputTokens
+    partials: (async function* () {
+      try {
+        let text = "";
+        let lastPartial = "";
+        for await (const chunk of result.textStream) {
+          text += chunk;
+          const partial = extractAssistantPartial(text);
+          if (partial?.direct_answer && partial.direct_answer !== lastPartial) {
+            lastPartial = partial.direct_answer;
+            yield partial;
+          }
         }
-      };
-    })()
+        const usage = await result.totalUsage;
+        resolveTerminal({
+          outcome: parseAssistantModelJson(text) as AssistantModelResult["outcome"],
+          usage: {
+            input_tokens: usage.inputTokens,
+            output_tokens: usage.outputTokens
+          }
+        });
+      } catch (error) {
+        rejectTerminal(error);
+      }
+    })(),
+    result: terminal
   };
 }
 

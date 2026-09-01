@@ -2,7 +2,7 @@ import type { AssistantContextReceipt } from "@/lib/assistant/context";
 
 export function AssistantContextReceiptView({ receipt }: { receipt: AssistantContextReceipt }) {
   return (
-    <section className="assistant-receipt" aria-label="Context receipt">
+    <section className="assistant-receipt" aria-label="Context receipt" tabIndex={0}>
       <h3>Context receipt</h3>
       <p>{receipt.source_mode.replaceAll("-", " ")}{receipt.head_revision ? ` · ${receipt.head_revision}` : ""}</p>
       <ul>

@@ -638,6 +638,7 @@ body {
 .assistant-sheet__header [data-slot="sheet-description"] { color: var(--ink-muted); font-size: 12.5px; line-height: 1.45; }
 .assistant-sheet__body { min-height: 0; flex: 1; overflow-y: auto; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
 .assistant-receipt { border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: 12px; background: var(--paper); }
+.assistant-receipt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .assistant-receipt h3, .assistant-output h3, .assistant-source-gate h3 { margin: 0; color: var(--ink); font-size: 12px; font-weight: 700; }
 .assistant-receipt > p { margin: 4px 0 8px; color: var(--ink-muted); font-family: var(--font-mono); font-size: 10.5px; }
 .assistant-receipt ul { display: flex; flex-direction: column; gap: 4px; padding: 0; margin: 0; list-style: none; }
@@ -1058,6 +1059,7 @@ body {
   .assistant-sheet { width: 100vw !important; border-left: 0 !important; }
   .assistant-sheet__body { padding: 14px 16px; }
   .assistant-sheet__header { padding-left: 16px !important; }
+  .assistant-receipt { max-height: 17rem; overflow-y: auto; }
   .assistant-receipt li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .assistant-receipt li small { grid-column: auto; }
   .assistant-composer { padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }

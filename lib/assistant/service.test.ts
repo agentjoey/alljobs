@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AssistantContextBundle } from "./context";
 import type { AssistantOutcome, AssistantRequestIntent, AssistantStreamEvent } from "./contracts";
-import { createAssistantService, parseAssistantModelJson } from "./service";
+import { createAssistantService, extractAssistantPartial, parseAssistantModelJson } from "./service";
 
 const DIGEST = "a".repeat(64);
 const NEXT_DIGEST = "b".repeat(64);
@@ -75,6 +75,11 @@ describe("assistant service", () => {
   it("accepts only a terminal JSON object from the MiniMax text stream", () => {
     expect(parseAssistantModelJson(JSON.stringify(validAnswer))).toEqual(validAnswer);
     expect(() => parseAssistantModelJson("```json\n{}\n``` ")).toThrow("OUTCOME_INVALID_MODEL_JSON");
+  });
+
+  it("exposes only a complete direct answer field as an incomplete stream preview", () => {
+    expect(extractAssistantPartial('{"direct_answer":"Draft')).toBeNull();
+    expect(extractAssistantPartial('{"direct_answer":"Draft answer"')).toEqual({ direct_answer: "Draft answer" });
   });
 
   it("rejects a pre-call manifest mismatch without invoking the model", async () => {

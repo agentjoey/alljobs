@@ -2,12 +2,13 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 export const MINIMAX_TOKEN_PLAN_BASE_URL = "https://api.minimax.io/v1";
 export const MINIMAX_TOKEN_PLAN_MODEL = "MiniMax-M3";
+export type MiniMaxTokenPlanMode = "standard" | "deep";
 
-export function withMiniMaxM3StreamOptions(body: Record<string, unknown>): Record<string, unknown> {
+export function withMiniMaxM3StreamOptions(body: Record<string, unknown>, mode: MiniMaxTokenPlanMode = "standard"): Record<string, unknown> {
   return {
     ...body,
     reasoning_split: true,
-    thinking: { type: "disabled" }
+    thinking: { type: mode === "deep" ? "adaptive" : "disabled" }
   };
 }
 
@@ -15,7 +16,7 @@ export function withMiniMaxM3StreamOptions(body: Record<string, unknown>): Recor
  * The generic OpenAI provider does not expose MiniMax's M3-specific request
  * fields. Add only the two documented fields to this fixed provider request.
  */
-export function createMiniMaxTokenPlanFetch(nextFetch: typeof fetch = globalThis.fetch): typeof fetch {
+export function createMiniMaxTokenPlanFetch(nextFetch: typeof fetch = globalThis.fetch, mode: MiniMaxTokenPlanMode = "standard"): typeof fetch {
   return async (input, init) => {
     const request = new Request(input, init);
     const isMiniMaxJsonPost = request.url.startsWith(`${MINIMAX_TOKEN_PLAN_BASE_URL}/`)
@@ -34,7 +35,7 @@ export function createMiniMaxTokenPlanFetch(nextFetch: typeof fetch = globalThis
     return nextFetch(request.url, {
       method: request.method,
       headers: request.headers,
-      body: JSON.stringify(withMiniMaxM3StreamOptions(body as Record<string, unknown>)),
+      body: JSON.stringify(withMiniMaxM3StreamOptions(body as Record<string, unknown>, mode)),
       signal: request.signal
     });
   };
@@ -51,12 +52,15 @@ export function requireMiniMaxTokenPlanKey(
 }
 
 /** Creates the fixed official Token Plan OpenAI-compatible MiniMax-M3 model. */
-export function createMiniMaxTokenPlanModel(apiKey = requireMiniMaxTokenPlanKey()) {
+export function createMiniMaxTokenPlanModel(options: { apiKey?: string; mode?: MiniMaxTokenPlanMode } | string = {}) {
+  const normalized = typeof options === "string" ? { apiKey: options } : options;
+  const apiKey = normalized.apiKey ?? requireMiniMaxTokenPlanKey();
+  const mode = normalized.mode ?? "standard";
   const provider = createOpenAI({
     name: "minimax-token-plan",
     baseURL: MINIMAX_TOKEN_PLAN_BASE_URL,
     apiKey,
-    fetch: createMiniMaxTokenPlanFetch()
+    fetch: createMiniMaxTokenPlanFetch(globalThis.fetch, mode)
   });
 
   return provider.chat(MINIMAX_TOKEN_PLAN_MODEL);

@@ -200,6 +200,8 @@ test.describe("R2 management assistant browser and authority boundaries", () => 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.getByRole("heading", { name: "Management assistant" })).toBeVisible();
+    await expect(page.getByText("Companion output")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText("AJ-B-101 is ready for owner review.")).toBeInViewport({ ratio: 1 });
     await assertNoHorizontalScroll(page);
     await page.screenshot({ path: resolve(evidenceDir, "r2-assistant-output-390.png"), fullPage: true });
     expect(existsSync(resolve(evidenceDir, "r2-assistant-output-390.png"))).toBe(true);

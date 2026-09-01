@@ -15,7 +15,7 @@ if (mode !== "standard" && mode !== "deep") {
 async function run(selectedMode: "standard" | "deep") {
   try {
     const result = streamText({
-      model: createMiniMaxTokenPlanModel(),
+      model: createMiniMaxTokenPlanModel({ mode: selectedMode }),
       instructions: "Return exactly the requested JSON object with no Markdown fences or surrounding text.",
       prompt: 'Synthetic compatibility check. Return exactly {"verified":true}.',
       maxOutputTokens: ASSISTANT_LIMITS[selectedMode].outputTokens,
