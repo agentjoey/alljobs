@@ -134,6 +134,106 @@ Task 1 before approval.
 
 ---
 
+# Task 9 — Operations, independent gates, final build, and release
+
+## Start Card
+
+```md
+Workflow: 3.3
+Task: Task 9 — Operations, independent gates, final build, and release
+Role: Primary Agent
+Tier / 理由: T3 — MiniMax-backed Project Detail journey with privacy, authorization, and release risk
+Canonical record: .agent/frontend-design/r2-management-assistant/
+Branch / worktree: codex/r2-management-assistant / .worktrees/r2-pact-orchestrator
+Mockup Gate: Required — approved Brief revision 17 / Mockup revision 2
+Review path: fresh independent code review plus separate independent verification run
+Human checkpoints: candidate walkthrough, rollback confirmation, exact-SHA release approval
+```
+
+**Task 9 candidate at start:** `3a24b72` (`test: prove r2 assistant boundaries`).
+
+**Scope and decision:** R2 is now explicitly outside Pactify. This Task records
+operations, review, verification, and controlled final-build evidence only. It
+does not merge, push, deploy, edit `.agent/CURRENT.md`, change the Tunnel/Access/
+domain/refresh worker, or configure/restart a production listener without a new
+Human Owner release authorization.
+
+**Environment note:** `git pull` initially hit managed-worktree `FETCH_HEAD`
+permissions; the authorized retry established that this feature branch has no
+upstream. The worktree was clean before Task 9 edits.
+
+### Task 9 closeout status (2026-09-01)
+
+Current code candidate: `638c9a0f6cd1f36a8dbabaef9d0e8e5cabe79771`.
+
+- The candidate gate passed `npm test` (56 files / 344 tests), typecheck, lint
+  with 0 errors, Webpack fallback build, R2 isolated Playwright (6/6), planning
+  skill validation, and deployment invariant verification. Default Turbopack
+  and default/R1 E2E configuration failures are recorded in `verification.md`;
+  they are not R2 regressions and were not expanded into unrelated work.
+- Fresh independent verification approved the predecessor's R2 UI/fixture
+  boundaries and discovered an actual 390px Receipt readability problem. It was
+  repaired and fixed-build screenshots were generated for `d3e9652`; those
+  screenshots require regeneration for the current candidate.
+- Fresh independent code review found no P0. The shared-listing budget and stale
+  draft/handoff findings are fixed and covered by 32 focused tests in `638c9a0`.
+  The remaining P1 is that the current real MiniMax adapter uses `generateText`
+  and never emits `assistant_partial`; the client will safely show partials only
+  when a transport provides them. Changing that adapter requires an
+  owner-authorized Token Plan streaming compatibility proof and new independent
+  review/verification.
+
+**Stop condition:** R2 cannot enter Human release walkthrough on this SHA yet.
+No merge, push, deployment, production configuration/key change, listener restart,
+or Pactify action has been taken.
+
+### Streaming compatibility closeout (2026-09-01)
+
+Current code candidate: `e6876f6a4d6f21840b3558200e7d74b7d71c790f`.
+
+- Human Owner authorized the MiniMax Token Plan standard/deep metadata-only
+  validation. Both modes completed streaming with `MiniMax-M3` and a strict
+  terminal JSON result; no key, prompt, source, reasoning, or response body was
+  printed or recorded.
+- Official MiniMax M3 documentation shows OpenAI-compatible streaming and
+  `thinking`/`reasoning_split` controls, but not `json_schema` output support.
+  The implementation therefore uses `streamText` with the fixed official
+  endpoint, injects only the documented M3 controls, buffers raw stream text
+  server-side, and applies the existing intent-specific Zod validation before
+  any browser event. Raw model text is never rendered.
+- Focused assistant tests (4 files / 44 tests), typecheck, lint (0 errors), the
+  Webpack production build, and R2 Playwright (6/6) passed. The final desktop
+  and true-390px screenshots were regenerated from this candidate.
+- This is a new exact-SHA independent-review boundary. No merge, push,
+  deployment, production configuration/key change, listener restart, or Pactify
+  action has been taken.
+
+### Final repair candidate (2026-09-01)
+
+Current code candidate: `c73901dfed41ccbb4ed7f529532dd5f1fc1caed5`.
+
+- Independent review of `e6876f6` found no P0 and identified concrete P1s:
+  Deep thinking was disabled, real stream partials were buffered, the tool-step
+  limit could omit the final answer, and the 390px evidence did not show output
+  body. This candidate fixes each finding with focused tests.
+- Standard uses M3 `thinking: disabled`; Deep uses `thinking: adaptive`; both
+  retain `reasoning_split: true`. A real stream emits only a fully closed
+  `direct_answer` string as an incomplete/non-actionable preview, while the
+  terminal object remains server-only until strict parsing and Zod validation.
+- R2 `6/6` now includes full-viewport 390px assertions for the Companion
+  header and answer. The narrowed receipt is keyboard-focusable and passes axe.
+  The refreshed final screenshots are from the final Webpack build.
+- No merge, push, deployment, production configuration/key change, listener
+  restart, or Pactify action has been taken. This remains subject to a fresh
+  exact-SHA independent review and Human Owner release gate.
+
+**Independent acceptance:** A fresh read-only reviewer accepted
+`c73901dfed41ccbb4ed7f529532dd5f1fc1caed5` with no P0/P1. It verified the
+stream/Deep/final-step repairs and 390px output readability without edits,
+credentials, provider calls, Pactify, or deployment.
+
+---
+
 # Task 1 — contracts, limits, and digests (`r2-contracts`)
 
 **Pact task:** `r2-contracts` (feature `r2-management-assistant`)
