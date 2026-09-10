@@ -2,6 +2,8 @@
 
 **Required context:** Read `AGENTS.md`, the complete implementation plan at `docs/superpowers/plans/2026-09-11-alljobs-application-monitoring.md`, the approved design at `docs/superpowers/specs/2026-09-11-alljobs-application-monitoring-design.md`, and the approved UI brief at `.agent/frontend-design/r5-application-monitoring/brief.md` before editing. Obey the plan's Global Constraints and Shared Contracts. Use TDD/BDD, preserve the listed Human-owned dirty files, do not use production credentials or real provider mutations, and do not push/deploy/release.
 
+verify: npm test -- scripts/verify-deployment-config.test.ts lib/monitoring/domain/schemas.test.ts lib/planning/domain/schemas.test.ts lib/planning/config.test.ts && npm run typecheck
+
 ### Task 1: Define strict bindings, configuration, and normalized domain contracts
 
 **Files:**
