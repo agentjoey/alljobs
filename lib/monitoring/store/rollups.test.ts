@@ -104,6 +104,50 @@ describe("buildRollups", () => {
     expect(records.filter((r) => r.billing_alignment === "operational_only")).toHaveLength(3);
   });
 
+  it("normalizes offset timestamps to UTC so one real hour is one bucket", () => {
+    // '2026-09-11T23:30:00+08:00' is 15:30Z: the same real hour as 15:45Z.
+    const records = buildRollups(
+      [
+        sample({ value: 10 }, "2026-09-11T23:30:00+08:00"),
+        sample({ value: 20 }, "2026-09-11T15:45:00Z")
+      ],
+      "hourly"
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].bucket).toBe("2026-09-11T15");
+    expect(records[0].min).toBe(10);
+    expect(records[0].max).toBe(20);
+    expect(records[0].count).toBe(2);
+  });
+
+  it("normalizes offset timestamps to UTC so one real day is one bucket", () => {
+    // '2026-09-12T07:30:00+08:00' is 2026-09-11T23:30Z: the same real day as 2026-09-11.
+    const records = buildRollups(
+      [sample({ value: 5 }, "2026-09-12T07:30:00+08:00"), sample({ value: 7 }, "2026-09-11T05:00:00Z")],
+      "daily"
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].bucket).toBe("2026-09-11");
+    expect(records[0].count).toBe(2);
+  });
+
+  it("picks last by real time across mixed offsets, keeping the original observed_at", () => {
+    // Both points fall in the real hour 13Z; string order would wrongly prefer
+    // the '+02:00' literal, but 13:30Z is the truly latest observation.
+    const records = buildRollups(
+      [
+        sample({ value: 10 }, "2026-09-11T13:20:00Z"),
+        sample({ value: 99 }, "2026-09-11T15:30:00+02:00") // = 13:30Z
+      ],
+      "hourly"
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0].bucket).toBe("2026-09-11T13");
+    expect(records[0].last).toBe(99);
+    // last_observed_at keeps the provider's original timestamp verbatim.
+    expect(records[0].last_observed_at).toBe("2026-09-11T15:30:00+02:00");
+  });
+
   it("splits buckets at the hour boundary", () => {
     const records = buildRollups(
       [sample({ value: 1 }, "2026-09-11T05:59:59Z"), sample({ value: 2 }, "2026-09-11T06:00:00Z")],

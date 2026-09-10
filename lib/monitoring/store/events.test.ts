@@ -270,6 +270,28 @@ describe("appendTransitionEvents", () => {
     expect(after).toHaveLength(september.length * 2);
   });
 
+  it("assigns events to the UTC month of recorded_at, not the offset literal", () => {
+    const root = tempRoot();
+    const previous = snap({ cycle_id: CYCLE_A });
+    const next = snap({ cycle_id: CYCLE_B, attention: "warning", reasons: [
+      {
+        code: "deployment_failed",
+        dimension: "deployment" as const,
+        severity: "warning" as const,
+        summary: "The latest production deployment failed.",
+        observed_at: "2026-09-11T07:00:00Z"
+      }
+    ] });
+    // '2026-09-01T00:30:00+08:00' is 2026-08-31T16:30Z: the event belongs to August.
+    const events = diffTransitions(previous, next, "2026-09-01T00:30:00+08:00");
+    expect(events.length).toBeGreaterThan(0);
+
+    const { files } = appendTransitionEvents(root, events);
+    expect(files).toHaveLength(1);
+    expect(files[0].endsWith(join("events", "2026-08.jsonl"))).toBe(true);
+    expect(fs.existsSync(join(root, "events", "2026-09.jsonl"))).toBe(false);
+  });
+
   it("contains normalized metadata only (recursive forbidden-key scan)", () => {
     const root = tempRoot();
     const previous = snap({ cycle_id: CYCLE_A });

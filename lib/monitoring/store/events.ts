@@ -234,8 +234,8 @@ function writeLinesAtomic(file: string, lines: string[]): void {
 }
 
 /**
- * Appends events to the monthly JSONL file for each event's recorded month.
- * The rewrite is atomic (temp sibling + rename); the single worker/lock
+ * Appends events to the monthly JSONL file for each event's recorded UTC
+ * month. The rewrite is atomic (temp sibling + rename); the single worker/lock
  * boundary serializes concurrent appenders.
  */
 export function appendTransitionEvents(root: string, events: TransitionEvent[]): { files: string[] } {
@@ -244,7 +244,11 @@ export function appendTransitionEvents(root: string, events: TransitionEvent[]):
 
   const byMonth = new Map<string, string[]>();
   for (const event of parsed) {
-    const month = assertMonthName(event.recorded_at.slice(0, 7));
+    // The monthly file follows the UTC month of recorded_at: normalize first,
+    // because offset-bearing timestamps are legal input and string slicing
+    // would misfile them into a neighbouring month. Retention prunes events
+    // by Date.parse(recorded_at), so UTC filing keeps both sides consistent.
+    const month = assertMonthName(new Date(Date.parse(event.recorded_at)).toISOString().slice(0, 7));
     const lines = byMonth.get(month) ?? [];
     lines.push(JSON.stringify(event));
     byMonth.set(month, lines);

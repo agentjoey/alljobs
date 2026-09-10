@@ -97,14 +97,21 @@ function seriesKey(
 
 function bucketOf(granularity: RollupGranularity, observedAt: string): string {
   isoTimestamp.parse(observedAt);
-  return granularity === "hourly" ? observedAt.slice(0, 13) : observedAt.slice(0, 10);
+  // Offset-bearing timestamps are legal input (shared contract allows offsets),
+  // so normalize to UTC before slicing: bucket labels are always UTC semantics,
+  // matching retention.ts, which parses bucket labels with an explicit 'Z'.
+  const utc = new Date(Date.parse(observedAt)).toISOString();
+  return granularity === "hourly" ? utc.slice(0, 13) : utc.slice(0, 10);
 }
 
 /**
  * Builds rollup records from samples. Only available measures with a finite
  * numeric value participate; unavailable measures never synthesize values.
- * `last` is the most recently observed value in the bucket (ties broken by
- * input order). Output is sorted by series identity for determinism.
+ * `last` is the most recently observed value in the bucket, compared by real
+ * time (epoch ms) so offset-bearing timestamps order correctly; ties keep
+ * input order (the later input point wins). `last_observed_at` keeps the
+ * provider's original timestamp verbatim, never rewritten to UTC. Output is
+ * sorted by series identity for determinism.
  */
 export function buildRollups(samples: RollupSample[], granularity: RollupGranularity): RollupRecord[] {
   const groups = new Map<string, { sample: RollupSample; bucket: string; points: { value: number; observed_at: string }[] }>();
@@ -126,7 +133,9 @@ export function buildRollups(samples: RollupSample[], granularity: RollupGranula
     .map(([, group]) => {
       const values = group.points.map((point) => point.value);
       const last = group.points.reduce((latest, point) =>
-        point.observed_at >= latest.observed_at ? point : latest
+        // Real-time (epoch ms) comparison, not string order: offset-bearing
+        // timestamps are legal input. Equal instants keep input order.
+        Date.parse(point.observed_at) >= Date.parse(latest.observed_at) ? point : latest
       );
       return rollupRecordSchema.parse({
         schema_version: 1,
