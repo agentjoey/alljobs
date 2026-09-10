@@ -1,0 +1,34 @@
+{
+  "data": {
+    "metrics": [
+      {
+        "measurement": "CPU_USAGE",
+        "values": [
+          { "ts": 1789084800, "value": 0.2 },
+          { "ts": 1789084860, "value": 0.4 }
+        ]
+      },
+      {
+        "measurement": "MEMORY_USAGE_GB",
+        "values": [
+          { "ts": 1789084800, "value": 0.5 },
+          { "ts": 1789084860, "value": 0.7 }
+        ]
+      },
+      {
+        "measurement": "NETWORK_RX_GB",
+        "values": [
+          { "ts": 1789084800, "value": 0.01 },
+          { "ts": 1789084860, "value": 0.02 }
+        ]
+      },
+      {
+        "measurement": "NETWORK_TX_GB",
+        "values": [
+          { "ts": 1789084800, "value": 0.005 },
+          { "ts": 1789084860, "value": 0.015 }
+        ]
+      }
+    ]
+  }
+}

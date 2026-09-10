@@ -1,0 +1,16 @@
+{
+  "data": {
+    "deployments": {
+      "edges": [
+        {
+          "node": {
+            "id": "dep-7f3a1b2c9d4e",
+            "status": "SUCCESS",
+            "createdAt": "2026-09-10T22:14:03Z",
+            "url": "https://web-production.up.railway.app"
+          }
+        }
+      ]
+    }
+  }
+}

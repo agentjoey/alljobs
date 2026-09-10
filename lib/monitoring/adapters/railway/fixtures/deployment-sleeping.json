@@ -1,0 +1,16 @@
+{
+  "data": {
+    "deployments": {
+      "edges": [
+        {
+          "node": {
+            "id": "dep-5s4l3e2e1p0z",
+            "status": "SLEEPING",
+            "createdAt": "2026-09-09T18:27:44Z",
+            "url": "https://web-staging.up.railway.app"
+          }
+        }
+      ]
+    }
+  }
+}

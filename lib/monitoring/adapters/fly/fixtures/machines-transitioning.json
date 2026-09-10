@@ -1,0 +1,13 @@
+[
+  {
+    "id": "7812345a1b2c3d",
+    "name": "dry-meadow-4821",
+    "state": "starting",
+    "region": "ord",
+    "created_at": "2026-09-11T05:55:00Z",
+    "updated_at": "2026-09-11T05:55:30Z",
+    "config": {
+      "guest": { "cpu_kind": "shared", "cpus": 1, "memory_mb": 256 }
+    }
+  }
+]

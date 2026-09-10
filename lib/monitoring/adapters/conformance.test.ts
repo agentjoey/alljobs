@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMonitoringBinding } from "../domain/fixtures";
+import { monitoringBindingSchema } from "../domain/schemas";
+import type { MonitoringBinding } from "../domain/types";
 import { createCredentialHandle } from "../collector/credentials";
 import type { MonitoringAdapter } from "./contracts";
 import { AdapterError } from "./contracts";
@@ -9,6 +11,11 @@ import {
   runAdapterConformance
 } from "./conformance";
 import { createFixtureAdapter } from "./fixture";
+import { createRailwayAdapter } from "./railway";
+import { createFlyAdapter } from "./fly";
+import railwayDeploymentSuccess from "./railway/fixtures/deployment-success.json";
+import railwayMetricsComplete from "./railway/fixtures/metrics-complete.json";
+import flyMachinesHealthy from "./fly/fixtures/machines-healthy.json";
 
 // Common adapter conformance suite (design §13): fixed hosts/methods, abort
 // deadlines, size limits, closed error taxonomy, safe timestamps, unsupported
@@ -46,25 +53,25 @@ function conformanceOptions() {
   };
 }
 
+const EXPECTED_CHECKS = [
+  "capabilities declared",
+  "validateBinding accepts valid binding",
+  "validateBinding rejects invalid resource kind",
+  "validateBinding rejects unsupported required signal",
+  "requests stay on declared hosts and methods",
+  "requests carry abort signals and no unexpected headers",
+  "collect result is schema-valid",
+  "timestamps are safe",
+  "no serialized secret",
+  "oversized response rejected",
+  "abort deadline honored",
+  "errors use the closed taxonomy"
+];
+
 describe("fixture adapter", () => {
   it("passes the full conformance suite", async () => {
     const report = await runAdapterConformance(createFixtureAdapter(), conformanceOptions());
-    expect(report.checks).toEqual(
-      expect.arrayContaining([
-        "capabilities declared",
-        "validateBinding accepts valid binding",
-        "validateBinding rejects invalid resource kind",
-        "validateBinding rejects unsupported required signal",
-        "requests stay on declared hosts and methods",
-        "requests carry abort signals and no unexpected headers",
-        "collect result is schema-valid",
-        "timestamps are safe",
-        "no serialized secret",
-        "oversized response rejected",
-        "abort deadline honored",
-        "errors use the closed taxonomy"
-      ])
-    );
+    expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
   });
 
   it("maps HTTP statuses to the closed collector taxonomy", async () => {
@@ -118,6 +125,52 @@ describe("fixture adapter", () => {
     // Fixture declares deployment/runtime/usage; platform_incident is unsupported.
     const unsupported = { ...buildMonitoringBinding({ probe: undefined }), required_signals: ["platform_incident" as const] };
     expect(adapter.validateBinding(unsupported).ok).toBe(false);
+  });
+});
+
+describe("railway adapter", () => {
+  it("passes the full conformance suite", async () => {
+    const report = await runAdapterConformance(createRailwayAdapter(), {
+      binding: buildMonitoringBinding(),
+      credential: createCredentialHandle("railway-primary", "railway", CANARY),
+      now: "2026-09-11T06:00:00Z",
+      secrets: [CANARY],
+      respond: (request) => {
+        const body = JSON.parse(request.body ?? "{}") as { query?: string };
+        return body.query?.includes("deployments")
+          ? { status: 200, body: JSON.stringify(railwayDeploymentSuccess) }
+          : { status: 200, body: JSON.stringify(railwayMetricsComplete) };
+      }
+    });
+    expect(report.provider).toBe("railway");
+    expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
+  });
+});
+
+describe("fly adapter", () => {
+  const flyBinding: MonitoringBinding = monitoringBindingSchema.parse({
+    id: "fly-production-web",
+    provider: "fly",
+    resource_kind: "app",
+    resource_id: "paper-web",
+    environment: "production",
+    expected_runtime: "always-on",
+    required_signals: ["runtime", "usage"],
+    credential_ref: "fly-primary",
+    console_url: "https://fly.io/apps/paper-web"
+  });
+  const FLY_CANARY = "conformance-canary-fly-token-2b3c4d5e";
+
+  it("passes the full conformance suite", async () => {
+    const report = await runAdapterConformance(createFlyAdapter(), {
+      binding: flyBinding,
+      credential: createCredentialHandle("fly-primary", "fly", FLY_CANARY),
+      now: "2026-09-11T06:00:00Z",
+      secrets: [FLY_CANARY],
+      respond: () => ({ status: 200, body: JSON.stringify(flyMachinesHealthy) })
+    });
+    expect(report.provider).toBe("fly");
+    expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
   });
 });
 
