@@ -1,6 +1,6 @@
 # AllJobs Application Monitoring Design
 
-**Status:** Proposed final design; section-level decisions approved by Human Owner on 2026-09-11
+**Status:** Approved for implementation by Human Owner on 2026-09-11
 
 **Date:** 2026-09-11
 
@@ -10,7 +10,7 @@
 
 **Canonical UI Brief:** `.agent/frontend-design/r5-application-monitoring/brief.md`
 
-**Implementation authorization:** None. This document does not authorize product code, credential creation, provider mutation, production deployment, or release.
+**Implementation authorization:** Product code and fixture-based verification are authorized using Pactify with worker `kimi` (K3), independent reviewer `claude`, and the primary agent driving acceptance. Credential creation, live-provider mutation, production deployment, push, and release remain unauthorized.
 
 ## 1. Purpose
 

@@ -16,8 +16,8 @@ Human checkpoints: Tier and Brief approval; rendered mockup approval; implementa
 
 ## Status
 
-- State: Design sections approved; formal specification in review
-- Implementation authorization: None
+- State: Design and mockups approved; implementation authorized on 2026-09-11
+- Implementation authorization: Pactify implementation with worker `kimi` (K3), independent reviewer `claude`, and primary-agent acceptance; no credential creation, live-provider mutation, production deployment, push, or release
 - Human-selected primary outcome: daily overview within one minute
 - Human-selected binding policy: explicit Project-to-provider-resource binding
 - Human-selected architecture: Control Host cached projections

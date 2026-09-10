@@ -5,9 +5,9 @@
 - Workflow: Frontend Design Workflow 3.3
 - Tier: T3
 - Review type: independent design review in a new session without implementation context
-- Implementation authorization: none
+- Implementation authorization: granted 2026-09-11 for Pactify implementation with worker `kimi` (K3), independent reviewer `claude`, and primary-agent acceptance; production credentials, provider mutations, deployment, push, and release remain unauthorized
 - Primary-agent self-review: complete on 2026-09-11
-- Independent review: pending
+- Independent review: pending; required as Task 0 before product code
 
 ## Canonical inputs
 
@@ -41,8 +41,8 @@
 
 Return findings ordered by severity with exact file and line references. Distinguish blocking findings from suggestions. Conclude with one of:
 
-- `APPROVE` — no blocking design findings;
-- `APPROVE_WITH_NONBLOCKING_NOTES` — safe to plan after notes are recorded; or
+- `PASS` — no blocking design findings;
+- `PASS_WITH_NONBLOCKING_NOTES` — safe to implement after notes are recorded; or
 - `CHANGES_REQUIRED` — list the blocking changes needed before an implementation plan.
 
 Do not implement code, edit provider credentials, run provider mutations, deploy, or release.
