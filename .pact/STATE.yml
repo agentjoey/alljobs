@@ -103,7 +103,7 @@ features:
     tasks:
       - id: r5-design-review
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-0.md
         evidence: null
