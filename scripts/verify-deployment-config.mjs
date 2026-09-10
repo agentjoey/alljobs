@@ -43,16 +43,34 @@ const clientSources = [
   resolve(root, "components/planning/assistant-session.ts"),
   resolve(root, "components/planning/assistant-answer.tsx")
 ].map((path) => readFileSync(path, "utf8")).join("\n");
-if (!assistantRoute.includes('export const dynamic = "force-dynamic"') || !assistantRoute.includes("assistantIsEnabled")) {
-  console.error("[verify-deployment-config] assistant route MUST be dynamic and reject disabled Control Host configuration");
+// Human commit c9d83c8 renamed the disabled-config guard (`assistantIsEnabled`
+// became `getAssistantConfig` plus `assistant?.enabled !== true`). Assert the
+// semantic invariants, not the helper identifier: dynamic route, disabled or
+// missing config rejected with a safe 503/no-store response, and configured
+// allowedOrigins passed through to the route factory.
+if (!assistantRoute.includes('export const dynamic = "force-dynamic"')) {
+  console.error("[verify-deployment-config] assistant route MUST be dynamic");
+  process.exit(1);
+}
+if (!assistantRoute.includes("assistant?.enabled !== true")) {
+  console.error("[verify-deployment-config] assistant route MUST reject requests when the Control Host assistant config is disabled or missing");
+  process.exit(1);
+}
+if (!assistantRoute.includes("status: 503") || !assistantRoute.includes('"cache-control": "no-store"')) {
+  console.error("[verify-deployment-config] disabled assistant MUST answer with a safe 503 no-store response");
+  process.exit(1);
+}
+if (!assistantRoute.includes("allowedOrigins: assistant.allowedOrigins")) {
+  console.error("[verify-deployment-config] assistant route MUST pass configured allowedOrigins through to the route factory");
   process.exit(1);
 }
 if (!assistantRouteFactory.includes('"cache-control": "no-store"') || !assistantRouteFactory.includes('"x-content-type-options": "nosniff"')) {
   console.error("[verify-deployment-config] assistant responses MUST be no-store and nosniff");
   process.exit(1);
 }
-if (!minimaxProvider.startsWith('import "server-only";') || !minimaxProvider.includes("MINIMAX_API_KEY")) {
-  console.error("[verify-deployment-config] MINIMAX_API_KEY MUST remain in the server-only MiniMax provider module");
+const minimaxProviderCore = readFileSync(resolve(root, "lib/assistant/minimax-token-plan-core.ts"), "utf8");
+if (!minimaxProvider.startsWith('import "server-only";') || !minimaxProvider.includes("./minimax-token-plan-core") || !minimaxProviderCore.includes("MINIMAX_API_KEY")) {
+  console.error("[verify-deployment-config] MINIMAX_API_KEY MUST remain behind the server-only MiniMax provider module");
   process.exit(1);
 }
 if (/NEXT_PUBLIC_MINIMAX|MINIMAX_API_KEY|api[_-]?key|credential/i.test(clientSources)) {

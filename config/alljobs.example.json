@@ -11,5 +11,19 @@
     "allowedOrigins": [
       "https://alljobs.agentjoey.ai"
     ]
+  },
+  "monitoring": {
+    "enabled": false,
+    "refreshIntervalSeconds": 300,
+    "concurrency": 3,
+    "credentials": {
+      "example-railway-ref": {
+        "provider": "railway",
+        "tokenEnv": "EXAMPLE_ONLY_MONITORING_TOKEN_ENV"
+      }
+    },
+    "probeAllowedHosts": {
+      "example-production-host": "https://app.example.invalid"
+    }
   }
 }

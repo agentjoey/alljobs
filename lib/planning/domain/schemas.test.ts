@@ -320,3 +320,75 @@ describe("domain schemas", () => {
     });
   });
 });
+
+describe("projectRegistrySchema monitoring bindings", () => {
+  const baseProject = {
+    slug: "talentvault",
+    name: "TalentVault",
+    type: "code",
+    work_modes: ["implementation"]
+  };
+
+  const railwayBinding = {
+    id: "railway-production-api",
+    provider: "railway",
+    resource_kind: "service",
+    resource_id: [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+      "33333333-3333-4333-8333-333333333333"
+    ].join("/"),
+    environment: "production",
+    expected_runtime: "always-on",
+    required_signals: ["deployment"],
+    credential_ref: "railway-primary",
+    console_url: "https://railway.com/project/example"
+  };
+
+  it("parses a project without monitoring (optional extension)", () => {
+    const parsed = parseProjectRegistry(baseProject);
+    expect(parsed.monitoring).toBeUndefined();
+  });
+
+  it("parses a project with explicit monitoring bindings", () => {
+    const parsed = parseProjectRegistry({
+      ...baseProject,
+      monitoring: { bindings: [railwayBinding] }
+    });
+    expect(parsed.monitoring?.bindings).toHaveLength(1);
+    expect(parsed.monitoring?.bindings[0]?.id).toBe("railway-production-api");
+  });
+
+  it("defaults bindings to empty when the monitoring block is present without them", () => {
+    const parsed = parseProjectRegistry({ ...baseProject, monitoring: {} });
+    expect(parsed.monitoring?.bindings).toEqual([]);
+  });
+
+  it("rejects duplicate binding ids within a project", () => {
+    expect(() => parseProjectRegistry({
+      ...baseProject,
+      monitoring: { bindings: [railwayBinding, { ...railwayBinding, resource_id: railwayBinding.resource_id }] }
+    })).toThrowError(/[Dd]uplicate/);
+  });
+
+  it("rejects unknown keys inside the monitoring block (strict)", () => {
+    expect(() => parseProjectRegistry({
+      ...baseProject,
+      monitoring: { bindings: [], token: "sk-secret" }
+    })).toThrow();
+  });
+
+  it("rejects required signals unsupported by the selected provider/resource kind", () => {
+    expect(() => parseProjectRegistry({
+      ...baseProject,
+      monitoring: { bindings: [{ ...railwayBinding, required_signals: ["platform_incident"] }] }
+    })).toThrow();
+  });
+
+  it("keeps registry bindings free of credential values", () => {
+    expect(() => parseProjectRegistry({
+      ...baseProject,
+      monitoring: { bindings: [{ ...railwayBinding, api_token: "sk-secret" }] }
+    })).toThrow();
+  });
+});

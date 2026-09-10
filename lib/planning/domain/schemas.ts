@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { monitoringBindingSchema } from "../../monitoring/domain/schemas";
 
 export const projectTypeSchema = z.enum(["code", "business"]);
 export const workModeSchema = z.enum(["implementation", "operations"]);
@@ -112,6 +113,25 @@ export const taskSchema = z.object({
   }
 });
 
+// Optional R5 monitoring bindings. Binding validity (provider/resource-kind,
+// resource_id grammar, console allowlist, required-signal support) is enforced
+// by monitoringBindingSchema; this layer adds per-Project uniqueness.
+export const projectMonitoringSchema = z.object({
+  bindings: z.array(monitoringBindingSchema).max(16).default([])
+}).strict().superRefine((monitoring, ctx) => {
+  const seen = new Set<string>();
+  for (const binding of monitoring.bindings) {
+    if (seen.has(binding.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bindings"],
+        message: `Duplicate monitoring binding id '${binding.id}' within the Project`
+      });
+    }
+    seen.add(binding.id);
+  }
+});
+
 export const projectRegistrySchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase alphanumeric characters and hyphens"),
   name: z.string().min(1, "Project name is required"),
@@ -122,6 +142,7 @@ export const projectRegistrySchema = z.object({
   git_branch: z.string().optional(),
   trusted_path: z.string().optional(),
   assistant: projectAssistantConfigSchema.optional(),
+  monitoring: projectMonitoringSchema.optional(),
   archived: z.boolean().default(false)
 });
 

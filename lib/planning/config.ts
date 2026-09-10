@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
 import { ASSISTANT_LIMITS } from "../assistant/limits";
+import { monitoringProviderSchema } from "../monitoring/domain/schemas";
 
 const assistantAllowedOriginSchema = z.string().url().refine((value) => {
   const origin = new URL(value);
@@ -36,13 +37,49 @@ export const controlHostAssistantConfigSchema = z.object({
   deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)
 }).strict();
 
+const monitoringCredentialRefKeySchema = z
+  .string()
+  .max(64)
+  .regex(/^[a-z0-9][a-z0-9-]*$/, "Credential reference keys must be lowercase letters, digits, and hyphens");
+
+// Secret values live only in the server environment; the config names the
+// environment variable and the provider it is valid for, never the token.
+export const controlHostMonitoringCredentialSchema = z.object({
+  provider: monitoringProviderSchema,
+  tokenEnv: z
+    .string()
+    .max(128)
+    .regex(/^[A-Z][A-Z0-9_]*$/, "tokenEnv must be a valid environment-variable name (uppercase, digits, underscores)")
+}).strict();
+
+const monitoringProbeOriginSchema = z.string().url().refine((value) => {
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "https:" && origin.origin === value && !origin.username && !origin.password
+      && !origin.hostname.endsWith(".");
+  } catch {
+    return false;
+  }
+}, "probeAllowedHosts values must be exact HTTPS origins without a path, query, or user information.");
+
+// Monitoring is disabled by default; the state root is always derived from the
+// resolved ALLJOBS_HOME and is never configurable to an arbitrary path.
+export const controlHostMonitoringConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  refreshIntervalSeconds: z.number().int().min(60).max(86_400).default(300),
+  concurrency: z.number().int().min(1).max(4).default(3),
+  credentials: z.record(monitoringCredentialRefKeySchema, controlHostMonitoringCredentialSchema).default({}),
+  probeAllowedHosts: z.record(monitoringCredentialRefKeySchema, monitoringProbeOriginSchema).default({})
+}).strict();
+
 export const controlHostConfigSchema = z.object({
   trustedCodeRoots: z.array(z.string().min(1, "Trusted code root cannot be empty")).min(1, "At least one trustedCodeRoot is required"),
   refreshIntervalSeconds: z.number().int().min(10, "Minimum refresh interval is 10 seconds").default(300),
   mirrorsDir: z.string().optional(),
   logsDir: z.string().optional(),
   cacheDir: z.string().optional(),
-  assistant: controlHostAssistantConfigSchema.optional()
+  assistant: controlHostAssistantConfigSchema.optional(),
+  monitoring: controlHostMonitoringConfigSchema.optional()
 });
 
 export type ControlHostConfig = z.infer<typeof controlHostConfigSchema>;
@@ -53,6 +90,10 @@ export interface ControlHostResolvedPaths {
   mirrorsDir: string;
   logsDir: string;
   cacheDir: string;
+  // Always set by loadControlHostConfig; optional so existing test fixtures
+  // that construct this shape literally keep compiling.
+  stateDir?: string;
+  monitoringStateDir?: string;
   config: ControlHostConfig;
 }
 
@@ -94,10 +135,16 @@ export function loadControlHostConfig(customHome?: string): ControlHostResolvedP
   const mirrorsDir = config.mirrorsDir ? resolve(config.mirrorsDir) : resolve(homeDir, "mirrors");
   const logsDir = config.logsDir ? resolve(config.logsDir) : resolve(homeDir, "logs");
   const cacheDir = config.cacheDir ? resolve(config.cacheDir) : resolve(homeDir, "cache");
+  // Monitoring state root is always <ALLJOBS_HOME>/state/monitoring — never
+  // configurable, so directory creation only ever touches descendants of the
+  // resolved Control Host home.
+  const stateDir = resolve(homeDir, "state");
+  const monitoringStateDir = resolve(stateDir, "monitoring");
 
   if (!existsSync(mirrorsDir)) mkdirSync(mirrorsDir, { recursive: true });
   if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
   if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  if (!existsSync(monitoringStateDir)) mkdirSync(monitoringStateDir, { recursive: true });
 
   return {
     homeDir,
@@ -105,6 +152,8 @@ export function loadControlHostConfig(customHome?: string): ControlHostResolvedP
     mirrorsDir,
     logsDir,
     cacheDir,
+    stateDir,
+    monitoringStateDir,
     config
   };
 }
