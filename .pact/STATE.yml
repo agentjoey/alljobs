@@ -114,3 +114,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-1.md
         evidence: null
         deps: [r5-design-review]
+      - id: r5-attention
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-2.md
+        evidence: null
+        deps: [r5-contracts]
