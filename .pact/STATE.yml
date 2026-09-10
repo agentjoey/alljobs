@@ -109,7 +109,7 @@ features:
         evidence: Fix round: the red gate was caused by the worktree missing node_modules (Turbopack "Could not find the Next.js package (next/package.json)"). Per AGENTS.md, worktrees require a real `npm install` (no symlinked node_modules); ran `npm install`, then re-ran the gate:  - `npm run lint` → exit 0 (66 warnings, 0 errors; warnings pre-existing) - `npm run typecheck` (tsc --noEmit) → exit 0 - `npm run build` (next build, Turbopack) → exit 0, all routes compiled  No product source changed: `git diff --name-only HEAD -- app components lib scripts tests config` → empty.  Note for reviewer (pre-existing, out of scope, NOT introduced by this task): `scripts/verify-deployment-config.test.ts` fails on main too — Human commit c9d83c8 (2026-09-01, "fix: allow configured assistant public origins") renamed `assistantIsEnabled` → `getAssistantConfig` in app/api/assistant/respond/route.ts, while scripts/verify-deployment-config.mjs:46 still greps for the literal `assistantIsEnabled`. The guarded behavior (dynamic route, 503 when assistant disabled) is intact in route.ts. Fixing requires editing app/ or scripts/, both excluded by this task's spec; flagging as a separate finding for a follow-up task.
       - id: r5-contracts
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-1.md
         evidence: null
