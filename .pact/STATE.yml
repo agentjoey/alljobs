@@ -142,3 +142,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-5.md
         evidence: null
         deps: [r5-collector]
+      - id: r5-neon-supabase
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-6.md
+        evidence: null
+        deps: [r5-railway-fly]
