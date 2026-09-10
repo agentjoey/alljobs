@@ -1,0 +1,436 @@
+<div id="alljobs-monitoring-project-detail">
+  <style>
+    #alljobs-monitoring-project-detail {
+      --aj-paper: light-dark(#f1eee6, #1d1b17);
+      --aj-paper-raised: light-dark(#fbf7e6, #27231b);
+      --aj-paper-recessed: light-dark(#e8e4da, #171511);
+      --aj-ink: light-dark(#16140e, #f3eedf);
+      --aj-muted: light-dark(#595448, #b9b09e);
+      --aj-line: light-dark(rgba(22, 20, 14, 0.2), rgba(243, 238, 223, 0.2));
+      --aj-amber: light-dark(#f3b44a, #b87a17);
+      --aj-red: light-dark(#a83b3b, #ef8881);
+      --aj-green: light-dark(#2e7d4f, #70c792);
+      --aj-watch: light-dark(#805800, #e7bd58);
+      color-scheme: light dark;
+      color: var(--aj-ink);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    #alljobs-monitoring-project-detail * { box-sizing: border-box; }
+
+    #alljobs-monitoring-project-detail .aj-window {
+      width: 100%;
+      overflow: hidden;
+      color: var(--aj-ink);
+      background-color: var(--aj-paper);
+      background-image: radial-gradient(var(--aj-line) 0.7px, transparent 0.7px);
+      background-size: 12px 12px;
+      border: 1px solid var(--aj-line);
+      border-radius: 8px;
+    }
+
+    #alljobs-monitoring-project-detail .aj-nav,
+    #alljobs-monitoring-project-detail .aj-source,
+    #alljobs-monitoring-project-detail .aj-title-line,
+    #alljobs-monitoring-project-detail .aj-section-head,
+    #alljobs-monitoring-project-detail .aj-binding-head,
+    #alljobs-monitoring-project-detail .aj-signal,
+    #alljobs-monitoring-project-detail .aj-event {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #alljobs-monitoring-project-detail .aj-nav {
+      padding: 12px 16px;
+      background: var(--aj-paper-raised);
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-brand,
+    #alljobs-monitoring-project-detail strong,
+    #alljobs-monitoring-project-detail h1,
+    #alljobs-monitoring-project-detail h2,
+    #alljobs-monitoring-project-detail h3 { font-weight: 500; }
+
+    #alljobs-monitoring-project-detail .aj-nav-links {
+      display: flex;
+      gap: 18px;
+      color: var(--aj-muted);
+    }
+
+    #alljobs-monitoring-project-detail .aj-nav-links [aria-current="page"] { color: var(--aj-ink); }
+
+    #alljobs-monitoring-project-detail .aj-source {
+      padding: 7px 16px;
+      background: var(--aj-amber);
+      color: light-dark(#211706, #171006);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #alljobs-monitoring-project-detail .aj-main { padding: 24px 20px 28px; }
+
+    #alljobs-monitoring-project-detail .aj-breadcrumb,
+    #alljobs-monitoring-project-detail .aj-kicker,
+    #alljobs-monitoring-project-detail .aj-label,
+    #alljobs-monitoring-project-detail th {
+      color: var(--aj-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #alljobs-monitoring-project-detail .aj-breadcrumb { margin-bottom: 16px; }
+
+    #alljobs-monitoring-project-detail h1 {
+      margin: 3px 0 4px;
+      letter-spacing: -0.035em;
+    }
+
+    #alljobs-monitoring-project-detail .aj-subtitle,
+    #alljobs-monitoring-project-detail .aj-updated,
+    #alljobs-monitoring-project-detail .aj-note,
+    #alljobs-monitoring-project-detail .aj-secondary { color: var(--aj-muted); }
+
+    #alljobs-monitoring-project-detail .aj-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    #alljobs-monitoring-project-detail .aj-status::before {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      background: currentColor;
+      border-radius: 50%;
+      content: "";
+    }
+
+    #alljobs-monitoring-project-detail .critical { color: var(--aj-red); }
+    #alljobs-monitoring-project-detail .healthy { color: var(--aj-green); }
+    #alljobs-monitoring-project-detail .unknown { color: var(--aj-muted); }
+
+    #alljobs-monitoring-project-detail .aj-attention {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      background: var(--aj-paper-raised);
+      border-block: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-reason { line-height: 1.45; }
+
+    #alljobs-monitoring-project-detail .aj-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 10px;
+      color: var(--aj-ink);
+      font: inherit;
+      text-decoration: none;
+      background: transparent;
+      border: 1px solid var(--aj-line);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #alljobs-monitoring-project-detail .aj-action:hover { background: var(--aj-paper-recessed); }
+
+    #alljobs-monitoring-project-detail section { margin-top: 24px; }
+    #alljobs-monitoring-project-detail h2 { margin: 0; font-size: 1rem; }
+    #alljobs-monitoring-project-detail h3 { margin: 0; font-size: 0.95rem; }
+
+    #alljobs-monitoring-project-detail .aj-table-wrap {
+      margin-top: 8px;
+      overflow-x: auto;
+      background: var(--aj-paper-raised);
+      border-top: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #alljobs-monitoring-project-detail th,
+    #alljobs-monitoring-project-detail td {
+      padding: 11px 12px;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail th { font-weight: 400; }
+    #alljobs-monitoring-project-detail td:last-child,
+    #alljobs-monitoring-project-detail th:last-child { text-align: right; }
+
+    #alljobs-monitoring-project-detail .aj-binding-detail {
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--aj-paper-recessed);
+      border: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-binding-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    #alljobs-monitoring-project-detail .aj-signal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0 18px;
+      margin-top: 14px;
+      background: var(--aj-paper-raised);
+      border-top: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-signal {
+      min-height: 58px;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-signal-value { text-align: right; }
+
+    #alljobs-monitoring-project-detail .aj-history {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(230px, 0.65fr);
+      gap: 18px;
+      margin-top: 8px;
+    }
+
+    #alljobs-monitoring-project-detail .aj-events,
+    #alljobs-monitoring-project-detail .aj-interpretation {
+      background: var(--aj-paper-raised);
+      border-top: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-event {
+      align-items: flex-start;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-project-detail .aj-event time {
+      color: var(--aj-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    #alljobs-monitoring-project-detail .aj-event-copy {
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    #alljobs-monitoring-project-detail .aj-interpretation { padding: 14px; }
+    #alljobs-monitoring-project-detail .aj-interpretation p { margin: 8px 0 0; line-height: 1.5; }
+
+    @media (max-width: 760px) {
+      #alljobs-monitoring-project-detail .aj-nav-links { display: none; }
+
+      #alljobs-monitoring-project-detail .aj-source,
+      #alljobs-monitoring-project-detail .aj-title-line,
+      #alljobs-monitoring-project-detail .aj-section-head,
+      #alljobs-monitoring-project-detail .aj-binding-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      #alljobs-monitoring-project-detail .aj-source { gap: 3px; }
+      #alljobs-monitoring-project-detail .aj-main { padding: 20px 14px 24px; }
+
+      #alljobs-monitoring-project-detail .aj-attention {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      #alljobs-monitoring-project-detail .aj-attention .aj-action { justify-self: start; }
+
+      #alljobs-monitoring-project-detail .aj-table-wrap {
+        overflow: visible;
+        background: transparent;
+        border-top: 0;
+      }
+
+      #alljobs-monitoring-project-detail table,
+      #alljobs-monitoring-project-detail tbody,
+      #alljobs-monitoring-project-detail tr,
+      #alljobs-monitoring-project-detail td {
+        display: block;
+        width: 100%;
+      }
+
+      #alljobs-monitoring-project-detail thead { display: none; }
+
+      #alljobs-monitoring-project-detail tr {
+        margin-bottom: 10px;
+        padding: 12px;
+        background: var(--aj-paper-raised);
+        border-bottom: 1px solid var(--aj-line);
+      }
+
+      #alljobs-monitoring-project-detail td {
+        display: grid;
+        grid-template-columns: minmax(90px, 0.45fr) 1fr;
+        gap: 10px;
+        padding: 5px 0;
+        border: 0;
+      }
+
+      #alljobs-monitoring-project-detail td::before {
+        color: var(--aj-muted);
+        content: attr(data-label);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      #alljobs-monitoring-project-detail td:last-child { text-align: left; }
+      #alljobs-monitoring-project-detail td:last-child .aj-action { justify-self: start; }
+
+      #alljobs-monitoring-project-detail .aj-signal-grid { grid-template-columns: 1fr; }
+      #alljobs-monitoring-project-detail .aj-history { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <div class="aj-window">
+    <header>
+      <div class="aj-nav">
+        <span class="aj-brand">alljobs</span>
+        <nav class="aj-nav-links" aria-label="Primary navigation">
+          <span>Portfolio</span><span>Projects</span><span>Tasks</span><span aria-current="page">Monitoring</span>
+        </nav>
+        <span aria-label="Command menu shortcut">⌘K</span>
+      </div>
+      <div class="aj-source">
+        <span>/monitoring/talentvault · cached projection</span>
+        <span>observed 2 min ago</span>
+      </div>
+    </header>
+
+    <main class="aj-main">
+      <div class="aj-breadcrumb">Monitoring / TalentVault</div>
+      <div class="aj-title-line">
+        <div>
+          <span class="aj-kicker">Project monitoring</span>
+          <h1>TalentVault</h1>
+          <div class="aj-subtitle">2 provider bindings · production</div>
+        </div>
+        <span class="aj-status critical">Critical</span>
+      </div>
+
+      <div class="aj-attention">
+        <span class="aj-label">Why attention</span>
+        <span class="aj-reason"><strong>Required runtime probe failed twice.</strong> The latest Railway deployment succeeded, so runtime evidence—not deployment state—is driving the project status.</span>
+        <button type="button" class="aj-action" id="focus-railway">Inspect binding</button>
+      </div>
+
+      <section aria-labelledby="bindings-title">
+        <div class="aj-section-head">
+          <h2 id="bindings-title">Provider bindings</h2>
+          <span class="aj-note">Signals stay separate; project state uses the most severe required signal</span>
+        </div>
+        <div class="aj-table-wrap">
+          <table>
+            <thead>
+              <tr><th>Resource</th><th>State</th><th>Deployment</th><th>Runtime</th><th>Usage</th><th>Freshness</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Resource"><strong>Railway · production API</strong></td>
+                <td data-label="State"><span class="aj-status critical">Critical</span></td>
+                <td data-label="Deployment"><span class="healthy">Succeeded</span></td>
+                <td data-label="Runtime"><span class="critical">Probe failed</span></td>
+                <td data-label="Usage">US$6.38 · estimate</td>
+                <td data-label="Freshness">2m ago</td>
+                <td data-label="Action"><button type="button" class="aj-action" id="toggle-railway" aria-expanded="true" aria-controls="railway-detail">Collapse ↑</button></td>
+              </tr>
+              <tr>
+                <td data-label="Resource"><strong>Neon · main branch</strong></td>
+                <td data-label="State"><span class="aj-status healthy">Healthy</span></td>
+                <td data-label="Deployment">Not applicable</td>
+                <td data-label="Runtime"><span class="healthy">Active</span></td>
+                <td data-label="Usage">42% CU-hours · exact</td>
+                <td data-label="Freshness">4m ago</td>
+                <td data-label="Action"><button type="button" class="aj-action">Open ›</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="aj-binding-detail" id="railway-detail">
+          <div class="aj-binding-head">
+            <div><span class="aj-kicker">Selected binding</span><h3>Railway · production API</h3></div>
+            <div class="aj-binding-actions"><button type="button" class="aj-action">Provider console ↗</button></div>
+          </div>
+          <div class="aj-signal-grid" aria-label="Railway binding signal matrix">
+            <div class="aj-signal"><span class="aj-label">Collector</span><span class="aj-signal-value healthy">Healthy</span></div>
+            <div class="aj-signal"><span class="aj-label">Deployment</span><span class="aj-signal-value healthy">Succeeded · c41ea1</span></div>
+            <div class="aj-signal"><span class="aj-label">Runtime</span><span class="aj-signal-value critical">HTTP 503 · 2×</span></div>
+            <div class="aj-signal"><span class="aj-label">Usage</span><span class="aj-signal-value">US$6.38 · estimate</span></div>
+            <div class="aj-signal"><span class="aj-label">Platform incident</span><span class="aj-signal-value">None related</span></div>
+            <div class="aj-signal"><span class="aj-label">Freshness</span><span class="aj-signal-value">2m · current</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="history-title">
+        <div class="aj-section-head">
+          <h2 id="history-title">Recent evidence</h2>
+          <span class="aj-note">Normalized cache · last 24 hours</span>
+        </div>
+        <div class="aj-history">
+          <div class="aj-events">
+            <div class="aj-event"><time>14:06</time><div class="aj-event-copy"><span class="critical">Runtime probe failed again</span><br><span class="aj-secondary">HTTP 503 · second consecutive failure</span></div></div>
+            <div class="aj-event"><time>14:04</time><div class="aj-event-copy"><span class="critical">Runtime probe changed to failing</span><br><span class="aj-secondary">HTTP 503 · first failure</span></div></div>
+            <div class="aj-event"><time>13:55</time><div class="aj-event-copy"><span class="healthy">Deployment changed to succeeded</span><br><span class="aj-secondary">Revision c41ea1 became active</span></div></div>
+            <div class="aj-event"><time>13:51</time><div class="aj-event-copy">Deployment changed to building<br><span class="aj-secondary">Revision c41ea1</span></div></div>
+          </div>
+          <aside class="aj-interpretation">
+            <span class="aj-label">Deterministic interpretation</span>
+            <p>The failure began nine minutes after the active deployment. This is correlation evidence only; the initial release does not claim root cause or remediate automatically.</p>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById('alljobs-monitoring-project-detail');
+      const detail = root.querySelector('#railway-detail');
+      const toggle = root.querySelector('#toggle-railway');
+      const focus = root.querySelector('#focus-railway');
+
+      const openDetail = () => {
+        detail.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.textContent = 'Collapse ↑';
+        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
+      toggle.addEventListener('click', () => {
+        const opening = detail.hidden;
+        detail.hidden = !opening;
+        toggle.setAttribute('aria-expanded', String(opening));
+        toggle.textContent = opening ? 'Collapse ↑' : 'Open ›';
+      });
+
+      focus.addEventListener('click', openDetail);
+    })();
+  </script>
+</div>

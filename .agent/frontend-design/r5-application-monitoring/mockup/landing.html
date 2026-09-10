@@ -1,0 +1,542 @@
+<div id="alljobs-monitoring-hybrid">
+  <style>
+    #alljobs-monitoring-hybrid {
+      --aj-paper: light-dark(#f1eee6, #1d1b17);
+      --aj-paper-raised: light-dark(#fbf7e6, #27231b);
+      --aj-paper-recessed: light-dark(#e8e4da, #171511);
+      --aj-ink: light-dark(#16140e, #f3eedf);
+      --aj-muted: light-dark(#595448, #b9b09e);
+      --aj-line: light-dark(rgba(22, 20, 14, 0.2), rgba(243, 238, 223, 0.2));
+      --aj-amber: light-dark(#f3b44a, #b87a17);
+      --aj-red: light-dark(#a83b3b, #ef8881);
+      --aj-green: light-dark(#2e7d4f, #70c792);
+      --aj-watch: light-dark(#805800, #e7bd58);
+      color-scheme: light dark;
+      color: var(--aj-ink);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    #alljobs-monitoring-hybrid * {
+      box-sizing: border-box;
+    }
+
+    #alljobs-monitoring-hybrid .aj-window {
+      width: 100%;
+      overflow: hidden;
+      color: var(--aj-ink);
+      background-color: var(--aj-paper);
+      background-image: radial-gradient(var(--aj-line) 0.7px, transparent 0.7px);
+      background-size: 12px 12px;
+      border: 1px solid var(--aj-line);
+      border-radius: 8px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-nav,
+    #alljobs-monitoring-hybrid .aj-source,
+    #alljobs-monitoring-hybrid .aj-heading,
+    #alljobs-monitoring-hybrid .aj-section-head,
+    #alljobs-monitoring-hybrid .aj-mobile-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-nav {
+      padding: 12px 16px;
+      background: var(--aj-paper-raised);
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-brand,
+    #alljobs-monitoring-hybrid strong,
+    #alljobs-monitoring-hybrid h1,
+    #alljobs-monitoring-hybrid h2 {
+      font-weight: 500;
+    }
+
+    #alljobs-monitoring-hybrid .aj-nav-links {
+      display: flex;
+      gap: 18px;
+      color: var(--aj-muted);
+    }
+
+    #alljobs-monitoring-hybrid .aj-nav-links [aria-current="page"] {
+      color: var(--aj-ink);
+    }
+
+    #alljobs-monitoring-hybrid .aj-source {
+      padding: 7px 16px;
+      background: var(--aj-amber);
+      color: light-dark(#211706, #171006);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #alljobs-monitoring-hybrid .aj-main {
+      padding: 24px 20px 28px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-kicker,
+    #alljobs-monitoring-hybrid .aj-label,
+    #alljobs-monitoring-hybrid th,
+    #alljobs-monitoring-hybrid .aj-source {
+      font-size: 0.75rem;
+    }
+
+    #alljobs-monitoring-hybrid .aj-kicker,
+    #alljobs-monitoring-hybrid .aj-label {
+      color: var(--aj-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #alljobs-monitoring-hybrid h1 {
+      margin: 3px 0 4px;
+      letter-spacing: -0.035em;
+    }
+
+    #alljobs-monitoring-hybrid .aj-subtitle,
+    #alljobs-monitoring-hybrid .aj-updated,
+    #alljobs-monitoring-hybrid .aj-secondary {
+      color: var(--aj-muted);
+    }
+
+    #alljobs-monitoring-hybrid .aj-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 20px;
+      background: var(--aj-paper-raised);
+      border-block: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-summary > div {
+      min-width: 0;
+      padding: 11px 12px;
+      border-right: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-summary > div:last-child {
+      border-right: 0;
+    }
+
+    #alljobs-monitoring-hybrid .aj-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.25rem;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #alljobs-monitoring-hybrid section {
+      margin-top: 24px;
+    }
+
+    #alljobs-monitoring-hybrid h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    #alljobs-monitoring-hybrid .aj-section-note {
+      color: var(--aj-muted);
+      font-size: 0.875rem;
+    }
+
+    #alljobs-monitoring-hybrid .aj-attention-list {
+      margin-top: 8px;
+      background: var(--aj-paper-raised);
+      border-top: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-attention-row {
+      display: grid;
+      grid-template-columns: 110px minmax(110px, 0.8fr) minmax(145px, 1fr) minmax(180px, 1.5fr) 90px;
+      align-items: center;
+      gap: 12px;
+      min-height: 50px;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    #alljobs-monitoring-hybrid .aj-status::before {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      background: currentColor;
+      border-radius: 50%;
+      content: "";
+    }
+
+    #alljobs-monitoring-hybrid .critical { color: var(--aj-red); }
+    #alljobs-monitoring-hybrid .watch { color: var(--aj-watch); }
+    #alljobs-monitoring-hybrid .healthy { color: var(--aj-green); }
+    #alljobs-monitoring-hybrid .unknown { color: var(--aj-muted); }
+
+    #alljobs-monitoring-hybrid .aj-open {
+      justify-self: end;
+      padding: 7px 9px;
+      color: var(--aj-ink);
+      font: inherit;
+      background: transparent;
+      border: 1px solid var(--aj-line);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #alljobs-monitoring-hybrid .aj-open:hover {
+      background: var(--aj-paper-recessed);
+    }
+
+    #alljobs-monitoring-hybrid .aj-table-wrap {
+      margin-top: 8px;
+      overflow-x: auto;
+      background: var(--aj-paper-raised);
+      border-top: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #alljobs-monitoring-hybrid th,
+    #alljobs-monitoring-hybrid td {
+      padding: 11px 12px;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid th {
+      color: var(--aj-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    #alljobs-monitoring-hybrid td:last-child,
+    #alljobs-monitoring-hybrid th:last-child {
+      text-align: right;
+    }
+
+    #alljobs-monitoring-hybrid .aj-project {
+      min-width: 130px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-binding {
+      min-width: 180px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-detail-row[hidden] {
+      display: none;
+    }
+
+    #alljobs-monitoring-hybrid .aj-detail {
+      padding: 14px 18px 16px 32px;
+      background: var(--aj-paper-recessed);
+    }
+
+    #alljobs-monitoring-hybrid .aj-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 18px;
+      margin-top: 9px;
+    }
+
+    #alljobs-monitoring-hybrid .aj-detail-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--aj-line);
+    }
+
+    #alljobs-monitoring-hybrid .aj-mobile-meta {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      #alljobs-monitoring-hybrid .aj-nav-links {
+        display: none;
+      }
+
+      #alljobs-monitoring-hybrid .aj-source,
+      #alljobs-monitoring-hybrid .aj-heading,
+      #alljobs-monitoring-hybrid .aj-section-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      #alljobs-monitoring-hybrid .aj-source {
+        gap: 3px;
+      }
+
+      #alljobs-monitoring-hybrid .aj-main {
+        padding: 20px 14px 24px;
+      }
+
+      #alljobs-monitoring-hybrid .aj-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #alljobs-monitoring-hybrid .aj-summary > div:nth-child(2) {
+        border-right: 0;
+      }
+
+      #alljobs-monitoring-hybrid .aj-summary > div:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--aj-line);
+      }
+
+      #alljobs-monitoring-hybrid .aj-attention-row {
+        grid-template-columns: 1fr auto;
+        gap: 6px 12px;
+        padding-block: 12px;
+      }
+
+      #alljobs-monitoring-hybrid .aj-attention-row > :nth-child(3),
+      #alljobs-monitoring-hybrid .aj-attention-row > :nth-child(4) {
+        grid-column: 1 / -1;
+      }
+
+      #alljobs-monitoring-hybrid .aj-open {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      #alljobs-monitoring-hybrid .aj-table-wrap {
+        overflow: visible;
+        background: transparent;
+        border-top: 0;
+      }
+
+      #alljobs-monitoring-hybrid table,
+      #alljobs-monitoring-hybrid tbody,
+      #alljobs-monitoring-hybrid tr,
+      #alljobs-monitoring-hybrid td {
+        display: block;
+        width: 100%;
+      }
+
+      #alljobs-monitoring-hybrid thead {
+        display: none;
+      }
+
+      #alljobs-monitoring-hybrid tr:not(.aj-detail-row) {
+        position: relative;
+        margin-bottom: 10px;
+        padding: 12px;
+        background: var(--aj-paper-raised);
+        border-bottom: 1px solid var(--aj-line);
+      }
+
+      #alljobs-monitoring-hybrid td {
+        display: grid;
+        grid-template-columns: minmax(90px, 0.45fr) 1fr;
+        gap: 10px;
+        padding: 5px 0;
+        border: 0;
+      }
+
+      #alljobs-monitoring-hybrid td::before {
+        color: var(--aj-muted);
+        content: attr(data-label);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      #alljobs-monitoring-hybrid td:last-child {
+        text-align: left;
+      }
+
+      #alljobs-monitoring-hybrid td:last-child .aj-open {
+        justify-self: start;
+      }
+
+      #alljobs-monitoring-hybrid .aj-detail-row {
+        margin-top: -10px;
+        margin-bottom: 10px;
+      }
+
+      #alljobs-monitoring-hybrid .aj-detail-row td {
+        display: block;
+        padding: 0;
+      }
+
+      #alljobs-monitoring-hybrid .aj-detail-row td::before {
+        display: none;
+      }
+
+      #alljobs-monitoring-hybrid .aj-detail {
+        padding: 14px;
+      }
+
+      #alljobs-monitoring-hybrid .aj-detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div class="aj-window">
+    <header>
+      <div class="aj-nav">
+        <span class="aj-brand">alljobs</span>
+        <nav class="aj-nav-links" aria-label="Primary navigation">
+          <span>Portfolio</span><span>Projects</span><span>Tasks</span><span aria-current="page">Monitoring</span>
+        </nav>
+        <span aria-label="Command menu shortcut">⌘K</span>
+      </div>
+      <div class="aj-source">
+        <span>/monitoring · cached projection</span>
+        <span>observed 4 min ago · 7 providers</span>
+      </div>
+    </header>
+
+    <main class="aj-main">
+      <div class="aj-heading">
+        <div>
+          <span class="aj-kicker">Project operations</span>
+          <h1>Application monitoring</h1>
+          <div class="aj-subtitle">先处理跨项目异常，再按项目核对服务状态、用量与数据新鲜度。</div>
+        </div>
+        <div class="aj-updated">Next refresh in 56s</div>
+      </div>
+
+      <div class="aj-summary" aria-label="Monitoring summary">
+        <div><span class="aj-label">Projects</span><span class="aj-value">8</span></div>
+        <div><span class="aj-label">Bindings</span><span class="aj-value">16</span></div>
+        <div><span class="aj-label">Needs attention</span><span class="aj-value critical">3</span></div>
+        <div><span class="aj-label">Freshness</span><span class="aj-value">4m</span></div>
+      </div>
+
+      <section aria-labelledby="attention-title">
+        <div class="aj-section-head">
+          <h2 id="attention-title">Needs attention</h2>
+          <span class="aj-section-note">Only actionable or unavailable signals</span>
+        </div>
+        <div class="aj-attention-list">
+          <div class="aj-attention-row">
+            <span class="aj-status critical">Critical</span>
+            <strong>TalentVault</strong>
+            <span>Railway · production API</span>
+            <span>Required HTTP probe failed twice; deploy succeeded</span>
+            <button type="button" class="aj-open" data-project="talentvault">Open ›</button>
+          </div>
+          <div class="aj-attention-row">
+            <span class="aj-status watch">Watch</span>
+            <strong>GrandeGPT</strong>
+            <span>Neon · main branch</span>
+            <span>Data transfer reached 82% of the current-period allowance</span>
+            <button type="button" class="aj-open" data-project="grandegpt">Open ›</button>
+          </div>
+          <div class="aj-attention-row">
+            <span class="aj-status unknown">Unknown</span>
+            <strong>MathMagics</strong>
+            <span>Fly.io · worker</span>
+            <span>Credential expired; last trustworthy observation was 18h ago</span>
+            <button type="button" class="aj-open" data-project="mathmagics">Open ›</button>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="projects-title">
+        <div class="aj-section-head">
+          <h2 id="projects-title">All projects</h2>
+          <span class="aj-section-note">8 projects · sorted by attention, then name</span>
+        </div>
+        <div class="aj-table-wrap">
+          <table>
+            <thead>
+              <tr><th>Project</th><th>State</th><th>Provider bindings</th><th>Leading reason</th><th>Freshness</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="aj-project" data-label="Project"><strong>TalentVault</strong></td>
+                <td data-label="State"><span class="aj-status critical">Critical</span></td>
+                <td class="aj-binding" data-label="Provider bindings">Railway 1 · Neon 1</td>
+                <td data-label="Leading reason">API probe failed</td>
+                <td data-label="Freshness">2m ago</td>
+                <td data-label="Action"><button type="button" class="aj-open" data-project="talentvault" aria-expanded="false" aria-controls="detail-talentvault">Open ›</button></td>
+              </tr>
+              <tr id="detail-talentvault" class="aj-detail-row" hidden>
+                <td colspan="6">
+                  <div class="aj-detail" aria-live="polite">
+                    <strong>TalentVault · provider evidence</strong>
+                    <div class="aj-detail-grid">
+                      <div class="aj-detail-item"><span>Railway deployment</span><span class="healthy">Succeeded · c41ea1</span></div>
+                      <div class="aj-detail-item"><span>Required HTTP probe</span><span class="critical">Failed 2× · 503</span></div>
+                      <div class="aj-detail-item"><span>Neon compute</span><span class="healthy">Active</span></div>
+                      <div class="aj-detail-item"><span>Usage</span><span>42% CU-hours · exact</span></div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="aj-project" data-label="Project"><strong>GrandeGPT</strong></td>
+                <td data-label="State"><span class="aj-status watch">Watch</span></td>
+                <td class="aj-binding" data-label="Provider bindings">Fly.io 2 · Neon 1</td>
+                <td data-label="Leading reason">Transfer 82%</td>
+                <td data-label="Freshness">4m ago</td>
+                <td data-label="Action"><button type="button" class="aj-open" data-project="grandegpt">Open ›</button></td>
+              </tr>
+              <tr>
+                <td class="aj-project" data-label="Project"><strong>MathMagics</strong></td>
+                <td data-label="State"><span class="aj-status unknown">Unknown</span></td>
+                <td class="aj-binding" data-label="Provider bindings">Fly.io 1</td>
+                <td data-label="Leading reason">Credential expired</td>
+                <td data-label="Freshness">18h ago</td>
+                <td data-label="Action"><button type="button" class="aj-open" data-project="mathmagics">Open ›</button></td>
+              </tr>
+              <tr>
+                <td class="aj-project" data-label="Project"><strong>AllJobs</strong></td>
+                <td data-label="State"><span class="aj-status healthy">Healthy</span></td>
+                <td class="aj-binding" data-label="Provider bindings">Cloudflare 2 · GitHub 1</td>
+                <td data-label="Leading reason">All 3 required signals current</td>
+                <td data-label="Freshness">4m ago</td>
+                <td data-label="Action"><button type="button" class="aj-open" data-project="alljobs">Open ›</button></td>
+              </tr>
+              <tr>
+                <td class="aj-project" data-label="Project"><strong>DocLock</strong></td>
+                <td data-label="State"><span class="aj-status healthy">Healthy</span></td>
+                <td class="aj-binding" data-label="Provider bindings">Supabase 1 · Vercel 1</td>
+                <td data-label="Leading reason">All 2 required signals current</td>
+                <td data-label="Freshness">4m ago</td>
+                <td data-label="Action"><button type="button" class="aj-open" data-project="doclock">Open ›</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById('alljobs-monitoring-hybrid');
+      const detail = root.querySelector('#detail-talentvault');
+      const expandable = root.querySelector('[aria-controls="detail-talentvault"]');
+
+      root.querySelectorAll('.aj-open').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (button.dataset.project !== 'talentvault') return;
+          const opening = detail.hidden;
+          detail.hidden = !opening;
+          expandable.setAttribute('aria-expanded', String(opening));
+          expandable.textContent = opening ? 'Close ↑' : 'Open ›';
+        });
+      });
+    })();
+  </script>
+</div>
