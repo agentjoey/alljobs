@@ -116,7 +116,7 @@ features:
         deps: [r5-design-review]
       - id: r5-attention
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-2.md
         evidence: null
