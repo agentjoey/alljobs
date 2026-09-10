@@ -121,3 +121,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-2.md
         evidence: null
         deps: [r5-contracts]
+      - id: r5-store
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-3.md
+        evidence: null
+        deps: [r5-attention]
