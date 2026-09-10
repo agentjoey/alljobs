@@ -7,7 +7,6 @@ agents:
   - { id: gemini, roles: [worker] }
   - { id: kimi, roles: [worker] }
   - { id: opencode, roles: [worker] }
-  - { id: ${PACT_AGENT_ID:-}, roles: [worker] }
 features:
   - id: workbench-v1
     branch: 
@@ -98,3 +97,13 @@ features:
         spec: .pact/tasks/r2-management-assistant-panel.md
         evidence: null
         deps: [r2-orchestration]
+  - id: r5-application-monitoring
+    branch: codex/r5-application-monitoring
+    status: in_progress
+    tasks:
+      - id: r5-design-review
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-0.md
+        evidence: null
