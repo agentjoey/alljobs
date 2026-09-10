@@ -135,3 +135,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-4.md
         evidence: null
         deps: [r5-store]
+      - id: r5-railway-fly
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-5.md
+        evidence: null
+        deps: [r5-collector]
