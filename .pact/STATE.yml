@@ -137,7 +137,7 @@ features:
         deps: [r5-store]
       - id: r5-railway-fly
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-5.md
         evidence: null
