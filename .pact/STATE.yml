@@ -163,3 +163,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-8.md
         evidence: null
         deps: [r5-queries-refresh]
+      - id: r5-verification
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-9.md
+        evidence: null
+        deps: [r5-ui]
