@@ -156,3 +156,10 @@ features:
         spec: .pact/tasks/r5-application-monitoring-task-7.md
         evidence: null
         deps: [r5-neon-supabase]
+      - id: r5-ui
+        owner: kimi
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/r5-application-monitoring-task-8.md
+        evidence: null
+        deps: [r5-queries-refresh]
