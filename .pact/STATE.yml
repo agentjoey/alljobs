@@ -123,7 +123,7 @@ features:
         deps: [r5-contracts]
       - id: r5-store
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-3.md
         evidence: null
