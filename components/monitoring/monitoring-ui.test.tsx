@@ -508,7 +508,10 @@ describe("ProjectMonitoringDetail", () => {
     const table = screen.getByRole("table", { name: /provider bindings/i });
     expect(within(table).getByText(/Succeeded/)).toBeInTheDocument();
     expect(within(table).getByText(/Unhealthy/)).toBeInTheDocument();
-    expect(screen.getByText(/Required runtime probe failed twice\./)).toBeInTheDocument();
+    // The reason summary appears twice: in the Project "Why attention" strip
+    // and again as the binding's own evidence (all applicable reasons remain
+    // visible in Project and binding detail — design §8).
+    expect(screen.getAllByText(/Required runtime probe failed twice\./)).toHaveLength(2);
   });
 
   it("drills down Project → binding → signal: the expanded matrix shows each signal separately", async () => {
@@ -708,6 +711,89 @@ describe("ProjectMonitoringDetail", () => {
 
     expect(screen.getByText("usage_near_allowance")).toBeInTheDocument();
     expect(screen.getByText(/Transfer reached 92%/)).toBeInTheDocument();
+  });
+
+  it("keeps the binding's only reason visible when it is also the Project leading reason", async () => {
+    // The normal critical case: the Project leading reason IS this binding's
+    // reason. Expanding the binding must still show the code, summary,
+    // dimension and evidence timestamp — filtering it as a duplicate of the
+    // "Why attention" strip would erase all binding-level evidence (design §8:
+    // all applicable reasons remain visible in Project and binding detail).
+    const user = userEvent.setup();
+    const reason = {
+      code: "runtime_probe_failed",
+      dimension: "runtime",
+      severity: "critical",
+      summary: "Required runtime probe failed twice.",
+      observed_at: OBSERVED
+    } as const;
+    const { container } = render(
+      <ProjectMonitoringDetail
+        view={projectView({
+          attention: "critical",
+          leading_reason: reason,
+          bindings: [bindingDetail({ attention: "critical", reasons: [reason] })]
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /signal matrix/i }));
+
+    const panel = container.querySelector(".mon-binding-panel");
+    expect(panel).not.toBeNull();
+    expect(panel).not.toHaveAttribute("hidden");
+    const reasonList = within(panel as HTMLElement).getByRole("list", { name: "Attention reasons" });
+    expect(within(reasonList).getByText("runtime_probe_failed")).toBeInTheDocument();
+    expect(within(reasonList).getByText(/Required runtime probe failed twice\./)).toBeInTheDocument();
+    expect(within(reasonList).getByText(/runtime · observed/)).toBeInTheDocument();
+    const evidenceTime = within(reasonList).getByText("05:59");
+    expect(evidenceTime).toHaveAttribute("datetime", OBSERVED);
+  });
+
+  it("keeps identical reasons on two bindings visible in each binding's evidence", async () => {
+    // Two bindings legitimately share the same reason code/summary/timestamp;
+    // neither may lose its binding-level evidence to deduplication.
+    const user = userEvent.setup();
+    const reason = {
+      code: "runtime_probe_failed",
+      dimension: "runtime",
+      severity: "critical",
+      summary: "Required runtime probe failed twice.",
+      observed_at: OBSERVED
+    } as const;
+    const { container } = render(
+      <ProjectMonitoringDetail
+        view={projectView({
+          attention: "critical",
+          leading_reason: reason,
+          bindings: [
+            bindingDetail({
+              binding_id: "railway-production-api",
+              attention: "critical",
+              reasons: [reason]
+            }),
+            bindingDetail({
+              binding_id: "railway-eu-worker",
+              attention: "critical",
+              reasons: [reason]
+            })
+          ]
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /railway-production-api/ }));
+    await user.click(screen.getByRole("button", { name: /railway-eu-worker/ }));
+
+    const panels = container.querySelectorAll(".mon-binding-panel:not([hidden])");
+    expect(panels).toHaveLength(2);
+    for (const panel of panels) {
+      const reasonList = within(panel as HTMLElement).getByRole("list", { name: "Attention reasons" });
+      expect(within(reasonList).getByText("runtime_probe_failed")).toBeInTheDocument();
+      expect(within(reasonList).getByText(/Required runtime probe failed twice\./)).toBeInTheDocument();
+      const evidenceTime = within(reasonList).getByText("05:59");
+      expect(evidenceTime).toHaveAttribute("datetime", OBSERVED);
+    }
   });
 
   it("renders recent normalized evidence with a bounded interpretation that never claims root cause", () => {

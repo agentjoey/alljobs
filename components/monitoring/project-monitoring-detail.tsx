@@ -129,22 +129,14 @@ function SignalCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-function sameReason(a: AttentionReason, b: AttentionReason): boolean {
-  return a.code === b.code && a.summary === b.summary && a.observed_at === b.observed_at;
-}
-
-function BindingPanel({
-  binding,
-  leadingReason
-}: {
-  binding: MonitoringBindingDetail;
-  leadingReason: AttentionReason | null;
-}) {
-  // The Project-level leading reason is already called out in the "Why
-  // attention" strip; repeat it here only when it is not the same reason.
-  const reasons = leadingReason
-    ? binding.reasons.filter((reason) => !sameReason(reason, leadingReason))
-    : binding.reasons;
+function BindingPanel({ binding }: { binding: MonitoringBindingDetail }) {
+  // Every binding reason stays visible here with full code, summary,
+  // dimension and evidence timestamp — even when it is the same reason the
+  // "Why attention" strip shows as the Project leading reason (design §8:
+  // all applicable reasons remain visible in Project and binding detail).
+  // Deduplicating against the strip would erase this binding's own evidence,
+  // and two bindings sharing a reason would both lose it.
+  const reasons = binding.reasons;
   return (
     <>
       <div className="mon-signal-grid" role="group" aria-label={`Signal matrix for ${bindingLabel(binding)}`}>
@@ -515,7 +507,7 @@ export function ProjectMonitoringDetail({ view }: { view: MonitoringProjectView 
                     <h3>{bindingLabel(binding)}</h3>
                   </div>
                 </div>
-                <BindingPanel binding={binding} leadingReason={view.leading_reason} />
+                <BindingPanel binding={binding} />
               </div>
             ))}
           </>
