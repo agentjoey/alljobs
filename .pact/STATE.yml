@@ -166,7 +166,7 @@ features:
         deps: [r5-queries-refresh]
       - id: r5-verification
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-9.md
         evidence: null
