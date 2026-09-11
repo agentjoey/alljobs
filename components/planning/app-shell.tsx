@@ -22,6 +22,7 @@ function custodyForPath(pathname: string): SourceStatusProps["custody"] {
   if (pathname === "/") return "MIXED: PORTFOLIO";
   if (pathname.startsWith("/projects")) return "MIXED: WORKBENCH";
   if (pathname.startsWith("/tasks")) return "NATIVE: CONTROL-HOST";
+  if (pathname.startsWith("/monitoring")) return "EXTERNAL: CACHED PROJECTION";
   if (pathname.startsWith("/register")) return "NATIVE: CONTROL-HOST";
   if (pathname.startsWith("/archived")) return "MIXED: WORKBENCH";
   return "MIXED: WORKBENCH";
