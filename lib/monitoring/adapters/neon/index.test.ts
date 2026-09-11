@@ -109,7 +109,11 @@ describe("neon adapter requests", () => {
     expect(consumptionUrl.searchParams.get("project_ids")).toBe("cool-project");
     expect(consumptionUrl.searchParams.get("granularity")).toBe("daily");
     expect(consumptionUrl.searchParams.get("metrics")).toContain("compute_unit_seconds");
-    expect(consumptionUrl.searchParams.get("from")).toBeTruthy();
+    // The queried window must start at the validated billing period start, so
+    // the summed timeframes actually cover the period the emitted measures are
+    // labeled with (review rework: a short window labeled as the full billing
+    // period understates usage against design §8 allowance bands).
+    expect(consumptionUrl.searchParams.get("from")).toBe(projectPaid.project.consumption_period_start);
     expect(consumptionUrl.searchParams.get("to")).toBe(NOW);
   });
 
@@ -248,12 +252,13 @@ describe("neon usage normalization", () => {
   });
 
   it("aggregates paid consumption metrics per billing period as provider estimates", async () => {
-    const { result } = collectWith(respondNeon(SUCCESS_SCRIPT));
+    const { result, requests } = collectWith(respondNeon(SUCCESS_SCRIPT));
     const collected = await result;
     const byMetric = new Map(collected.usage.map((measure) => [measure.metric, measure]));
 
-    expect(byMetric.get("compute_unit_seconds")).toMatchObject({
-      value: 4500,
+    const compute = byMetric.get("compute_unit_seconds");
+    expect(compute).toMatchObject({
+      value: 36900,
       unit: "cu_seconds",
       availability: "available",
       billing_alignment: "provider_estimate",
@@ -261,8 +266,27 @@ describe("neon usage normalization", () => {
       period_end: NOW,
       provider_reported_at: NOW
     });
-    expect(byMetric.get("root_branch_bytes_month")).toMatchObject({ value: 4100000, availability: "available" });
-    expect(byMetric.get("public_network_transfer_bytes")).toMatchObject({ value: 1572864, unit: "bytes" });
+
+    // Pin the window/label relationship: the emitted period_start is exactly
+    // the `from` the adapter queried with, which is the validated billing
+    // period start — the summed value covers the period it claims to cover.
+    const consumptionRequest = requests.find((request) => request.url.includes("consumption_history"));
+    expect(consumptionRequest).toBeDefined();
+    const queriedFrom = new URL(consumptionRequest!.url).searchParams.get("from");
+    expect(queriedFrom).toBe(projectPaid.project.consumption_period_start);
+    expect(compute?.period_start).toBe(queriedFrom);
+
+    // Per the Neon usage-calculations reference, every v2 metric is a
+    // per-timeframe accumulation that sums to the billing-period total (v2
+    // storage metrics are byte-months = byte-hours/744 per timeframe, not
+    // point-in-time snapshots), so the fixture's daily timeframes spanning
+    // the whole period sum: 10 full days + the partial current day.
+    expect(byMetric.get("root_branch_bytes_month")).toMatchObject({ value: 1025000, unit: "byte_months", availability: "available" });
+    expect(byMetric.get("public_network_transfer_bytes")).toMatchObject({ value: 1025000, unit: "bytes" });
+    // extra_branches_month is documented in raw branch-hours (not divided by
+    // 744 like the byte-month metrics), so the unit label says so.
+    expect(byMetric.get("extra_branches_month")).toMatchObject({ value: 492, unit: "branch_hours" });
+
     // Neon does not label any consumption metric invoice-aligned, so nothing
     // may ever be reported with exact billing alignment.
     for (const measure of collected.usage) {

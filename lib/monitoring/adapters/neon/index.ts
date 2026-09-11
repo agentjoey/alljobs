@@ -24,6 +24,9 @@ import {
 //   3. GET /api/v2/consumption_history/v2/projects — OPTIONAL paid-plan query
 //      (Launch/Scale/Agent/Business/Enterprise only; 403 otherwise). Failures
 //      here never fail collection: the measures downgrade to not_available.
+//      The query window starts at the validated billing period start so the
+//      summed timeframes cover exactly the period the measures are labeled
+//      with (see the aggregation note on CONSUMPTION_METRICS below).
 //
 // Neon documents NO consumption metric as invoice-aligned, so every measure
 // reports billing_alignment "provider_estimate" — "exact" is never emitted.
@@ -51,6 +54,13 @@ import {
 //   from, to, granularity, metrics; 403 when the account plan is ineligible;
 //   404 when the account is not a member of the org):
 //   https://neon.com/docs/reference/api/consumption/get-consumption-history-per-project-v2
+// - Usage and cost calculations (per-metric raw units and the documented
+//   bill-reconciliation procedure — fetch the billing month and SUM each
+//   metric across its timeframes; v2 storage metrics are byte-months, i.e.
+//   byte-hours already divided by 744 per timeframe, and extra_branches_month
+//   is raw branch-hours — every v2 metric is a per-timeframe accumulation,
+//   none is a point-in-time snapshot, so summing timeframes is correct):
+//   https://neon.com/docs/introduction/usage-calculations
 // - API authentication (Bearer API key):
 //   https://neon.com/docs/manage/api-keys
 export const NEON_ADAPTER_COMPATIBILITY_DATE = "2026-09-11";
@@ -65,7 +75,10 @@ const NEON_PROJECT_SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 // Documented consumption v2 metrics (OpenAPI
 // ConsumptionHistoryQueryMetrics, re-verified 2026-09-11). Neon labels none of
-// them invoice-aligned, so they are always provider estimates.
+// them invoice-aligned, so they are always provider estimates. Unit labels
+// follow the raw units in the usage-calculations reference: the storage
+// metrics arrive as byte-months (byte-hours/744 per timeframe), while
+// extra_branches_month arrives as raw branch-hours despite its name.
 const CONSUMPTION_METRICS = [
   { name: "compute_unit_seconds", unit: "cu_seconds" },
   { name: "root_branch_bytes_month", unit: "byte_months" },
@@ -73,7 +86,7 @@ const CONSUMPTION_METRICS = [
   { name: "instant_restore_bytes_month", unit: "byte_months" },
   { name: "public_network_transfer_bytes", unit: "bytes" },
   { name: "private_network_transfer_bytes", unit: "bytes" },
-  { name: "extra_branches_month", unit: "branch_months" },
+  { name: "extra_branches_month", unit: "branch_hours" },
   { name: "snapshot_storage_bytes_month", unit: "byte_months" }
 ] as const;
 
@@ -419,7 +432,13 @@ export function createNeonAdapter(): MonitoringAdapter {
     let consumptionMeasures: UsageMeasure[] = unavailableConsumptionMeasures(period, input.now);
     if (project.org_id) {
       const to = input.now;
-      const from = secondPrecisionIso(Date.parse(input.now) - 48 * 60 * 60 * 1000);
+      // Query the whole current billing period (option (a) of the rework):
+      // the emitted measures are labeled with the billing period start, so
+      // the summed window must actually start there. The current billing
+      // period start is always within the documented 60-day daily-granularity
+      // lookback; should Neon ever reject the range (406), the optional-query
+      // error path below downgrades these measures to not_available.
+      const from = project.consumption_period_start;
       const query = new URLSearchParams({
         org_id: project.org_id,
         project_ids: projectId,
