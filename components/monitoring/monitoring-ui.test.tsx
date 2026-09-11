@@ -302,6 +302,43 @@ describe("MonitoringOverview", () => {
     expect(order).toEqual(["Critical", "Warning", "Unknown", "Watch"]);
   });
 
+  it("labels the queue evidence time from the leading reason, never the newer collection attempt", () => {
+    // A failed collection attempt at 06:00 carried forward evidence last
+    // observed the previous day; the queue item's observed_at holds the
+    // attempt time (snapshot.attempted_at), so labeling it "observed" would
+    // misrepresent stale evidence as newly observed.
+    const queue = [
+      queueItem({
+        attention: "unknown",
+        observed_at: NOW, // snapshot.attempted_at: the failed re-collection attempt
+        reason: {
+          code: "collector_authentication_failed",
+          dimension: "collector",
+          severity: "unknown",
+          summary: "Credential expired; serving the last trustworthy evidence",
+          observed_at: "2026-09-10T12:00:00Z"
+        }
+      })
+    ];
+    render(<MonitoringOverview view={landingView({ queue, ledger: readyLedger() })} />);
+
+    const queueRegion = screen.getByRole("region", { name: "Needs attention" });
+    const item = within(queueRegion).getByRole("listitem");
+    const evidenceTime = within(item).getByText("12:00");
+    expect(evidenceTime).toHaveAttribute("datetime", "2026-09-10T12:00:00Z");
+    expect(within(item).queryByText("06:00")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the snapshot attempt time only when the queue item has no reason", () => {
+    const queue = [queueItem({ reason: null, observed_at: NOW })];
+    render(<MonitoringOverview view={landingView({ queue, ledger: readyLedger() })} />);
+
+    const queueRegion = screen.getByRole("region", { name: "Needs attention" });
+    const item = within(queueRegion).getByRole("listitem");
+    const evidenceTime = within(item).getByText("06:00");
+    expect(evidenceTime).toHaveAttribute("datetime", NOW);
+  });
+
   it("renders the complete project ledger including healthy projects, in precedence order", () => {
     render(<MonitoringOverview view={landingView({ ledger: readyLedger() })} />);
 

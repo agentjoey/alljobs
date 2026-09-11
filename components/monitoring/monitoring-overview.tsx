@@ -129,22 +129,30 @@ function AttentionQueue({ queue }: { queue: MonitoringQueueItem[] }) {
         <p className="mon-empty">Nothing needs attention — every collected binding is healthy.</p>
       ) : (
         <ul className="mon-attention">
-          {queue.map((item) => (
-            <li key={`${item.project}/${item.binding_id}`} className="mon-attention__row">
-              <AttentionStatus level={item.attention} />
-              <strong>{item.project_name}</strong>
-              <span>
-                {MONITORING_PROVIDER_LABELS[item.provider]} · {item.binding_id}
-              </span>
-              <span>
-                {item.reason?.summary ?? "This signal cannot be evaluated right now"} · observed{" "}
-                <time dateTime={item.observed_at}>{formatClock(item.observed_at)}</time>
-              </span>
-              <Link className="mon-open" href={`/monitoring/${item.project}`}>
-                Open ›
-              </Link>
-            </li>
-          ))}
+          {queue.map((item) => {
+            // The evidence time comes from the leading reason: a failed
+            // collection may carry forward older trustworthy evidence, so the
+            // item's observed_at (snapshot.attempted_at) would mislabel stale
+            // evidence as newly observed. Fall back to it only when no
+            // reason exists.
+            const evidenceAt = item.reason?.observed_at ?? item.observed_at;
+            return (
+              <li key={`${item.project}/${item.binding_id}`} className="mon-attention__row">
+                <AttentionStatus level={item.attention} />
+                <strong>{item.project_name}</strong>
+                <span>
+                  {MONITORING_PROVIDER_LABELS[item.provider]} · {item.binding_id}
+                </span>
+                <span>
+                  {item.reason?.summary ?? "This signal cannot be evaluated right now"} · observed{" "}
+                  <time dateTime={evidenceAt}>{formatClock(evidenceAt)}</time>
+                </span>
+                <Link className="mon-open" href={`/monitoring/${item.project}`}>
+                  Open ›
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
