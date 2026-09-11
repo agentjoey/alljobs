@@ -114,7 +114,10 @@ function bindingFreshness(binding: MonitoringBindingDetail): string {
 }
 
 function bindingLabel(binding: MonitoringBindingDetail): string {
-  return `${MONITORING_PROVIDER_LABELS[binding.provider]} · ${binding.resource_kind}`;
+  // binding_id keeps two bindings of the same provider and resource kind
+  // distinguishable in the row, the toggle's accessible name, and the
+  // expanded panel heading; its charset is schema-restricted and safe.
+  return `${MONITORING_PROVIDER_LABELS[binding.provider]} · ${binding.resource_kind} · ${binding.binding_id}`;
 }
 
 function SignalCell({ label, value }: { label: string; value: string }) {
@@ -242,24 +245,37 @@ function BindingPanel({
  * Deterministic, bounded interpretation: the only claim allowed is a timing
  * relationship between a deployment transition and a later runtime failure on
  * the same binding. It is correlation evidence, never a root cause.
+ *
+ * Production contract (lib/monitoring/store/events.ts): a deployment reaching
+ * `succeeded` is a signal_state event whose `new` is the state token. A
+ * deployment_identity event's `new` is the `deployment_id/revision` identity
+ * token, never a state, so identity events can never satisfy this correlation.
  */
 function interpretationFor(events: readonly MonitoringRecentEvent[]): string {
   for (const runtimeEvent of events) {
-    if (runtimeEvent.dimension !== "runtime") continue;
+    if (runtimeEvent.type !== "signal_state" || runtimeEvent.dimension !== "runtime") continue;
     if (runtimeEvent.new !== "unhealthy" && runtimeEvent.new !== "degraded") continue;
-    const deployment = events.find(
-      (event) =>
-        event.binding_id === runtimeEvent.binding_id &&
-        event.dimension === "deployment" &&
-        event.new === "succeeded"
-    );
-    if (!deployment) continue;
-    const minutes = Math.round(
-      (Date.parse(runtimeEvent.observed_at) - Date.parse(deployment.observed_at)) / 60000
-    );
-    if (minutes >= 0) {
-      return `The failure began ${minutes} minutes after the active deployment. This is correlation evidence only; the initial release does not claim root cause or remediate automatically.`;
+    const failedAt = Date.parse(runtimeEvent.observed_at);
+    // Deterministic pick: the latest same-binding `succeeded` deployment
+    // signal transition observed at or before the failure (ties broken by
+    // recorded_at). Later deployments and other bindings never qualify.
+    let deployment: MonitoringRecentEvent | null = null;
+    for (const event of events) {
+      if (event.type !== "signal_state" || event.dimension !== "deployment") continue;
+      if (event.binding_id !== runtimeEvent.binding_id || event.new !== "succeeded") continue;
+      const deployedAt = Date.parse(event.observed_at);
+      if (deployedAt > failedAt) continue;
+      if (
+        deployment === null ||
+        deployedAt > Date.parse(deployment.observed_at) ||
+        (deployedAt === Date.parse(deployment.observed_at) && event.recorded_at > deployment.recorded_at)
+      ) {
+        deployment = event;
+      }
     }
+    if (!deployment) continue;
+    const minutes = Math.round((failedAt - Date.parse(deployment.observed_at)) / 60000);
+    return `The failure began ${minutes} minutes after the active deployment. This is correlation evidence only; the initial release does not claim root cause or remediate automatically.`;
   }
   return "These are normalized transition events — correlation evidence only; the initial release does not claim root cause or remediate automatically.";
 }

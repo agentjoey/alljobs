@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ActionResult } from "@/app/actions/action-result";
 import { requestMonitoringRefresh, type MonitoringRefreshAck } from "@/app/actions/monitoring-refresh";
+import type { MonitoringSnapshot } from "@/lib/monitoring/domain/types";
 import type {
   MonitoringLandingView,
   MonitoringLedgerRow,
@@ -13,6 +16,7 @@ import type {
   MonitoringProjectView,
   MonitoringRecentEvent
 } from "@/lib/monitoring/queries/project";
+import { diffTransitions, type TransitionEvent } from "@/lib/monitoring/store/events";
 import { MonitoringOverview } from "./monitoring-overview";
 import { MonitoringRefreshControl } from "./monitoring-refresh-control";
 import { ProjectMonitoringDetail } from "./project-monitoring-detail";
@@ -113,6 +117,45 @@ function projectView(overrides: Partial<MonitoringProjectView> = {}): Monitoring
     bindings: [bindingDetail()],
     recent_evidence: [],
     ...overrides
+  };
+}
+
+function monitoringSnapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapshot {
+  return {
+    schema_version: 1,
+    cycle_id: "cycle-2026-09-11-05",
+    project: "talentvault",
+    binding_id: "railway-production-api",
+    provider: "railway",
+    adapter: { version: "railway/2026-09-11", capabilities: ["deployment", "runtime"] },
+    attempted_at: "2026-09-11T05:45:00Z",
+    collector: { state: "success", attempted_at: "2026-09-11T05:45:00Z" },
+    deployment: {
+      state: "building",
+      deployment_id: "dep-123",
+      revision: "c41ea1",
+      observed_at: "2026-09-11T05:44:00Z"
+    },
+    runtime: { state: "healthy", observed_at: "2026-09-11T05:44:30Z", source: "probe" },
+    usage: [],
+    platform_incident: null,
+    freshness: { signals: [] },
+    attention: "healthy",
+    reasons: [],
+    ...overrides
+  };
+}
+
+function toRecentEvent(event: TransitionEvent): MonitoringRecentEvent {
+  return {
+    type: event.type,
+    binding_id: event.binding_id,
+    dimension: event.dimension,
+    key: event.key,
+    previous: event.previous,
+    new: event.new,
+    observed_at: event.observed_at,
+    recorded_at: event.recorded_at
   };
 }
 
@@ -631,6 +674,102 @@ describe("ProjectMonitoringDetail", () => {
   });
 
   it("renders recent normalized evidence with a bounded interpretation that never claims root cause", () => {
+    // Events are derived from representative store output (diffTransitions),
+    // not hand-shaped literals: a deployment reaching `succeeded` emits a
+    // signal_state event whose `new` is the state token; deployment_identity
+    // `new` is the `deployment_id/revision` identity token instead.
+    const previous = monitoringSnapshot();
+    const next = monitoringSnapshot({
+      cycle_id: "cycle-2026-09-11-06",
+      attempted_at: NOW,
+      collector: { state: "success", attempted_at: NOW },
+      deployment: {
+        state: "succeeded",
+        deployment_id: "dep-123",
+        revision: "c41ea1",
+        observed_at: "2026-09-11T05:46:00Z"
+      },
+      runtime: {
+        state: "unhealthy",
+        observed_at: "2026-09-11T05:55:00Z",
+        source: "probe",
+        consecutive_failures: 2,
+        detail: "HTTP 503"
+      },
+      attention: "critical",
+      reasons: [
+        {
+          code: "runtime_probe_failed",
+          dimension: "runtime",
+          severity: "critical",
+          summary: "Required runtime probe failed twice.",
+          observed_at: "2026-09-11T05:55:00Z"
+        }
+      ]
+    });
+    const events = diffTransitions(previous, next, "2026-09-11T05:55:10Z").map(toRecentEvent);
+    render(<ProjectMonitoringDetail view={projectView({ recent_evidence: events })} />);
+
+    expect(screen.getByRole("region", { name: "Recent evidence" })).toBeInTheDocument();
+    expect(screen.getByText(/unhealthy/)).toBeInTheDocument();
+    const interpretation = screen.getByText(/correlation/i);
+    expect(interpretation.textContent).toMatch(/9 minutes after the active deployment/);
+    expect(interpretation.textContent).toMatch(/does not claim root cause/i);
+  });
+
+  it("correlates a runtime failure with the latest preceding succeeded deployment on the same binding only", () => {
+    const events: MonitoringRecentEvent[] = [
+      // A later succeeded deployment must not be picked: it is not preceding.
+      {
+        type: "signal_state",
+        binding_id: "railway-production-api",
+        dimension: "deployment",
+        key: "deployment",
+        previous: "building",
+        new: "succeeded",
+        observed_at: "2026-09-11T06:05:00Z",
+        recorded_at: "2026-09-11T06:05:10Z"
+      },
+      {
+        type: "signal_state",
+        binding_id: "railway-production-api",
+        dimension: "runtime",
+        key: "runtime",
+        previous: "healthy",
+        new: "unhealthy",
+        observed_at: "2026-09-11T05:55:00Z",
+        recorded_at: "2026-09-11T05:55:10Z"
+      },
+      // A different binding's succeeded deployment must not be picked.
+      {
+        type: "signal_state",
+        binding_id: "railway-eu-worker",
+        dimension: "deployment",
+        key: "deployment",
+        previous: "building",
+        new: "succeeded",
+        observed_at: "2026-09-11T05:50:00Z",
+        recorded_at: "2026-09-11T05:50:10Z"
+      },
+      // The latest preceding succeeded deployment on the same binding wins.
+      {
+        type: "signal_state",
+        binding_id: "railway-production-api",
+        dimension: "deployment",
+        key: "deployment",
+        previous: "building",
+        new: "succeeded",
+        observed_at: "2026-09-11T05:40:00Z",
+        recorded_at: "2026-09-11T05:40:10Z"
+      }
+    ];
+    render(<ProjectMonitoringDetail view={projectView({ recent_evidence: events })} />);
+
+    const interpretation = screen.getByText(/correlation/i);
+    expect(interpretation.textContent).toMatch(/15 minutes after the active deployment/);
+  });
+
+  it("never treats a deployment_identity token as a succeeded state transition", () => {
     const events: MonitoringRecentEvent[] = [
       {
         type: "signal_state",
@@ -646,20 +785,66 @@ describe("ProjectMonitoringDetail", () => {
         type: "deployment_identity",
         binding_id: "railway-production-api",
         dimension: "deployment",
-        key: "deployment",
-        previous: null,
-        new: "succeeded",
+        key: "deployment.identity",
+        previous: "dep-122/a1b2c3",
+        new: "dep-123/c41ea1",
         observed_at: "2026-09-11T05:46:00Z",
         recorded_at: "2026-09-11T05:46:10Z"
       }
     ];
     render(<ProjectMonitoringDetail view={projectView({ recent_evidence: events })} />);
 
-    expect(screen.getByRole("region", { name: "Recent evidence" })).toBeInTheDocument();
-    expect(screen.getByText(/unhealthy/)).toBeInTheDocument();
     const interpretation = screen.getByText(/correlation/i);
-    expect(interpretation).toBeInTheDocument();
-    expect(interpretation.textContent).toMatch(/does not claim root cause/i);
+    expect(interpretation.textContent).not.toMatch(/minutes after/);
+  });
+
+  it("distinguishes same-provider same-kind bindings by binding_id in the row, toggle and expanded heading", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectMonitoringDetail
+        view={projectView({
+          bindings: [
+            bindingDetail({ binding_id: "railway-production-api" }),
+            bindingDetail({ binding_id: "railway-eu-worker" })
+          ]
+        })}
+      />
+    );
+
+    const table = screen.getByRole("table", { name: /provider bindings/i });
+    expect(within(table).getByText(/railway-production-api/)).toBeInTheDocument();
+    expect(within(table).getByText(/railway-eu-worker/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /railway-eu-worker/ }));
+    expect(screen.getByRole("heading", { level: 3, name: /railway-eu-worker/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3, name: /railway-production-api/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps monitoring links, buttons and the refresh control at least 44px tall on coarse pointers", () => {
+    // Coarse pointers are a media feature, not a viewport width: 768/1024px
+    // touch devices never enter the ≤720px overrides, so the contract is a
+    // dedicated @media (pointer: coarse) block in globals.css.
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    const marker = "@media (pointer: coarse)";
+    const start = css.indexOf(marker);
+    expect(start, "globals.css must define a @media (pointer: coarse) block").toBeGreaterThan(-1);
+    let depth = 0;
+    let end = css.length;
+    for (let i = css.indexOf("{", start); i < css.length; i += 1) {
+      if (css[i] === "{") depth += 1;
+      if (css[i] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    const block = css.slice(start, end);
+    expect(block).toContain(".mon-open");
+    expect(block).toContain(".mon-refresh__button");
+    expect(block).toContain(".mon-breadcrumb a");
+    expect(block).toMatch(/min-height:\s*44px/);
   });
 
   it("renders awaiting_first_collection and cache_unavailable states without throwing", () => {

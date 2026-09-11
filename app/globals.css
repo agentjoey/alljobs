@@ -1553,3 +1553,19 @@ body {
     width: 100%;
   }
 }
+
+/* Coarse pointers are a media feature, not a viewport width: 768/1024px touch
+   devices never enter the ≤720px overrides, so monitoring interactive targets
+   get their ≥44px floor here. `.mon-open` covers both the signal-matrix toggle
+   button and the Open / Provider console links. */
+@media (pointer: coarse) {
+  .mon-open,
+  .mon-refresh__button,
+  .mon-breadcrumb a {
+    min-height: 44px;
+  }
+  .mon-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+  }
+}
