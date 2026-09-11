@@ -158,7 +158,7 @@ features:
         deps: [r5-neon-supabase]
       - id: r5-ui
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-8.md
         evidence: null
