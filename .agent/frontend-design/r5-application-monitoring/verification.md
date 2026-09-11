@@ -1,6 +1,6 @@
 # R5 Application Monitoring — Task 9 Verification Evidence
 
-Date: 2026-09-11 · Seat: `kimi` (worker) · Independent reviewer verdict: pending pact review by seat `claude`.
+Date: 2026-09-11 · Release decision updated: 2026-09-12 · Seat: `kimi` (worker) · Independent reviewer verdict: accepted by seat `claude`.
 
 ## Candidate under verification
 
@@ -71,13 +71,17 @@ Intentional differences (implementation vs. mockup copy), each covered by e2e as
 
 ## Impeccable audit (`$impeccable audit`)
 
-- Mechanical detector (`detect.mjs`) over all monitoring UI files: zero findings.
+- Fresh mechanical detector (`detect.mjs`) over the monitoring routes, components, and shared stylesheet reported 13 advisory-only design-system findings: 11 are shared pre-existing stylesheet values and 2 are the R5 warning/watch accent hex values (`#8c5e00`, `#705800`). No blocking detector finding was reported.
 - Accessibility 4/4 (axe WCAG AA clean on both routes; keyboard traversal and visible focus verified in e2e). Performance 4/4 (local-cache reads only; no animations added). Theming 3/4 (Paper Workbench tokens throughout; two hard-coded status-accent hex values in `globals.css` for warning/watch). Responsive 4/4 (390px reflow proven, no horizontal scroll, ≥44px coarse-pointer targets). Implementation integrity 4/4 (structure matches the approved mockups; no drift).
 - **Audit Health Score: 19/20 (Excellent).** No P0/P1 findings; the token-accent hex values are a P3 note for a future `$impeccable polish` pass. No code changed as a result of the audit.
 
 ## Fixture integrity: the Vercel projection is evaluator-derived
 
 The OrbitDesk/Vercel extension binding's published snapshot is produced by calling `evaluateAttention` inside `tests/e2e/r5-fixtures.ts` with the genuine collection inputs (collector state `unsupported_capability`, empty `required_signals`, empty adapter capabilities), so the fixture cannot drift from the collector/evaluator contract. The genuine result — `attention=healthy`, `leading=null`, `reasons=[]` — is what the journeys and screenshots assert: an optional unsupported capability never downgrades attention, while the unsupported state remains visible and asserted in the binding's Collector detail (`Unsupported capability`, zero collection requests).
+
+## Human Owner release decision (2026-09-12)
+
+After reviewing the final desktop, true-390px mobile, and Project-detail screenshots plus the rollback boundary, the Human Owner explicitly instructed: `push and deploy`. This authorizes integrating and deploying the accepted R5 candidate. The deployment remains safe-off: `monitoring.enabled` stays false, no production provider credential is created, and no live provider collection is enabled by this decision.
 
 ## Explicit statements
 
@@ -86,6 +90,6 @@ The OrbitDesk/Vercel extension binding's published snapshot is produced by calli
 - **No production credentials configured.** Every credential reference resolves to an `ALLJOBS_R5_E2E_*` environment variable that is deliberately never set.
 - **No live provider validation performed.** All evidence derives from schema-valid fixture projections and fail-closed collection.
 
-## Pending Human gates (unchanged)
+## Pending Human gates after safe-off deployment authorization
 
-Human-selected pilot binding, production credential creation/scoping, live provider validation, Human Owner walkthrough of the final build, push, deploy, launchd changes, and release approval all remain pending Human gates.
+Human-selected pilot binding, production credential creation/scoping, live provider validation, and authorization to set `monitoring.enabled: true` remain pending Human gates. The 2026-09-12 instruction authorizes push and deployment of the disabled-by-default release only.

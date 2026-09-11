@@ -5,7 +5,7 @@
 - Workflow: Frontend Design Workflow 3.3
 - Tier: T3
 - Review type: independent design review in a new session without implementation context
-- Implementation authorization: granted 2026-09-11 for Pactify implementation with worker `kimi` (K3), independent reviewer `claude`, and primary-agent acceptance; production credentials, provider mutations, deployment, push, and release remain unauthorized
+- Implementation authorization: granted 2026-09-11 for Pactify implementation with worker `kimi` (K3), independent reviewer `claude`, and primary-agent acceptance. On 2026-09-12 the Human Owner explicitly authorized push and deployment of the accepted safe-off candidate; production credentials, provider mutations, live collection, and `monitoring.enabled: true` remain unauthorized.
 - Primary-agent self-review: complete on 2026-09-11
 - Independent review: **complete on 2026-09-11** — verdict `PASS` (no blocking findings; four non-blocking findings R5-DESIGN-001…004 recorded). Review document: `.agent/frontend-design/r5-application-monitoring/independent-design-review.md`. Reviewer: seat `kimi` via pact task `r5-design-review`; implementation may proceed to Task 1.
 
@@ -62,6 +62,7 @@ Do not implement code, edit provider credentials, run provider mutations, deploy
   - `final-mobile.png` `78d59edeae15f374a099543006b41efad2ffb55a7d94a239a777a1489cdff7a1`
   - `final-project-detail.png` `eef0537281fb2b63b4f67d23caadcc754f52d5e5738eeaffa54d50951c9391a7`
 - **Mockup comparison:** both routes match the approved mockups' information architecture; eight intentional differences (freshness state labels vs relative times, no refresh countdown, binding ids in queue rows, collapsed-by-default detail panels, console link in row action, normalized transition tokens in evidence, operational usage without mockup cost styling, app-wide custody strip) are documented with evidence in `verification.md`. `$impeccable audit` scored 19/20 (Excellent), no P0/P1 findings.
-- **Independent reviewer verdict:** pending pact review by seat `claude`.
-- **Explicit statements:** not pushed; not deployed; no production credentials configured; no live provider validation performed. Pilot binding selection, live provider validation, Human Owner walkthrough, push/deploy, and release remain pending Human gates.
+- **Independent reviewer verdict:** accepted by seat `claude`; all R5 Pact tasks are accepted.
+- **Human release decision:** on 2026-09-12, after the final screenshot and rollback walkthrough package was presented, the Human Owner instructed `push and deploy`. This authorizes the safe-off release only: monitoring remains disabled and no provider credential or live collection is enabled.
+- **Pre-release state:** no production credentials configured and no live provider validation performed. Pilot binding selection, credential scoping, live provider validation, and authorization to set `monitoring.enabled: true` remain pending Human gates.
 - Full evidence: `.agent/frontend-design/r5-application-monitoring/verification.md`.
