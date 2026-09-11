@@ -151,7 +151,7 @@ features:
         deps: [r5-railway-fly]
       - id: r5-queries-refresh
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-7.md
         evidence: null
