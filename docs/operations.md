@@ -93,3 +93,90 @@ application behavior itself must be reverted, restore the last approved build
 and reload only `com.agentjoey.alljobs`. Escalate immediately for any key/content
 leak, ungated source read, enabled stale action, failure to disable, or loss of
 loopback binding.
+
+## R5 Application Monitoring Operations
+
+R5 is a read-only, disabled-by-default monitoring workspace at `/monitoring`.
+Page rendering reads only the local validated cache projection; it never calls
+a provider. Collection happens only through the scheduled refresh worker or an
+explicit same-origin manual refresh.
+
+### Enabling (default is off)
+
+Monitoring activates only when `~/.alljobs/config.json` contains an explicit
+`monitoring` block with `enabled: true`, plus `refreshIntervalSeconds`
+(60–86400), `concurrency` (1–4), `credentials`, and `probeAllowedHosts`. A
+missing or invalid block is a deliberate safe-off state: routes render the
+disabled notice and the worker skips collection. Every monitored Project
+declares its own explicit `monitoring.bindings` in its registry entry; no
+binding is ever inferred from provider names, domains, or Git remotes.
+
+### Credential environment-name mapping
+
+The config maps each binding's `credential_ref` to `{ provider, tokenEnv }` —
+the NAME of an environment variable, never a value. Token values exist only in
+the server process environment (for the LaunchAgent, its `EnvironmentVariables`).
+Never print, paste, log, or screenshot a token value; documentation and tickets
+refer to environment-variable names only. A missing or empty variable fails
+closed as a normalized `authentication_failed` collector state before any
+provider request is made. Probe targets are equally indirect: a binding's
+`probe.host_ref` must resolve to an exact HTTPS origin in `probeAllowedHosts`,
+and the probe rejects loopback/private/link-local addresses, redirects across
+origins, and anything but GET/HEAD with expected status codes.
+
+### One-shot fixture-safe validation
+
+`npm run monitoring:refresh` (alias for `scripts/monitoring-refresh.ts --once`)
+runs exactly one bounded collection cycle and prints a metadata-only summary
+(cycle id, per-binding status) — never tokens, response bodies, or headers. To
+validate configuration without touching providers, point `ALLJOBS_HOME` and
+`ALLJOBS_DATA_ROOT` at a fixture home whose credential environment variables
+are intentionally unset; the cycle then exercises the full pipeline and fails
+closed per binding with zero network egress. The automated end-to-end suite
+(`npx playwright test --config playwright.r5.config.ts`) does exactly this
+against a production build on `127.0.0.1:3461`.
+
+### Cache layout
+
+All monitoring state lives under `<ALLJOBS_HOME>/state/monitoring` (never
+configurable to an arbitrary path):
+
+- `current/generations/<cycle-id>/<project>/<binding>.json` — immutable
+  schema-validated snapshots, written via temporary sibling files and atomic
+  renames;
+- `current/index.json` — the atomic visibility pointer, written last; a torn
+  or corrupt new cycle can never erase the prior readable generation;
+- `events/YYYY-MM.jsonl` — normalized material transition events only
+  (attention, signal state, deployment identity, permission state, quota band);
+- `rollups/hourly/YYYY-MM.jsonl` and `rollups/daily/YYYY.jsonl` — bounded
+  numeric rollups; hourly retained 90 days, daily and events 13 months.
+
+Only normalized metadata is ever persisted: no credentials, raw provider
+responses, request bodies, headers, logs, or source content.
+
+### Operator errors and backoff
+
+Provider `Retry-After` is honored, per-provider exponential backoff and
+per-binding minimum intervals apply to scheduled and manual refresh alike, and
+collection is globally single-flight. The manual-refresh control can only
+report `queued`, `collecting`, or `backing off`; it can never bypass these
+limits, and the previous atomic snapshot keeps being served throughout. A
+failed binding is isolated: its last trustworthy values carry forward with
+their original observation timestamps, the cycle publishes as
+`partially_complete`, and stale-but-retained evidence is labeled with its age
+rather than hidden or estimated.
+
+### R5 rollback
+
+Set `monitoring.enabled: false` in the Control Host config. This disables the
+monitoring routes' data and all collection while leaving Planning Core, the
+existing planning refresh path, Tunnel, domain, and Access untouched. The
+cached state under `state/monitoring` is preserved for inspection; removing it
+is a separate, explicitly confirmed operation.
+
+### Pending Human gates
+
+The following remain Human-owned and are NOT performed by the implementation:
+selecting the pilot binding, creating/scoping production credentials, live
+provider validation, the Human Owner walkthrough of the final build, and any
+push, deploy, launchd change, or release.

@@ -50,3 +50,17 @@ Do not implement code, edit provider credentials, run provider mutations, deploy
 ## New-session prompt
 
 > Independently review the T3 AllJobs Application Monitoring design. Read `AGENTS.md`, `.agent/frontend-design/r5-application-monitoring/brief.md`, `.agent/frontend-design/r5-application-monitoring/handoff.md`, both files under `.agent/frontend-design/r5-application-monitoring/mockup/`, and `docs/superpowers/specs/2026-09-11-alljobs-application-monitoring-design.md`. Do not inherit or assume the primary agent's reasoning. Validate architecture, provider feasibility, state semantics, credential and SSRF boundaries, atomic cache/history design, responsive mockup coverage, and scope discipline. Return severity-ordered findings with exact file/line evidence and the required verdict. Do not implement or mutate external systems.
+
+## Task 9 — Final candidate verification (2026-09-11)
+
+- **Candidate SHA:** `a81726bed652af1418d27611c11fe7541ffa8d35` (HEAD before the Task 9 artifact commit; Task 9 changed no product code).
+- **Test evidence:** `npm test` 789/789 passed (77 files); `tsc --noEmit` clean; `eslint` 0 errors / 69 warnings (baseline unchanged); `next build` clean; Playwright R5 suite 10/10 journeys passed against the production build on `127.0.0.1:3461` (attention triage, complete ledger, critical drill-down, mixed evidence, stale/permission/unsupported states, unmonitored-absent/never-collected-pending, manual-refresh safe outcome with backoff evidence, keyboard traversal, 390px reflow without horizontal scroll, axe WCAG 2 AA with zero violations on both routes); `npm run verify:deploy` passed. Every journey asserted zero non-127.0.0.1 requests.
+- **Secret scan:** clean — no bearer/authorization/secret/api-key/cookie material in the new sources, docs, or generated fixture cache; cache holds normalized metadata only; credential references are never-set env-var names.
+- **Screenshot SHA-256 (from the final production build, captured with `scripts/shot.mjs`):**
+  - `final-desktop.png` `4f9404dcddd82eec0071e1012b5c3b1a96d4d90e66a4712317883623d7da22d8`
+  - `final-mobile.png` `1f2f16e474a6879f7cb7cabc094660f856155296dfb27d04bbb85e7a91fa4116`
+  - `final-project-detail.png` `eef0537281fb2b63b4f67d23caadcc754f52d5e5738eeaffa54d50951c9391a7`
+- **Mockup comparison:** both routes match the approved mockups' information architecture; eight intentional differences (freshness state labels vs relative times, no refresh countdown, binding ids in queue rows, collapsed-by-default detail panels, console link in row action, normalized transition tokens in evidence, operational usage without mockup cost styling, app-wide custody strip) are documented with evidence in `verification.md`. `$impeccable audit` scored 19/20 (Excellent), no P0/P1 findings.
+- **Independent reviewer verdict:** pending pact review by seat `claude`.
+- **Explicit statements:** not pushed; not deployed; no production credentials configured; no live provider validation performed. Pilot binding selection, live provider validation, Human Owner walkthrough, push/deploy, and release remain pending Human gates.
+- Full evidence: `.agent/frontend-design/r5-application-monitoring/verification.md`.
