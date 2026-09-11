@@ -144,7 +144,7 @@ features:
         deps: [r5-collector]
       - id: r5-neon-supabase
         owner: kimi
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-6.md
         evidence: null
