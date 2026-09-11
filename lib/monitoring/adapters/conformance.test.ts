@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMonitoringBinding } from "../domain/fixtures";
+import { buildMonitoringBinding, buildNeonBinding } from "../domain/fixtures";
 import { monitoringBindingSchema } from "../domain/schemas";
 import type { MonitoringBinding } from "../domain/types";
 import { createCredentialHandle } from "../collector/credentials";
@@ -13,9 +13,16 @@ import {
 import { createFixtureAdapter } from "./fixture";
 import { createRailwayAdapter } from "./railway";
 import { createFlyAdapter } from "./fly";
+import { createNeonAdapter } from "./neon";
+import { createSupabaseAdapter } from "./supabase";
 import railwayDeploymentSuccess from "./railway/fixtures/deployment-success.json";
 import railwayMetricsComplete from "./railway/fixtures/metrics-complete.json";
 import flyMachinesHealthy from "./fly/fixtures/machines-healthy.json";
+import neonProjectPaid from "./neon/fixtures/project-paid.json";
+import neonEndpointsActive from "./neon/fixtures/endpoints-active.json";
+import neonConsumptionPaid from "./neon/fixtures/consumption-paid.json";
+import supabaseHealthHealthy from "./supabase/fixtures/health-healthy.json";
+import supabaseApiCounts from "./supabase/fixtures/api-counts.json";
 
 // Common adapter conformance suite (design §13): fixed hosts/methods, abort
 // deadlines, size limits, closed error taxonomy, safe timestamps, unsupported
@@ -170,6 +177,63 @@ describe("fly adapter", () => {
       respond: () => ({ status: 200, body: JSON.stringify(flyMachinesHealthy) })
     });
     expect(report.provider).toBe("fly");
+    expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
+  });
+});
+
+describe("neon adapter", () => {
+  const NEON_CANARY = "conformance-canary-neon-token-4d5e6f7a";
+
+  it("passes the full conformance suite", async () => {
+    const report = await runAdapterConformance(createNeonAdapter(), {
+      binding: buildNeonBinding({ required_signals: ["runtime", "usage"] }),
+      credential: createCredentialHandle("neon-primary", "neon", NEON_CANARY),
+      now: "2026-09-11T06:00:00Z",
+      secrets: [NEON_CANARY],
+      respond: (request) => {
+        const url = new URL(request.url);
+        if (url.pathname.startsWith("/api/v2/consumption_history/")) {
+          return { status: 200, body: JSON.stringify(neonConsumptionPaid) };
+        }
+        if (url.pathname.endsWith("/endpoints")) {
+          return { status: 200, body: JSON.stringify(neonEndpointsActive) };
+        }
+        return { status: 200, body: JSON.stringify(neonProjectPaid) };
+      }
+    });
+    expect(report.provider).toBe("neon");
+    expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
+  });
+});
+
+describe("supabase adapter", () => {
+  const supabaseBinding: MonitoringBinding = monitoringBindingSchema.parse({
+    id: "supabase-production-db",
+    provider: "supabase",
+    resource_kind: "project",
+    resource_id: "abcdefghijklmnopqrst",
+    environment: "production",
+    expected_runtime: "always-on",
+    required_signals: ["runtime", "usage"],
+    credential_ref: "supabase-primary",
+    console_url: "https://supabase.com/dashboard/project/abcdefghijklmnopqrst"
+  });
+  const SUPABASE_CANARY = "conformance-canary-supabase-token-8b9c0d1e";
+
+  it("passes the full conformance suite", async () => {
+    const report = await runAdapterConformance(createSupabaseAdapter(), {
+      binding: supabaseBinding,
+      credential: createCredentialHandle("supabase-primary", "supabase", SUPABASE_CANARY),
+      now: "2026-09-11T06:00:00Z",
+      secrets: [SUPABASE_CANARY],
+      respond: (request) => {
+        const url = new URL(request.url);
+        return url.pathname.includes("/analytics/endpoints/")
+          ? { status: 200, body: JSON.stringify(supabaseApiCounts) }
+          : { status: 200, body: JSON.stringify(supabaseHealthHealthy) };
+      }
+    });
+    expect(report.provider).toBe("supabase");
     expect(report.checks).toEqual(expect.arrayContaining(EXPECTED_CHECKS));
   });
 });

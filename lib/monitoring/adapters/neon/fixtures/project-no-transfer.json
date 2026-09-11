@@ -1,0 +1,33 @@
+{
+  "project": {
+    "id": "cool-project",
+    "platform_id": "aws",
+    "region_id": "aws-us-east-2",
+    "name": "cool-project",
+    "provisioner": "k8s-neonvm",
+    "pg_version": 17,
+    "proxy_host": "c-5.us-east-2.aws.neon.tech",
+    "creation_source": "console",
+    "history_retention_seconds": 86400,
+    "data_storage_bytes_hour": 1200000,
+    "written_data_bytes": 4194304,
+    "compute_time_seconds": 21600,
+    "active_time_seconds": 43200,
+    "cpu_used_sec": 10800,
+    "branch_logical_size_limit": 16777216,
+    "branch_logical_size_limit_bytes": 17592186044416,
+    "synthetic_storage_size": 1782579200,
+    "consumption_period_start": "2026-09-01T00:00:00Z",
+    "consumption_period_end": "2026-10-01T00:00:00Z",
+    "created_at": "2026-01-15T10:30:00Z",
+    "updated_at": "2026-09-11T05:30:00Z",
+    "owner_id": "org-spring-garden-12345",
+    "org_id": "org-spring-garden-12345",
+    "owner": {
+      "email": "owner@example.com",
+      "name": "Example Org",
+      "branches_limit": 5000,
+      "subscription_type": "free"
+    }
+  }
+}

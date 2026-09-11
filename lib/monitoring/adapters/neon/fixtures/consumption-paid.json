@@ -1,0 +1,95 @@
+{
+  "projects": [
+    {
+      "project_id": "cool-project",
+      "periods": [
+        {
+          "period_id": "79ec829f-1828-4006-ac82-9f1828a0067d",
+          "period_plan": "scale",
+          "period_start": "2026-09-01T00:00:00Z",
+          "consumption": [
+            {
+              "timeframe_start": "2026-09-10T00:00:00Z",
+              "timeframe_end": "2026-09-11T00:00:00Z",
+              "metrics": [
+                {
+                  "metric_name": "compute_unit_seconds",
+                  "value": 3600
+                },
+                {
+                  "metric_name": "root_branch_bytes_month",
+                  "value": 2000000
+                },
+                {
+                  "metric_name": "child_branch_bytes_month",
+                  "value": 500000
+                },
+                {
+                  "metric_name": "instant_restore_bytes_month",
+                  "value": 100000
+                },
+                {
+                  "metric_name": "public_network_transfer_bytes",
+                  "value": 1048576
+                },
+                {
+                  "metric_name": "private_network_transfer_bytes",
+                  "value": 2048
+                },
+                {
+                  "metric_name": "extra_branches_month",
+                  "value": 2
+                },
+                {
+                  "metric_name": "snapshot_storage_bytes_month",
+                  "value": 4096
+                }
+              ]
+            },
+            {
+              "timeframe_start": "2026-09-11T00:00:00Z",
+              "timeframe_end": "2026-09-11T05:59:00Z",
+              "metrics": [
+                {
+                  "metric_name": "compute_unit_seconds",
+                  "value": 900
+                },
+                {
+                  "metric_name": "root_branch_bytes_month",
+                  "value": 2100000
+                },
+                {
+                  "metric_name": "child_branch_bytes_month",
+                  "value": 500000
+                },
+                {
+                  "metric_name": "instant_restore_bytes_month",
+                  "value": 100000
+                },
+                {
+                  "metric_name": "public_network_transfer_bytes",
+                  "value": 524288
+                },
+                {
+                  "metric_name": "private_network_transfer_bytes",
+                  "value": 1024
+                },
+                {
+                  "metric_name": "extra_branches_month",
+                  "value": 2
+                },
+                {
+                  "metric_name": "snapshot_storage_bytes_month",
+                  "value": 4096
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "cursor": "cool-project"
+  }
+}

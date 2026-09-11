@@ -1,0 +1,8 @@
+[
+  { "name": "auth", "healthy": true, "status": "ACTIVE_HEALTHY", "info": { "name": "GoTrue", "version": "v2.180.0", "description": "GoTrue is a user registration and authentication API" } },
+  { "name": "db", "healthy": true, "status": "ACTIVE_HEALTHY", "info": { "healthy": true, "db_connected": true, "replication_connected": true, "connected_cluster": 1 } },
+  { "name": "pooler", "healthy": false, "status": "COMING_UP" },
+  { "name": "realtime", "healthy": true, "status": "ACTIVE_HEALTHY" },
+  { "name": "rest", "healthy": true, "status": "ACTIVE_HEALTHY" },
+  { "name": "storage", "healthy": true, "status": "ACTIVE_HEALTHY", "info": { "db_schema": "storage" } }
+]

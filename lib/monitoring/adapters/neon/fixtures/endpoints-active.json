@@ -1,0 +1,51 @@
+{
+  "endpoints": [
+    {
+      "id": "ep-cool-darkness-a5b6c7d8",
+      "host": "ep-cool-darkness-a5b6c7d8.c-5.us-east-2.aws.neon.tech",
+      "project_id": "cool-project",
+      "branch_id": "br-young-forest-a5b6c7d8",
+      "region_id": "aws-us-east-2",
+      "type": "read_write",
+      "current_state": "active",
+      "autoscaling_limit_min_cu": 1,
+      "autoscaling_limit_max_cu": 2,
+      "pooler_enabled": false,
+      "pooler_mode": "transaction",
+      "disabled": false,
+      "creation_source": "console",
+      "proxy_host": "c-5.us-east-2.aws.neon.tech",
+      "suspend_timeout_seconds": 300,
+      "provisioner": "k8s-neonvm",
+      "created_at": "2026-01-15T10:30:00Z",
+      "updated_at": "2026-09-11T05:30:00Z",
+      "last_active": "2026-09-11T05:45:00Z",
+      "settings": {
+        "pg_settings": {}
+      }
+    },
+    {
+      "id": "ep-quiet-meadow-b6c7d8e9",
+      "host": "ep-quiet-meadow-b6c7d8e9.c-5.us-east-2.aws.neon.tech",
+      "project_id": "cool-project",
+      "branch_id": "br-old-pine-c7d8e9f0",
+      "region_id": "aws-us-east-2",
+      "type": "read_only",
+      "current_state": "idle",
+      "autoscaling_limit_min_cu": 0.25,
+      "autoscaling_limit_max_cu": 1,
+      "pooler_enabled": false,
+      "pooler_mode": "transaction",
+      "disabled": false,
+      "creation_source": "console",
+      "proxy_host": "c-5.us-east-2.aws.neon.tech",
+      "suspend_timeout_seconds": 300,
+      "provisioner": "k8s-neonvm",
+      "created_at": "2026-02-01T09:00:00Z",
+      "updated_at": "2026-09-11T04:00:00Z",
+      "settings": {
+        "pg_settings": {}
+      }
+    }
+  ]
+}

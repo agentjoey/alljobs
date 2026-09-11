@@ -1,0 +1,8 @@
+[
+  { "name": "auth", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" },
+  { "name": "db", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" },
+  { "name": "pooler", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" },
+  { "name": "realtime", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" },
+  { "name": "rest", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" },
+  { "name": "storage", "healthy": false, "status": "UNHEALTHY", "error": "service unreachable" }
+]
