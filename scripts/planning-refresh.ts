@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import {
   loadControlHostConfig,
   type ControlHostResolvedPaths
@@ -5,6 +6,34 @@ import {
 import { NativePlanningStore } from "../lib/planning/native/store";
 import { NodeGitRunner } from "../lib/planning/providers/git-runner";
 import { refreshAllProjects } from "../lib/planning/providers/refresh";
+import {
+  runMonitoringRefreshOnce,
+  type MonitoringRefreshSummary
+} from "./monitoring-refresh";
+
+/**
+ * Monitoring rides the existing refresh loop (design §14) but never shares
+ * its failure fate: any monitoring error is caught, logged under its own
+ * prefix, and the Git planning refresh result stands. When monitoring is
+ * disabled the runner is not invoked at all.
+ */
+export async function runMonitoringRefreshSafely(
+  paths: ControlHostResolvedPaths,
+  run: () => Promise<MonitoringRefreshSummary> = () => runMonitoringRefreshOnce({ paths })
+): Promise<void> {
+  if (paths.config.monitoring?.enabled !== true) return;
+  try {
+    const summary = await run();
+    console.log(
+      `[monitoring-refresh] Cycle ${summary.cycle_id ?? "n/a"}: ${summary.status} (${summary.outcomes.length} bindings)`
+    );
+  } catch (err: any) {
+    console.error(
+      `[monitoring-refresh] Monitoring refresh failed; Git planning refresh is unaffected: ${err.message}`,
+      err
+    );
+  }
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -35,6 +64,7 @@ async function main() {
     } catch (err: any) {
       console.error(`[planning-refresh] Error during refresh cycle: ${err.message}`);
     }
+    await runMonitoringRefreshSafely(paths);
   }
 
   if (once) {
@@ -51,7 +81,10 @@ async function main() {
   await loop();
 }
 
-main().catch(err => {
-  console.error(`[planning-refresh] Fatal: ${err.message}`);
-  process.exit(1);
-});
+const isMain = process.argv[1] ? import.meta.url === pathToFileURL(process.argv[1]).href : false;
+if (isMain) {
+  main().catch(err => {
+    console.error(`[planning-refresh] Fatal: ${err.message}`);
+    process.exit(1);
+  });
+}
