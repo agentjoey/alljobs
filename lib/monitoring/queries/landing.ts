@@ -90,10 +90,6 @@ const FRESHNESS_RANK: Record<MonitoringFreshnessState, number> = {
   current: 3
 };
 
-function worstAttention(levels: readonly AttentionLevel[]): AttentionLevel {
-  return levels.reduce((worst, level) => (ATTENTION_RANK[level] < ATTENTION_RANK[worst] ? level : worst), "healthy");
-}
-
 function worstFreshness(snapshots: readonly MonitoringSnapshot[]): MonitoringFreshnessState | null {
   let worst: MonitoringFreshnessState | null = null;
   for (const snapshot of snapshots) {

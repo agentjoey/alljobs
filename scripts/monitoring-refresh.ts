@@ -2,6 +2,7 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { pathToFileURL } from "node:url";
 import { createMonitoringAdapterRegistry, type MonitoringAdapterRegistry } from "../lib/monitoring/adapters";
 import type { DnsLookup, FetchLike } from "../lib/monitoring/adapters/contracts";
+import { ProviderBackoff } from "../lib/monitoring/collector/backoff";
 import { MonitoringCollector, type BindingCycleStatus } from "../lib/monitoring/collector/collect";
 import { loadControlHostConfig, type ControlHostResolvedPaths } from "../lib/planning/config";
 import type { ProjectRegistryEntry } from "../lib/planning/domain/types";
@@ -19,6 +20,8 @@ export interface MonitoringRefreshOptions {
   listProjects?: () => Promise<ProjectRegistryEntry[]>;
   /** Adapter override; defaults to the fixed production registry. Tests inject the fixture registry. */
   adapters?: MonitoringAdapterRegistry;
+  /** Backoff override; defaults to the process-wide tracker shared across cycles. */
+  backoff?: ProviderBackoff;
   env?: Record<string, string | undefined>;
   fetch?: FetchLike;
   lookup?: DnsLookup;
@@ -35,6 +38,19 @@ export interface MonitoringRefreshSummary {
 const serverFetch: FetchLike = (url, init) => fetch(url, init);
 const serverLookup: DnsLookup = async (hostname) =>
   (await dnsLookup(hostname, { all: true, verbatim: true })).map((entry) => entry.address);
+
+// Process-wide backoff tracker: the planning-refresh loop calls this worker
+// every tick, and provider backoff ladders plus per-binding minimum intervals
+// must hold across those cycles. Constructing a fresh tracker per call would
+// silently reset the ladder on every tick, so the default lives here for the
+// lifetime of the process; tests inject their own via options.backoff.
+let sharedBackoff: ProviderBackoff | null = null;
+function sharedMonitoringBackoff(minIntervalSeconds: number): ProviderBackoff {
+  if (!sharedBackoff) {
+    sharedBackoff = new ProviderBackoff({ policy: { minIntervalSeconds } });
+  }
+  return sharedBackoff;
+}
 
 /** Runs exactly one collection cycle; safe to call when monitoring is off. */
 export async function runMonitoringRefreshOnce(
@@ -76,7 +92,8 @@ export async function runMonitoringRefreshOnce(
     env: options.env ?? process.env,
     fetch: options.fetch ?? serverFetch,
     lookup: options.lookup ?? serverLookup,
-    now: options.now ?? (() => new Date().toISOString())
+    now: options.now ?? (() => new Date().toISOString()),
+    backoff: options.backoff ?? sharedMonitoringBackoff(monitoring.refreshIntervalSeconds)
   });
 
   const result = await collector.collect();

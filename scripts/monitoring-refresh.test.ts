@@ -16,6 +16,7 @@ import {
   FIXTURE_OBSERVED
 } from "../lib/monitoring/domain/fixtures";
 import type { MonitoringBinding } from "../lib/monitoring/domain/types";
+import { ProviderBackoff } from "../lib/monitoring/collector/backoff";
 import type { ControlHostResolvedPaths } from "../lib/planning/config";
 import type { ProjectRegistryEntry } from "../lib/planning/domain/types";
 import { readCurrentIndex, readCurrentProjection } from "../lib/monitoring/store/store";
@@ -96,6 +97,12 @@ function walkFiles(dir: string): string[] {
 }
 
 describe("runMonitoringRefreshOnce", () => {
+  // Tests that run a cycle inject their own tracker so the process-wide
+  // default backoff (exercised by the cross-cycle test below) can never
+  // leak state between cases.
+  const freshBackoff = () =>
+    new ProviderBackoff({ now: () => Date.parse(FIXTURE_NOW), random: () => 0, policy: { minIntervalSeconds: 300 } });
+
   it("skips cleanly when monitoring is disabled", async () => {
     const { root } = tempHome();
     const transport = createRecordingTransport(() => ({ status: 500 }));
@@ -144,6 +151,7 @@ describe("runMonitoringRefreshOnce", () => {
         projectWithBindings("petcare-app", [buildNeonBinding()])
       ],
       adapters: createFixtureAdapterRegistry(["railway", "neon"]),
+      backoff: freshBackoff(),
       env: { RAILWAY_TEST_TOKEN: CANARY, NEON_TEST_TOKEN: "neon-canary-token" },
       fetch: transport.fetch,
       now: () => FIXTURE_NOW,
@@ -192,6 +200,7 @@ describe("runMonitoringRefreshOnce", () => {
         projectWithBindings("petcare-app", [buildNeonBinding()])
       ],
       adapters: createFixtureAdapterRegistry(["railway", "neon"]),
+      backoff: freshBackoff(),
       env: { RAILWAY_TEST_TOKEN: CANARY, NEON_TEST_TOKEN: "neon-canary-token" },
       fetch: transport.fetch,
       now: () => FIXTURE_NOW,
@@ -207,6 +216,38 @@ describe("runMonitoringRefreshOnce", () => {
     const index = readCurrentIndex(root);
     expect(index.ok).toBe(true);
     if (index.ok) expect(index.value.status).toBe("partially_complete");
+  });
+
+  it("holds provider backoff across consecutive cycles of the same process", async () => {
+    // The planning-refresh loop calls this worker every tick with no backoff
+    // override, so the process-wide default tracker must carry the failure
+    // ladder over: a provider that just failed backs off on the next tick
+    // instead of being retried into the same 5xx.
+    const { root } = tempHome();
+    const transport = createRecordingTransport(() => ({ status: 500 }));
+    const options = {
+      paths: makePaths(root, true),
+      listProjects: async () => [projectWithBindings("talentvault", [buildMonitoringBinding({ probe: undefined })])],
+      adapters: createFixtureAdapterRegistry(["railway"]),
+      env: { RAILWAY_TEST_TOKEN: CANARY },
+      fetch: transport.fetch,
+      now: () => FIXTURE_NOW,
+      log: () => {}
+    };
+
+    const first = await runMonitoringRefreshOnce(options);
+    expect(first.outcomes).toEqual([
+      { project: "talentvault", binding_id: "railway-production-api", status: "failed" }
+    ]);
+    const requestsAfterFirst = transport.requests.length;
+    expect(requestsAfterFirst).toBeGreaterThan(0);
+
+    const second = await runMonitoringRefreshOnce(options);
+    expect(second.outcomes).toEqual([
+      { project: "talentvault", binding_id: "railway-production-api", status: "skipped_backoff" }
+    ]);
+    // The backed-off tick never touched the provider again.
+    expect(transport.requests).toHaveLength(requestsAfterFirst);
   });
 });
 

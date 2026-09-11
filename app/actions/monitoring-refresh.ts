@@ -163,11 +163,10 @@ export async function requestMonitoringRefresh(input: {
       now: () => new Date().toISOString(),
       backoff
     };
-    for (const target of targets) {
-      backoff.recordAttempt(target.binding.provider, `${target.project}/${target.binding.id}`);
-    }
     // Fire-and-forget with server-side error logging: the request never waits
-    // on the provider fan-out.
+    // on the provider fan-out. Attempt accounting stays inside the cycle —
+    // collect.ts records each attempt only after the backoff check passes, so
+    // queueing here must not spend the minimum interval itself.
     inFlight = runCollectionCycle(deps)
       .catch((error: unknown) => {
         console.error("[alljobs action] MONITORING_CYCLE_ERROR:", error);

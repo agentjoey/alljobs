@@ -2,11 +2,14 @@ import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildMonitoringBinding, buildMonitoringSnapshot, FIXTURE_NOW } from "@/lib/monitoring/domain/fixtures";
+import { createFixtureAdapterRegistry } from "@/lib/monitoring/adapters";
+import { createRecordingTransport } from "@/lib/monitoring/adapters/conformance";
+import type { CollectionDeps } from "@/lib/monitoring/collector/collect";
+import { buildMonitoringBinding, buildMonitoringSnapshot, FIXTURE_NOW, FIXTURE_OBSERVED } from "@/lib/monitoring/domain/fixtures";
 import type { MonitoringBinding } from "@/lib/monitoring/domain/types";
 import type { ControlHostResolvedPaths } from "@/lib/planning/config";
 import type { ProjectRegistryEntry } from "@/lib/planning/domain/types";
-import { publishCycle } from "@/lib/monitoring/store/store";
+import { publishCycle, readCurrentProjection } from "@/lib/monitoring/store/store";
 
 // Server Action contract tests (plan Task 7, design §5.2/§12.3). The action
 // accepts only { project, binding_id? }, enforces same-origin POST behavior,
@@ -16,13 +19,15 @@ import { publishCycle } from "@/lib/monitoring/store/store";
 // is mocked or pointed at a temporary monitoring state root.
 
 const CYCLE_A = "2026-09-11t06-00-00z";
+const CANARY = "railway-action-canary-token-1a2b3c";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   headerValues: new Map<string, string>(),
   loadControlHostConfig: vi.fn(),
   getProject: vi.fn(),
-  runCollectionCycle: vi.fn()
+  runCollectionCycle: vi.fn(),
+  adapterRegistryOverride: null as import("@/lib/monitoring/adapters").MonitoringAdapterRegistry | null
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -38,6 +43,16 @@ vi.mock("@/lib/planning/native/store", () => ({
   }
 }));
 vi.mock("@/lib/monitoring/collector/collect", () => ({ runCollectionCycle: mocks.runCollectionCycle }));
+vi.mock("@/lib/monitoring/adapters", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/monitoring/adapters")>();
+  return {
+    ...actual,
+    // Tests may substitute the fixture registry; the default stays the fixed
+    // production set so the no-input-channel contract still holds.
+    createMonitoringAdapterRegistry: () =>
+      mocks.adapterRegistryOverride ?? actual.createMonitoringAdapterRegistry()
+  };
+});
 
 const homes: string[] = [];
 
@@ -104,6 +119,31 @@ async function importAction() {
   return import("./monitoring-refresh");
 }
 
+/**
+ * Faithful stand-in for the real cycle contract (collect.ts): per target it
+ * checks the injected backoff and records the attempt only when allowed. If
+ * the action spent the attempt itself before queueing, the first cycle
+ * reports skipped_min_interval here — exactly what the real collector does.
+ */
+function faithfulCycleMock() {
+  mocks.runCollectionCycle.mockImplementation(async (deps: CollectionDeps) => {
+    const outcomes = deps.targets.map((target) => {
+      const key = `${target.project}/${target.binding.id}`;
+      const check = deps.backoff!.check(target.binding.provider, key);
+      if (check.allowed) {
+        deps.backoff!.recordAttempt(target.binding.provider, key);
+        return { project: target.project, binding_id: target.binding.id, status: "collected" };
+      }
+      return {
+        project: target.project,
+        binding_id: target.binding.id,
+        status: check.reason === "provider_backoff" ? "skipped_backoff" : "skipped_min_interval"
+      };
+    });
+    return { cycle_id: "2026-09-11t07-00-00z", status: "complete", outcomes };
+  });
+}
+
 beforeEach(() => {
   vi.resetModules();
   mocks.revalidatePath.mockReset();
@@ -111,10 +151,13 @@ beforeEach(() => {
   mocks.loadControlHostConfig.mockReset();
   mocks.getProject.mockReset();
   mocks.runCollectionCycle.mockReset();
+  mocks.adapterRegistryOverride = null;
   sameOriginHeaders();
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   while (homes.length > 0) {
     const home = homes.pop();
     if (home) fs.rmSync(home, { recursive: true, force: true });
@@ -255,12 +298,16 @@ describe("requestMonitoringRefresh", () => {
     publishCycle(root, { cycle_id: CYCLE_A, collected_at: FIXTURE_NOW, snapshots: [buildMonitoringSnapshot()] });
     mocks.loadControlHostConfig.mockReturnValue(makePaths(root));
     mocks.getProject.mockResolvedValue(projectWithBindings("talentvault", [buildMonitoringBinding()]));
-    mocks.runCollectionCycle.mockResolvedValue({ cycle_id: "2026-09-11t07-00-00z", status: "complete", outcomes: [] });
+    faithfulCycleMock();
     const { requestMonitoringRefresh } = await importAction();
 
     const first = await requestMonitoringRefresh({ project: "talentvault" });
     expect(first).toMatchObject({ status: "success", data: { refresh: "queued" } });
-    await flush();
+    // Pin the real contract: the first click must collect. If the action had
+    // spent the attempt marker itself, the faithful cycle would report
+    // skipped_min_interval here — which is what the production bug did.
+    const firstCycle = await mocks.runCollectionCycle.mock.results[0].value;
+    expect(firstCycle.outcomes.map((outcome: { status: string }) => outcome.status)).toEqual(["collected"]);
 
     const second = await requestMonitoringRefresh({ project: "talentvault" });
     expect(second.status).toBe("success");
@@ -271,6 +318,60 @@ describe("requestMonitoringRefresh", () => {
     expect(data?.serving).toEqual({ cycle_id: CYCLE_A, collected_at: FIXTURE_NOW });
     expect(mocks.runCollectionCycle).toHaveBeenCalledTimes(1);
     expect(mocks.revalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it("collects on the first manual refresh through the real collector, backoff, and fixture adapters", async () => {
+    const { root } = tempHome();
+    // Integration path: no collector mock — the action drives the real
+    // runCollectionCycle with its real shared ProviderBackoff, the fixture
+    // adapter registry, and a temporary state root. The fetch seam is the
+    // global stub because the action binds the server fetch itself.
+    const { runCollectionCycle: realRunCollectionCycle } = await vi.importActual<
+      typeof import("@/lib/monitoring/collector/collect")
+    >("@/lib/monitoring/collector/collect");
+    const transport = createRecordingTransport(() => ({
+      status: 200,
+      body: JSON.stringify({
+        deployment: { state: "succeeded", deployment_id: "dep-1", observed_at: FIXTURE_OBSERVED }
+      })
+    }));
+    vi.stubGlobal("fetch", transport.fetch);
+    vi.stubEnv("RAILWAY_TEST_TOKEN", CANARY);
+    mocks.adapterRegistryOverride = createFixtureAdapterRegistry(["railway"]);
+    mocks.loadControlHostConfig.mockReturnValue(makePaths(root));
+    mocks.getProject.mockResolvedValue(projectWithBindings("talentvault", [buildMonitoringBinding({ probe: undefined })]));
+    mocks.runCollectionCycle.mockImplementation((deps: CollectionDeps) => realRunCollectionCycle(deps));
+    const { requestMonitoringRefresh } = await importAction();
+
+    const first = await requestMonitoringRefresh({ project: "talentvault" });
+    expect(first).toMatchObject({ status: "success", data: { refresh: "queued" } });
+
+    const cycle = await mocks.runCollectionCycle.mock.results[0].value;
+    // The regression this pins: a first manual refresh must collect, not
+    // skip itself with minimum_interval recorded by the action up front.
+    expect(cycle.outcomes.map((outcome: { status: string }) => outcome.status)).toEqual(["collected"]);
+    expect(cycle.outcomes[0].collector.state).toBe("success");
+    const requestsAfterFirst = transport.requests.length;
+    expect(requestsAfterFirst).toBeGreaterThan(0);
+    for (const request of transport.requests) {
+      expect(request.headers.authorization).toBe(`Bearer ${CANARY}`);
+    }
+
+    const projection = readCurrentProjection(root);
+    expect(projection.ok).toBe(true);
+    if (projection.ok) {
+      expect(projection.value.snapshots.map((s) => `${s.project}/${s.binding_id}`)).toEqual([
+        "talentvault/railway-production-api"
+      ]);
+    }
+
+    // The attempt recorded by the real cycle still holds the minimum
+    // interval: a second click inside the cadence backs off server-side
+    // without any new provider call.
+    const second = await requestMonitoringRefresh({ project: "talentvault" });
+    expect(second).toMatchObject({ status: "success", data: { refresh: "backing_off" } });
+    expect(transport.requests).toHaveLength(requestsAfterFirst);
+    expect(mocks.runCollectionCycle).toHaveBeenCalledTimes(1);
   });
 
   it("normalizes unexpected failures into safe errors without internals", async () => {
