@@ -204,6 +204,21 @@ describe("railway deployment normalization", () => {
     expect(collected.deployment).toMatchObject({ state: "unavailable" });
   });
 
+  it("maps prototype-chain statuses like toString to unavailable, never a function", async () => {
+    for (const status of ["toString", "constructor"]) {
+      const polluted = {
+        data: {
+          deployments: {
+            edges: [{ node: { ...deploymentSuccess.data.deployments.edges[0].node, status } }]
+          }
+        }
+      };
+      const { result } = collectWith(respondRailway({ status: 200, body: JSON.stringify(polluted) }));
+      const collected = await result;
+      expect(collected.deployment).toMatchObject({ state: "unavailable" });
+    }
+  });
+
   it("reports an empty deployment history as unavailable evidence", async () => {
     const empty = { data: { deployments: { edges: [] } } };
     const { result } = collectWith(respondRailway({ status: 200, body: JSON.stringify(empty) }));

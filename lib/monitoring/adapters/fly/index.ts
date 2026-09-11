@@ -22,6 +22,11 @@ import {
 // References (re-verified 2026-09-11; adapter compatibility date 2026-09-11):
 // - Machines resource (list machines, machine states, checks, guest):
 //   https://fly.io/docs/machines/api/machines-resource/
+// - Machines API OpenAPI document (response shapes the fixtures mirror):
+//   https://docs.machines.dev/swagger/doc.json (redirects to /openapi.json)
+//   Machine.checks is an ARRAY of CheckStatus {name, status, output,
+//   updated_at} — not a keyed map. GET /v1/apps/{app_name}/machines returns an
+//   array of Machine; fly.MachineGuest carries cpus/memory_mb integers.
 // - Access tokens (deploy/org/read-only scopes, Bearer usage):
 //   https://fly.io/docs/security/tokens/
 export const FLY_ADAPTER_COMPATIBILITY_DATE = "2026-09-11";
@@ -39,7 +44,11 @@ const FLY_APP_SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const TRANSITIONING_STATES = new Set(["created", "starting", "stopping", "suspending", "replacing"]);
 const STOPPED_STATES = new Set(["stopped", "suspended", "destroyed"]);
 
+// Documented CheckStatus element (OpenAPI #/components/schemas/CheckStatus):
+// Machine.checks is an array of these, absent entirely when the machine has
+// no checks configured.
 const flyCheckSchema = z.object({
+  name: z.string().min(1).max(128),
   status: z.string().min(1).max(32),
   output: z.string().max(1000).optional(),
   updated_at: z.string().max(64).optional()
@@ -48,7 +57,7 @@ const flyCheckSchema = z.object({
 const flyMachineSchema = z.object({
   id: z.string().min(1).max(64),
   state: z.string().min(1).max(32),
-  checks: z.record(z.string(), flyCheckSchema).optional(),
+  checks: z.array(flyCheckSchema).max(64).optional(),
   config: z
     .object({
       guest: z
@@ -66,7 +75,7 @@ const flyMachinesSchema = z.array(flyMachineSchema).max(1024);
 type FlyMachine = z.infer<typeof flyMachineSchema>;
 
 function checkStatuses(machine: FlyMachine): string[] {
-  return Object.values(machine.checks ?? {}).map((check) => check.status);
+  return (machine.checks ?? []).map((check) => check.status);
 }
 
 function deriveRuntime(machines: FlyMachine[], now: string): RuntimeSignal {

@@ -163,6 +163,54 @@ describe("fly usage normalization", () => {
   });
 });
 
+describe("fly documented Machines API shape", () => {
+  // Regression pin: the official Machines API (docs.machines.dev/swagger/doc.json,
+  // re-verified 2026-09-11) defines Machine.checks as an ARRAY of CheckStatus
+  // {name, status, output, updated_at} — not a keyed map. The previous record
+  // shape made every live collection fail as malformed_response.
+  const documentedMachinesPayload = [
+    {
+      id: "7812345a1b2c3d",
+      name: "dry-meadow-4821",
+      state: "started",
+      checks: [
+        {
+          name: "httpget",
+          status: "critical",
+          output: "connection refused",
+          updated_at: "2026-09-11T05:30:00Z"
+        }
+      ],
+      config: { guest: { cpus: 1, memory_mb: 256 } }
+    }
+  ];
+
+  it("parses the documented payload with checks as a CheckStatus array", async () => {
+    const { result } = collectWith(respondMachines(documentedMachinesPayload));
+    const collected = await result;
+    expect(collected.runtime).toMatchObject({ state: "unhealthy", observed_at: NOW, source: "provider" });
+  });
+
+  it("keeps every fixture's checks field in the documented array shape", () => {
+    const fixtures: unknown[] = [machinesHealthy, machinesDegraded, machinesUnhealthy, machinesStopped, machinesTransitioning];
+    let withChecks = 0;
+    for (const fixture of fixtures) {
+      expect(Array.isArray(fixture)).toBe(true);
+      for (const machine of fixture as Array<Record<string, unknown>>) {
+        const checks = machine.checks;
+        if (checks === undefined) continue;
+        withChecks += 1;
+        expect(Array.isArray(checks)).toBe(true);
+        for (const check of checks as Array<Record<string, unknown>>) {
+          expect(typeof check.name).toBe("string");
+          expect(typeof check.status).toBe("string");
+        }
+      }
+    }
+    expect(withChecks).toBeGreaterThan(0);
+  });
+});
+
 describe("fly error mapping", () => {
   async function expectAdapterError(respond: TransportResponder, code: string, retryAfterSeconds?: number) {
     const { result } = collectWith(respond);

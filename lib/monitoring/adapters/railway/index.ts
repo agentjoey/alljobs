@@ -212,7 +212,12 @@ function normalizeDeployment(data: unknown, now: string): { signal: DeploymentSi
   if (!node) {
     return { signal: { state: "unavailable", observed_at: now }, status: null };
   }
-  const state = RAILWAY_DEPLOYMENT_STATES[node.status] ?? "unavailable";
+  // Guard against the prototype chain: node.status is provider-controlled, so
+  // a status of "toString" must fall through to unavailable, not resolve to a
+  // function inherited from Object.prototype.
+  const state = Object.hasOwn(RAILWAY_DEPLOYMENT_STATES, node.status)
+    ? RAILWAY_DEPLOYMENT_STATES[node.status]
+    : "unavailable";
   const signal: DeploymentSignal = {
     state,
     deployment_id: node.id,
