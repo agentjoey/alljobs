@@ -144,10 +144,10 @@ features:
         deps: [r5-collector]
       - id: r5-neon-supabase
         owner: kimi
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/r5-application-monitoring-task-6.md
-        evidence: null
+        evidence: verify passed on recovery: gate passed for "npm test -- lib/monitoring/adapters/neon lib/monitoring/adapters/supabase lib/monitoring/adapters/conformance.test.ts && npm run typecheck"
         deps: [r5-railway-fly]
       - id: r5-queries-refresh
         owner: kimi
