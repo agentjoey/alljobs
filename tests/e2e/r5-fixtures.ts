@@ -2,7 +2,9 @@ import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { evaluateAttention } from "@/lib/monitoring/domain/attention";
 import {
+  buildCollectorSignal,
   buildDeploymentSignal,
   buildFreshnessSignal,
   buildMonitoringBinding,
@@ -353,32 +355,46 @@ function pulseboardSupabaseSnapshot(): MonitoringSnapshot {
   });
 }
 
-/** orbitdesk vercel: UNKNOWN — extension provider is not implemented in Phase 1. */
+/**
+ * orbitdesk vercel: the extension provider is not implemented in Phase 1, so
+ * the collector short-circuits as unsupported_capability with zero requests.
+ * Attention and reasons are DERIVED through the real evaluator (never
+ * hand-picked): the binding declares no required signals, and an optional
+ * unsupported fact does not downgrade attention, so the genuine result is
+ * healthy with no reasons — the unsupported state stays visible only in the
+ * binding's Collector detail.
+ */
 function orbitdeskVercelSnapshot(): MonitoringSnapshot {
-  return snapshot({
-    project: "orbitdesk",
-    binding_id: "vercel-production-site",
-    provider: "vercel",
-    adapter: { version: "none", capabilities: [] },
-    collector: {
-      state: "unsupported_capability",
-      attempted_at: FIXTURE_NOW,
-      detail: "no adapter registered for vercel"
-    },
+  const binding = orbitdeskVercelBinding();
+  const collector = buildCollectorSignal({
+    state: "unsupported_capability",
+    attempted_at: FIXTURE_NOW,
+    detail: "no adapter registered for vercel"
+  });
+  const freshness = buildFreshnessSignal({ signals: [] });
+  const evaluation = evaluateAttention({
+    binding,
+    collector,
     deployment: null,
     runtime: null,
     usage: [],
-    freshness: buildFreshnessSignal({ signals: [] }),
-    attention: "unknown",
-    reasons: [
-      {
-        code: "unsupported_capability",
-        dimension: "collector",
-        severity: "unknown",
-        summary: "The vercel adapter is not implemented in Phase 1; this binding cannot be collected yet.",
-        observed_at: FIXTURE_NOW
-      }
-    ]
+    platform_incident: null,
+    freshness,
+    adapter_capabilities: [],
+    now: FIXTURE_NOW
+  });
+  return snapshot({
+    project: "orbitdesk",
+    binding_id: binding.id,
+    provider: "vercel",
+    adapter: { version: "none", capabilities: [] },
+    collector,
+    deployment: null,
+    runtime: null,
+    usage: [],
+    freshness,
+    attention: evaluation.attention,
+    reasons: evaluation.reasons
   });
 }
 

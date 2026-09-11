@@ -54,11 +54,10 @@ test.describe("R5 application monitoring", () => {
 
     const queue = attentionRegion(page);
     const rows = queue.getByRole("listitem");
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(5);
     await expect(rows.locator(".mon-status")).toHaveText([
       "Critical",
       "Warning",
-      "Unknown",
       "Unknown",
       "Unknown",
       "Watch"
@@ -70,13 +69,16 @@ test.describe("R5 application monitoring", () => {
       "GrandeGPT",
       "MathMagics",
       "NovaWeb",
-      "OrbitDesk",
       "PulseBoard"
     ]);
 
-    // Healthy projects never occupy the queue, and talentvault's healthy Neon
-    // binding does not add a second TalentVault row.
+    // Healthy projects never occupy the queue — including OrbitDesk: its Vercel
+    // binding is an unsupported OPTIONAL capability with zero required signals,
+    // so the evaluator keeps its attention healthy and only the binding's
+    // Collector detail carries the unsupported state. TalentVault's healthy
+    // Neon binding does not add a second TalentVault row.
     await expect(queue.getByText("DocLock")).toHaveCount(0);
+    await expect(queue.getByText("OrbitDesk")).toHaveCount(0);
     await expect(queue.getByText("neon-production-db")).toHaveCount(0);
     await expect(rows.filter({ hasText: "TalentVault" })).toHaveCount(1);
 
@@ -100,9 +102,9 @@ test.describe("R5 application monitoring", () => {
       "GrandeGPT",
       "MathMagics",
       "NovaWeb",
-      "OrbitDesk",
       "PulseBoard",
-      "DocLock"
+      "DocLock",
+      "OrbitDesk"
     ]);
 
     const talentvault = ledgerRow(page, "TalentVault");
@@ -117,10 +119,15 @@ test.describe("R5 application monitoring", () => {
     await expect(mathmagics.locator("td").nth(3)).toContainText("permission was denied");
     await expect(mathmagics.locator("td").nth(4)).toHaveText("Expired");
 
+    // OrbitDesk's Vercel extension binding is collector-unsupported but declares
+    // no required signals, so the evaluator keeps the Project healthy with no
+    // active reasons and no freshness evidence; the unsupported state itself is
+    // asserted in the binding's Collector detail on the detail route.
     const orbitdesk = ledgerRow(page, "OrbitDesk");
-    await expect(orbitdesk.locator("td").nth(1)).toHaveText("Unknown");
+    await expect(orbitdesk.locator("td").nth(1)).toHaveText("Healthy");
     await expect(orbitdesk.locator("td").nth(2)).toHaveText("Vercel 1");
-    await expect(orbitdesk.locator("td").nth(3)).toContainText("not implemented in Phase 1");
+    await expect(orbitdesk.locator("td").nth(3)).toHaveText("No active reasons");
+    await expect(orbitdesk.locator("td").nth(4)).toHaveText("—");
 
     const pulseboard = ledgerRow(page, "PulseBoard");
     await expect(pulseboard.locator("td").nth(1)).toHaveText("Watch");
@@ -134,7 +141,7 @@ test.describe("R5 application monitoring", () => {
     const summary = page.getByRole("group", { name: "Monitoring summary" });
     await expect(summary.locator(".metric-card", { hasText: "Projects" }).locator(".metric-value")).toHaveText("7");
     await expect(summary.locator(".metric-card", { hasText: "Bindings" }).locator(".metric-value")).toHaveText("8");
-    await expect(summary.locator(".metric-card", { hasText: "Needs attention" }).locator(".metric-value")).toHaveText("6");
+    await expect(summary.locator(".metric-card", { hasText: "Needs attention" }).locator(".metric-value")).toHaveText("5");
     await expect(summary.locator(".metric-card", { hasText: "Freshness" }).locator(".metric-value")).toHaveText("Expired");
   });
 
@@ -215,12 +222,14 @@ test.describe("R5 application monitoring", () => {
     await expect(matrix.locator(".mon-signal", { hasText: "Runtime" })).toContainText("Unhealthy");
   });
 
-  test("stale, permission, and unsupported states render with their specific reasons", async ({ page }) => {
+  test("stale and permission states render with their specific reasons; an unsupported optional capability never downgrades attention", async ({ page }) => {
     // Landing queue carries the specific reason per state.
     await page.goto("/monitoring");
     const queue = attentionRegion(page);
     await expect(queue.getByRole("listitem").filter({ hasText: "MathMagics" })).toContainText("permission was denied");
-    await expect(queue.getByRole("listitem").filter({ hasText: "OrbitDesk" })).toContainText("not implemented in Phase 1");
+    // OrbitDesk's unsupported capability is optional (no required signals), so
+    // it produces no queue entry and no aggregate reason.
+    await expect(queue.getByRole("listitem").filter({ hasText: "OrbitDesk" })).toHaveCount(0);
 
     // Permission failure + expired retained value on the unknown project.
     await page.goto("/monitoring/mathmagics");
@@ -235,15 +244,22 @@ test.describe("R5 application monitoring", () => {
     await expect(reasons).toContainText("collector_permission_denied");
     await expect(reasons).toContainText("stale_max_age_exceeded");
 
-    // Extension provider short-circuits: unsupported capability, zero collection.
+    // Extension provider short-circuits with zero collection requests: the
+    // unsupported capability stays visible in the binding's Collector detail,
+    // but with zero required signals the evaluator leaves aggregate attention
+    // healthy and emits no reason — never a fabricated unknown.
     await page.goto("/monitoring/orbitdesk");
+    await expect(page.getByRole("region", { name: "Why attention" }))
+      .toContainText("No active reasons");
     const orbitRow = page.getByRole("table", { name: "Provider bindings for OrbitDesk" })
       .locator("tbody tr", { hasText: "vercel-production-site" });
-    await expect(orbitRow.locator("td").nth(1)).toHaveText("Unknown");
+    await expect(orbitRow.locator("td").nth(1)).toHaveText("Healthy");
+    await expect(orbitRow.locator("td").nth(5)).toHaveText("—");
     await page.getByRole("button", { name: "Signal matrix for Vercel · project · vercel-production-site" }).click();
     const orbitMatrix = page.getByRole("group", { name: "Signal matrix for Vercel · project · vercel-production-site" });
     await expect(orbitMatrix.locator(".mon-signal", { hasText: "Collector" })).toContainText("Unsupported capability");
-    await expect(page.getByRole("list", { name: "Attention reasons" })).toContainText("unsupported_capability");
+    // No attention-reason list renders for a healthy binding.
+    await expect(page.getByRole("list", { name: "Attention reasons" })).toHaveCount(0);
   });
 
   test("unmonitored project is absent and a never-collected project reads as pending unknown", async ({ page }) => {

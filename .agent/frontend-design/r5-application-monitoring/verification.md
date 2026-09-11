@@ -19,15 +19,15 @@ Date: 2026-09-11 · Seat: `kimi` (worker) · Independent reviewer verdict: pendi
 | `npx playwright test --config playwright.r5.config.ts` | PASS — 10/10 journeys (chromium, workers 1, `next start -p 3461 -H 127.0.0.1`, `reuseExistingServer: false`) |
 | `npm run verify:deploy` | PASS — "All deployment configs and invariants verified successfully." |
 
-RED evidence: with the fixture's `publishCycle` call temporarily disabled, the same suite produced 7 meaningful failures (empty attention queue, missing ledger rows, missing drill-down evidence, refresh ack without a served cycle id) and 3 passes; restored, the suite is fully green.
+RED evidence: with the fixture's `publishCycle` call temporarily disabled, the same suite produced 7 meaningful failures (empty attention queue, missing ledger rows, missing drill-down evidence, refresh ack without a served cycle id) and 3 passes; restored, the suite is fully green. Rework RED (this round): after switching the Vercel fixture to the evaluator-derived projection but before updating the journeys, exactly the 3 journeys that had asserted the fabricated aggregate state failed (attention triage, complete ledger, stale/permission/unsupported); after the assertion rework the suite is 10/10 green.
 
 ### E2E journeys (10)
 
-1. Attention triage: queue order Critical → Warning → Unknown ×3 → Watch; healthy projects and healthy bindings absent; queue items link to their owning Project.
-2. Complete ledger: 7 monitored Projects exactly once each (order, state, provider bindings, leading reason, freshness, drill-down action); summary cards agree (7 projects, 8 bindings, 6 needing attention, Expired worst freshness).
+1. Attention triage: queue order Critical → Warning → Unknown ×2 → Watch; healthy projects and healthy bindings absent — including OrbitDesk, whose unsupported-but-optional Vercel capability does not enter the queue; queue items link to their owning Project.
+2. Complete ledger: 7 monitored Projects exactly once each (order, state, provider bindings, leading reason, freshness, drill-down action); summary cards agree (7 projects, 8 bindings, 5 needing attention, Expired worst freshness).
 3. Critical drill-down: queue → `/monitoring/talentvault`; leading reason; binding comparison; expanded signal matrix with deployment `Succeeded · c41ea1` + runtime `Unhealthy · 2 consecutive failures`, observed timestamps, `Operational only` billing alignment, provider-console link (`rel=noopener`), and reason evidence `runtime_unhealthy_confirmed`.
 4. Mixed evidence: succeeded deployment and failed runtime coexist on one binding; state stays Critical, never flattened to healthy.
-5. Stale/unknown/permission/unsupported: `collector_permission_denied` + `stale_max_age_exceeded` on MathMagics (retained value labeled Expired); `unsupported_capability` on the Vercel extension binding.
+5. Stale/unknown/permission/unsupported: `collector_permission_denied` + `stale_max_age_exceeded` on MathMagics (retained value labeled Expired); the Vercel extension binding keeps `Unsupported capability` visible in its Collector detail while its aggregate attention stays healthy — zero required signals means an optional unsupported fact never downgrades attention, matching evaluator semantics.
 6. Empty/unmonitored: `ledgerless` (no bindings) absent from ledger and queue and 404s on detail; never-collected `novaweb` renders pending unknown / awaiting first collection.
 7. Manual refresh: ack announces `queued` naming the served cycle `2026-09-11t06-00-00z`; second immediate click reports `already running` or `backing off` (never a new fan-out); the queued cycle fails closed (credential env vars unset) and the republished projection keeps last-trustworthy values (`Succeeded · c41ea1`, `Unhealthy`) with `Authentication failed` collector state.
 8. Keyboard traversal: Tab reaches queue links, the refresh control, and binding toggles; Enter/Space toggle expansion; focused elements show a solid outline.
@@ -48,9 +48,9 @@ Result: CLEAN. The only matches are env-var NAME references (`ALLJOBS_R5_E2E_*_T
 
 Captured with `scripts/shot.mjs` (CDP device-metrics override; 390px is a true emulated viewport) from the same build that passed the chain above; the server was killed afterward and port 3461 is free.
 
-- `final-desktop.png` SHA-256 `4f9404dcddd82eec0071e1012b5c3b1a96d4d90e66a4712317883623d7da22d8` (1440×1, `/monitoring`)
-- `final-mobile.png` SHA-256 `1f2f16e474a6879f7cb7cabc094660f856155296dfb27d04bbb85e7a91fa4116` (390×2 emulated, `/monitoring`)
-- `final-project-detail.png` SHA-256 `eef0537281fb2b63b4f67d23caadcc754f52d5e5738eeaffa54d50951c9391a7` (1440×1, `/monitoring/talentvault`)
+- `final-desktop.png` SHA-256 `4c3a2df0d91f343737f24b3dd7f2385731eba8eb4078c42e48030defa02c1dd2` (1440×1, `/monitoring`)
+- `final-mobile.png` SHA-256 `78d59edeae15f374a099543006b41efad2ffb55a7d94a239a777a1489cdff7a1` (390×2 emulated, `/monitoring`)
+- `final-project-detail.png` SHA-256 `eef0537281fb2b63b4f67d23caadcc754f52d5e5738eeaffa54d50951c9391a7` (1440×1, `/monitoring/talentvault`; unchanged — the TalentVault route is unaffected by the fixture rework)
 
 ## Mockup comparison
 
@@ -75,9 +75,9 @@ Intentional differences (implementation vs. mockup copy), each covered by e2e as
 - Accessibility 4/4 (axe WCAG AA clean on both routes; keyboard traversal and visible focus verified in e2e). Performance 4/4 (local-cache reads only; no animations added). Theming 3/4 (Paper Workbench tokens throughout; two hard-coded status-accent hex values in `globals.css` for warning/watch). Responsive 4/4 (390px reflow proven, no horizontal scroll, ≥44px coarse-pointer targets). Implementation integrity 4/4 (structure matches the approved mockups; no drift).
 - **Audit Health Score: 19/20 (Excellent).** No P0/P1 findings; the token-accent hex values are a P3 note for a future `$impeccable polish` pass. No code changed as a result of the audit.
 
-## Known divergence flagged for reviewer decision
+## Fixture integrity: the Vercel projection is evaluator-derived
 
-The Vercel extension binding in the fixture is hand-published as `unknown` with an explicit `unsupported_capability` reason so the unsupported state is visible as the task requires. In a live collection cycle the evaluator currently resolves an extension-provider binding with empty `required_signals` to `healthy` even though its collector reports `unsupported_capability` (the unsupported state then only surfaces in the Collector cell). Product code is out of Task 9 scope, so this was documented rather than fixed; whether the evaluator should treat an unimplemented provider as `unknown` is a reviewer/Human decision for a follow-up task.
+The OrbitDesk/Vercel extension binding's published snapshot is produced by calling `evaluateAttention` inside `tests/e2e/r5-fixtures.ts` with the genuine collection inputs (collector state `unsupported_capability`, empty `required_signals`, empty adapter capabilities), so the fixture cannot drift from the collector/evaluator contract. The genuine result — `attention=healthy`, `leading=null`, `reasons=[]` — is what the journeys and screenshots assert: an optional unsupported capability never downgrades attention, while the unsupported state remains visible and asserted in the binding's Collector detail (`Unsupported capability`, zero collection requests).
 
 ## Explicit statements
 
