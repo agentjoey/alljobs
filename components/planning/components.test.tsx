@@ -179,13 +179,6 @@ describe("planning UI components", () => {
             { document: "backlog", state: "canonical", sourcePath: "docs/BACKLOG.md", diagnostics: [], candidates: [] }
           ],
           planningSource: { mode: "local-working-tree", writable: true, headRevision: "abc1234", backlogDigest: "backlog-digest", readAt: "2026-09-14T00:00:00.000Z" },
-          backlogControl: {
-            source: { mode: "local-working-tree", writable: true, headRevision: "abc1234", backlogDigest: "backlog-digest", readAt: "2026-09-14T00:00:00.000Z" },
-            ordering: "initialized",
-            conflictLanes: [],
-            writable: true,
-            blockers: []
-          },
           metrics: { activeTasks: 0, totalBacklog: 1, doneCount: 0, blockedCount: 0 },
           digest: "task-digest"
         }}

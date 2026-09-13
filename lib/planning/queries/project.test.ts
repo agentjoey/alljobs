@@ -101,17 +101,7 @@ describe("getProjectDetail", () => {
       expect(detail).not.toBeNull();
       expect(detail?.roadmap.length).toBe(1);
       expect(detail?.roadmap[0].id).toBe("phase-1");
-      expect(detail?.backlogControl).toMatchObject({
-        source: { mode: "cached", writable: false },
-        ordering: "initialized",
-        writable: false
-      });
-      expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "SOURCE_NOT_WRITABLE" }));
       expect(detail?.documents).toEqual([]);
-      expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({
-        code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
-        message: "Backlog control is unavailable because document health evidence is unavailable."
-      }));
     } finally {
       delete process.env.ALLJOBS_DATA_ROOT;
       delete process.env.ALLJOBS_HOME;
@@ -164,11 +154,24 @@ describe("getProjectDetail", () => {
       expect.objectContaining({ location: "docs/ROADMAP.md" }),
       expect.objectContaining({ location: "docs/BACKLOG.md" })
     ]));
-    expect(detail).not.toHaveProperty("backlogControl");
+    expect(Object.keys(detail ?? {}).sort()).toEqual([
+      "attention",
+      "backlog",
+      "backlogDigest",
+      "digest",
+      "documents",
+      "issues",
+      "metrics",
+      "planningSource",
+      "project",
+      "provenance",
+      "roadmap",
+      "tasks"
+    ]);
     expect(detail?.digest).not.toBe(detail?.backlogDigest);
   });
 
-  it("exposes an invalid local source as a non-writable Backlog control state", async () => {
+  it("exposes an invalid local source as read-only planning evidence", async () => {
     const trustedRoot = join(tempHome, "trusted");
     const repository = join(trustedRoot, "invalid-code-proj");
     await mkdir(repository, { recursive: true });
@@ -189,11 +192,8 @@ describe("getProjectDetail", () => {
 
     const detail = await getProjectDetail("invalid-code-proj", { root: tempHome });
 
-    expect(detail?.backlogControl).toMatchObject({
-      source: { mode: "local-working-tree", writable: false },
-      writable: false
-    });
-    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "PLANNING_FILE_MISSING" }));
+    expect(detail?.planningSource).toMatchObject({ mode: "local-working-tree", writable: false });
+    expect(detail?.issues).toContainEqual(expect.objectContaining({ code: "PLANNING_FILE_MISSING" }));
   });
 
   it("exposes a missing local Backlog separately without turning candidates into planning data", async () => {
@@ -239,10 +239,6 @@ describe("getProjectDetail", () => {
     expect(detail?.roadmap).toHaveLength(1);
     expect(detail?.backlog).toEqual([]);
     expect(detail?.metrics.totalBacklog).toBe(0);
-    expect(detail?.backlogControl?.writable).toBe(false);
-    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({
-      code: "BACKLOG_DOCUMENT_NOT_CANONICAL"
-    }));
   });
 
   it("surfaces relation issues for native roadmap and tasks (M8)", async () => {

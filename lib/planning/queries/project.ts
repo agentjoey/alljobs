@@ -17,11 +17,6 @@ import type {
 import { NodeGitRunner } from "../providers/git-runner";
 import { getCachedProjection } from "../providers/refresh";
 import { resolveCodePlanning } from "../providers/source-resolver";
-import {
-  analyzeBacklogOrdering,
-  type BacklogConflictLane,
-  type BacklogOrderingState
-} from "../backlog/ordering";
 import { deriveAttentionItems, type AttentionItem } from "./attention";
 
 export interface ProjectDetailMetrics {
@@ -29,19 +24,6 @@ export interface ProjectDetailMetrics {
   totalBacklog: number;
   doneCount: number;
   blockedCount: number;
-}
-
-export interface BacklogControlBlocker {
-  code: string;
-  message: string;
-}
-
-export interface BacklogControlState {
-  source: PlanningSourceState;
-  ordering: BacklogOrderingState;
-  conflictLanes: BacklogConflictLane[];
-  writable: boolean;
-  blockers: BacklogControlBlocker[];
 }
 
 export interface ProjectDetailView {
@@ -55,7 +37,6 @@ export interface ProjectDetailView {
   documents: DocumentTriage[];
   planningSource?: PlanningSourceState;
   backlogDigest?: string;
-  backlogControl?: BacklogControlState;
   metrics: ProjectDetailMetrics;
   digest: string;
   assistant?: AssistantEntryState;
@@ -63,67 +44,6 @@ export interface ProjectDetailView {
 
 function sourceDigest(provenance: SourceProvenance[], location: string) {
   return provenance.find((entry) => entry.location === location)?.digest;
-}
-
-function isBacklogControlIssue(issue: ProofIssue, backlogIds: Set<string>) {
-  return issue.scope === "document" || Boolean(issue.objectId && backlogIds.has(issue.objectId));
-}
-
-function deriveBacklogControlState(input: {
-  project: ProjectRegistryEntry;
-  backlog: BacklogItem[];
-  issues: ProofIssue[];
-  documents: DocumentTriage[];
-  source: PlanningSourceState;
-}): BacklogControlState {
-  const { project, backlog, issues, documents, source } = input;
-  const orderingAnalysis = analyzeBacklogOrdering(backlog);
-  const ordering = orderingAnalysis.state;
-  const blockers: BacklogControlBlocker[] = [];
-  const backlogIds = new Set(backlog.map((item) => item.id));
-  const controlIssues = issues.filter((issue) => isBacklogControlIssue(issue, backlogIds));
-  const backlogDocument = documents.find((document) => document.document === "backlog");
-  const backlogDocumentBlocked = !backlogDocument || backlogDocument.state !== "canonical";
-
-  if (project.archived) {
-    blockers.push({ code: "PROJECT_ARCHIVED", message: "Archived projects cannot change Backlog ordering." });
-  }
-  if (!source.writable) {
-    blockers.push({
-      code: "SOURCE_NOT_WRITABLE",
-      message: source.reason ?? "The current planning source is read-only."
-    });
-  }
-  for (const issue of controlIssues) {
-    blockers.push({ code: issue.code, message: issue.message });
-  }
-  if (backlogDocumentBlocked) {
-    blockers.push({
-      code: "BACKLOG_DOCUMENT_NOT_CANONICAL",
-      message: backlogDocument
-        ? `Backlog control is unavailable while ${backlogDocument.sourcePath} is ${backlogDocument.state}.`
-        : "Backlog control is unavailable because document health evidence is unavailable."
-    });
-  }
-  if (ordering === "uninitialized") {
-    blockers.push({
-      code: "ORDERING_NOT_INITIALIZED",
-      message: "Active Backlog items need rank initialization before ordered moves are available."
-    });
-  } else if (ordering === "repair-required") {
-    blockers.push({
-      code: "RANK_CONFLICT",
-      message: "Duplicate active ranks require a lane repair before ordinary ordered moves."
-    });
-  }
-
-  return {
-    source,
-    ordering,
-    conflictLanes: orderingAnalysis.conflictLanes,
-    writable: !project.archived && source.writable && controlIssues.length === 0 && !backlogDocumentBlocked,
-    blockers
-  };
 }
 
 /**
@@ -243,9 +163,6 @@ export async function getProjectDetail(
   const activeTasks = allTasks.filter(t => t.status === "doing" || t.status === "todo" || t.status === "waiting").length;
   const doneCount = allTasks.filter(t => t.status === "done").length;
   const blockedCount = allTasks.filter(t => t.status === "blocked").length;
-  const backlogControl = project.type === "code" && planningSource
-    ? deriveBacklogControlState({ project, backlog, issues, documents, source: planningSource })
-    : undefined;
 
   return {
     project,
@@ -258,7 +175,6 @@ export async function getProjectDetail(
     documents,
     planningSource,
     backlogDigest,
-    backlogControl,
     metrics: {
       activeTasks,
       totalBacklog: backlog.length,
