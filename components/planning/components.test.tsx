@@ -1,8 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { PortfolioOverview } from "./portfolio-overview";
-import { BacklogView } from "./backlog-view";
 import { ProjectDetail } from "./project-detail";
 import { ProjectList } from "./project-list";
 import { RoadmapView } from "./roadmap-view";
@@ -154,13 +152,11 @@ describe("planning UI components", () => {
     const tabs = screen.getByRole("tablist", { name: "Project sections" });
     expect(health.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Roadmap (1)" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Backlog (Missing document)" })).toBeVisible();
-    expect(screen.queryByRole("tab", { name: "Backlog (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /^Backlog/ })).not.toBeInTheDocument();
     expect(container.querySelectorAll("[data-document-candidate]")).toHaveLength(0);
   });
 
-  it("keeps read-only project sections while removing Backlog management entry points", async () => {
-    const user = userEvent.setup();
+  it("keeps read-only project sections while removing Backlog management entry points", () => {
     render(
       <ProjectDetail
         detail={{
@@ -195,9 +191,6 @@ describe("planning UI components", () => {
         }}
       />
     );
-
-    const backlogTab = screen.queryByRole("tab", { name: "Backlog (1)" });
-    if (backlogTab) await user.click(backlogTab);
 
     expect(screen.getByRole("tab", { name: "Roadmap (1)" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Tasks (0)" })).toBeVisible();
@@ -252,7 +245,7 @@ describe("planning UI components", () => {
     const { unmount } = render(<ProjectDetail detail={detail} />);
 
     expect(screen.getByRole("tab", { name: "Roadmap (Source unavailable)" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Backlog (Source unavailable)" })).toBeVisible();
+    expect(screen.queryByRole("tab", { name: /^Backlog/ })).not.toBeInTheDocument();
     unmount();
 
     render(<ProjectList projects={[detail]} />);
@@ -261,8 +254,7 @@ describe("planning UI components", () => {
     expect(screen.queryByText(/0 Backlog/)).not.toBeInTheDocument();
   });
 
-  it("treats no-triage cached evidence as unavailable instead of numeric planning counts or ordering authority", async () => {
-    const user = userEvent.setup();
+  it("keeps no-triage cached Backlog evidence in Project List without exposing a Project Detail surface", () => {
     const detail = {
       project: {
         slug: "legacy-cache-code",
@@ -285,28 +277,13 @@ describe("planning UI components", () => {
         reason: "Legacy cache has no document triage.",
         readAt: "2026-08-30T00:00:00.000Z"
       },
-      backlogControl: {
-        source: {
-          mode: "cached" as const,
-          writable: false,
-          reason: "Legacy cache has no document triage.",
-          readAt: "2026-08-30T00:00:00.000Z"
-        },
-        ordering: "initialized" as const,
-        conflictLanes: [],
-        writable: false,
-        blockers: [{ code: "BACKLOG_DOCUMENT_NOT_CANONICAL", message: "Backlog document health is unavailable." }]
-      },
       metrics: { activeTasks: 0, totalBacklog: 1, doneCount: 0, blockedCount: 0 },
       digest: "abc"
     };
     const { unmount } = render(<ProjectDetail detail={detail} />);
 
     expect(screen.getByRole("tab", { name: "Roadmap (Source unavailable)" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Backlog (Source unavailable)" })).toBeVisible();
-    await user.click(screen.getByRole("tab", { name: "Backlog (Source unavailable)" }));
-    expect(screen.getByText("Retained item")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Manage ordering" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /^Backlog/ })).not.toBeInTheDocument();
     unmount();
 
     render(<ProjectList projects={[detail]} />);
@@ -315,62 +292,9 @@ describe("planning UI components", () => {
     expect(screen.queryByText(/Backlog: 1/)).not.toBeInTheDocument();
   });
 
-  it("withholds Manage ordering for a degraded Backlog while retaining canonical siblings", async () => {
-    const user = userEvent.setup();
-    render(
-      <ProjectDetail
-        detail={{
-          project: {
-            slug: "degraded-code",
-            name: "Degraded Code",
-            type: "code",
-            work_modes: ["implementation"],
-            execution_locations: [],
-            archived: false
-          },
-          roadmap: [{ id: "phase-1", title: "Canonical phase", kind: "phase", status: "active", order: 10 }],
-          backlog: [{ id: "BL-001", title: "Canonical sibling", work_mode: "implementation", phase: "phase-1", status: "ready", priority: "P1", rank: 100, dependencies: [] }],
-          tasks: [],
-          issues: [],
-          attention: [],
-          provenance: [],
-          documents: [
-            { document: "roadmap", state: "canonical", sourcePath: "docs/ROADMAP.md", diagnostics: [], candidates: [] },
-            {
-              document: "backlog",
-              state: "recoverable",
-              sourcePath: "docs/BACKLOG.md",
-              diagnostics: [{ scope: "object", code: "INVALID_FIELD", sourcePath: "docs/BACKLOG.md", objectId: "BL-BAD", message: "Priority is invalid." }],
-              candidates: [{ heading: "Malformed sibling", line: 12, evidence: "## BL-BAD: Malformed sibling", confidence: "recognized", missingCanonicalFields: ["priority"] }]
-            }
-          ],
-          planningSource: { mode: "local-working-tree", writable: false, reason: "Local planning source has validation issues.", readAt: "2026-08-30T00:00:00.000Z" },
-          backlogControl: {
-            source: { mode: "local-working-tree", writable: false, reason: "Local planning source has validation issues.", readAt: "2026-08-30T00:00:00.000Z" },
-            ordering: "initialized",
-            conflictLanes: [],
-            writable: false,
-            blockers: [{ code: "BACKLOG_DOCUMENT_NOT_CANONICAL", message: "Backlog control is unavailable while docs/BACKLOG.md is recoverable." }]
-          },
-          metrics: { activeTasks: 0, totalBacklog: 1, doneCount: 0, blockedCount: 0 },
-          digest: "abc"
-        }}
-      />
-    );
-
-    await user.click(screen.getByRole("tab", { name: "Backlog (1)" }));
-    expect(screen.getByText("Canonical sibling")).toBeVisible();
-    expect(screen.getByText(/Backlog control is unavailable/)).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Manage ordering" })).not.toBeInTheDocument();
-  });
-
-  it("uses canonical-empty wording without claiming that a source document is absent", () => {
-    const { rerender } = render(<RoadmapView items={[]} isCodeProject />);
+  it("uses canonical-empty Roadmap wording without claiming that a source document is absent", () => {
+    render(<RoadmapView items={[]} isCodeProject />);
     expect(screen.getByText("No canonical phases currently available")).toBeVisible();
-    expect(screen.queryByText(/missing document/i)).not.toBeInTheDocument();
-
-    rerender(<BacklogView items={[]} projectSlug="alljobs" />);
-    expect(screen.getByText("No canonical backlog items currently available")).toBeVisible();
     expect(screen.queryByText(/missing document/i)).not.toBeInTheDocument();
   });
 

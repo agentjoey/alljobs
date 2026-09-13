@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import { refreshProjectAction } from "@/app/actions/refresh";
 import type { ProjectDetailView } from "@/lib/planning/queries/project";
-import { BacklogProposalForm } from "./backlog-proposal-form";
-import { BacklogView } from "./backlog-view";
 import { DocumentHealth } from "./document-health";
 import { NativeTaskForm } from "./native-task-form";
 import { ProvenancePanel } from "./provenance-panel";
@@ -18,27 +16,20 @@ export function ProjectDetail({
 }: {
   detail: ProjectDetailView;
 }) {
-  const { project, roadmap, backlog, tasks, provenance } = detail;
+  const { project, roadmap, tasks, provenance } = detail;
   const isCode = project.type === "code";
-  const [activeTab, setActiveTab] = useState<"roadmap" | "backlog" | "tasks" | "provenance">("roadmap");
+  const [activeTab, setActiveTab] = useState<"roadmap" | "tasks" | "provenance">("roadmap");
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [prefilledBacklogId, setPrefilledBacklogId] = useState<string | undefined>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   const [assistantTaskDraft, setAssistantTaskDraft] = useState<NativeTaskDraftInitialValues | undefined>();
 
-  const planningTabCount = (document: "roadmap" | "backlog", count: number) => {
+  const roadmapTabCount = (count: number) => {
     if (detail.project.type === "code" && detail.documents.length === 0) return "Source unavailable";
-    const state = detail.documents.find((item) => item.document === document)?.state;
+    const state = detail.documents.find((item) => item.document === "roadmap")?.state;
     if (state === "missing") return "Missing document";
     if (state === "unavailable") return "Source unavailable";
     return String(count);
-  };
-
-  const handleCreateTaskForBacklog = (backlogId: string) => {
-    setAssistantTaskDraft(undefined);
-    setPrefilledBacklogId(backlogId);
-    setShowTaskModal(true);
   };
 
   const handleRefresh = async () => {
@@ -94,7 +85,6 @@ export function ProjectDetail({
               className="btn btn--primary"
               onClick={() => {
                 setAssistantTaskDraft(undefined);
-                setPrefilledBacklogId(undefined);
                 setShowTaskModal(true);
               }}
             >
@@ -132,8 +122,7 @@ export function ProjectDetail({
       >
         {(
           [
-            { key: "roadmap", label: `Roadmap (${planningTabCount("roadmap", roadmap.length)})`, show: true },
-            { key: "backlog", label: `Backlog (${planningTabCount("backlog", backlog.length)})`, show: isCode },
+            { key: "roadmap", label: `Roadmap (${roadmapTabCount(roadmap.length)})`, show: true },
             { key: "tasks", label: `Tasks (${tasks.length})`, show: true },
             { key: "provenance", label: `Provenance (${provenance.length})`, show: true }
           ] as const
@@ -166,17 +155,6 @@ export function ProjectDetail({
       {/* Active Tab View */}
       <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "roadmap" && <RoadmapView items={roadmap} isCodeProject={isCode} />}
-        {activeTab === "backlog" && isCode && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <BacklogView
-              items={backlog}
-              projectSlug={project.slug}
-              control={detail.backlogControl}
-              onCreateTaskForBacklog={handleCreateTaskForBacklog}
-            />
-            <BacklogProposalForm projectSlug={project.slug} source={detail.backlogControl?.source} />
-          </div>
-        )}
         {activeTab === "tasks" && <TaskList tasks={tasks} filterProject={project.slug} digest={detail.digest} />}
         {activeTab === "provenance" && <ProvenancePanel provenance={provenance} />}
       </div>
@@ -185,7 +163,6 @@ export function ProjectDetail({
       {showTaskModal && (
         <NativeTaskForm
           projectSlug={project.slug}
-          defaultBacklogId={prefilledBacklogId}
           initialDraft={assistantTaskDraft}
           onClose={() => setShowTaskModal(false)}
         />
