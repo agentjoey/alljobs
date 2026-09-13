@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -29,6 +29,33 @@ const unstructuredRoadmap: DocumentTriage = {
       evidence: "## Release outline",
       confidence: "ambiguous",
       missingCanonicalFields: ["id", "kind", "status", "order"]
+    }
+  ]
+};
+
+const recoverableBacklog: DocumentTriage = {
+  document: "backlog",
+  state: "recoverable",
+  sourcePath: "docs/BACKLOG.md",
+  digest: "backlog-digest",
+  revision: "abc1234",
+  diagnostics: [
+    {
+      scope: "object",
+      code: "INVALID_FIELD",
+      sourcePath: "docs/BACKLOG.md",
+      objectId: "BL-BAD",
+      field: "priority",
+      message: "Priority is invalid."
+    }
+  ],
+  candidates: [
+    {
+      heading: "Backlog draft",
+      line: 8,
+      evidence: "## BL-BAD: Backlog draft",
+      confidence: "recognized",
+      missingCanonicalFields: ["priority"]
     }
   ]
 };
@@ -104,6 +131,27 @@ describe("DocumentHealth", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Roadmap document" })).toBeVisible();
     expect(screen.getByRole("heading", { level: 4, name: "Candidate section" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Manage ordering/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps non-canonical Backlog evidence read-only while retaining the Roadmap handoff", () => {
+    render(
+      <DocumentHealth
+        documents={[unstructuredRoadmap, recoverableBacklog]}
+        source={remoteReadOnly}
+        projectSlug="code-project"
+      />
+    );
+
+    const backlogArticle = screen.getByRole("heading", { level: 3, name: "Backlog document" }).closest("article");
+    const roadmapArticle = screen.getByRole("heading", { level: 3, name: "Roadmap document" }).closest("article");
+    expect(backlogArticle).not.toBeNull();
+    expect(roadmapArticle).not.toBeNull();
+    if (!backlogArticle || !roadmapArticle) return;
+
+    expect(within(backlogArticle).getByText("Backlog draft")).toBeVisible();
+    expect(within(backlogArticle).getByText(/INVALID_FIELD/)).toBeVisible();
+    expect(within(backlogArticle).queryByRole("button", { name: "Copy repository-agent handoff" })).not.toBeInTheDocument();
+    expect(within(roadmapArticle).getByRole("button", { name: "Copy repository-agent handoff" })).toBeEnabled();
   });
 
   it("keeps concise canonical health tied to fixed paths, revision, digests, read time, and exact authority", () => {

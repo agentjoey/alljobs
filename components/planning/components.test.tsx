@@ -159,6 +159,54 @@ describe("planning UI components", () => {
     expect(container.querySelectorAll("[data-document-candidate]")).toHaveLength(0);
   });
 
+  it("keeps read-only project sections while removing Backlog management entry points", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectDetail
+        detail={{
+          project: {
+            slug: "retired-backlog-code",
+            name: "Retired Backlog Code",
+            type: "code",
+            work_modes: ["implementation"],
+            execution_locations: [],
+            archived: false
+          },
+          roadmap: [{ id: "phase-1", title: "Canonical phase", kind: "phase", status: "active", order: 10 }],
+          backlog: [{ id: "BL-001", title: "Read-only evidence", work_mode: "implementation", phase: "phase-1", status: "ready", priority: "P1", rank: 100, dependencies: [] }],
+          tasks: [],
+          issues: [],
+          attention: [],
+          provenance: [{ provider: "git", location: "docs/BACKLOG.md", revision: "abc1234", digest: "backlog-digest", fetchedAt: "2026-09-14T00:00:00.000Z" }],
+          documents: [
+            { document: "roadmap", state: "canonical", sourcePath: "docs/ROADMAP.md", diagnostics: [], candidates: [] },
+            { document: "backlog", state: "canonical", sourcePath: "docs/BACKLOG.md", diagnostics: [], candidates: [] }
+          ],
+          planningSource: { mode: "local-working-tree", writable: true, headRevision: "abc1234", backlogDigest: "backlog-digest", readAt: "2026-09-14T00:00:00.000Z" },
+          backlogControl: {
+            source: { mode: "local-working-tree", writable: true, headRevision: "abc1234", backlogDigest: "backlog-digest", readAt: "2026-09-14T00:00:00.000Z" },
+            ordering: "initialized",
+            conflictLanes: [],
+            writable: true,
+            blockers: []
+          },
+          metrics: { activeTasks: 0, totalBacklog: 1, doneCount: 0, blockedCount: 0 },
+          digest: "task-digest"
+        }}
+      />
+    );
+
+    const backlogTab = screen.queryByRole("tab", { name: "Backlog (1)" });
+    if (backlogTab) await user.click(backlogTab);
+
+    expect(screen.getByRole("tab", { name: "Roadmap (1)" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Tasks (0)" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Provenance (1)" })).toBeVisible();
+    expect(screen.queryByRole("tab", { name: /^Backlog/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage ordering" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate proposal" })).not.toBeInTheDocument();
+  });
+
   it("replaces unavailable Roadmap and Backlog counts in Project Detail and Project List", () => {
     const unavailableDocuments = [
       {

@@ -118,7 +118,7 @@ describe("getProjectDetail", () => {
     }
   });
 
-  it("prefers the registered local working tree and exposes its source facts", async () => {
+  it("prefers the registered local working tree and exposes read-only Backlog evidence without control state", async () => {
     const trustedRoot = join(tempHome, "trusted");
     const repository = join(trustedRoot, "code-proj");
     const runner = new NodeGitRunner();
@@ -151,13 +151,20 @@ describe("getProjectDetail", () => {
 
     expect(detail?.planningSource).toMatchObject({ mode: "local-working-tree", writable: true, backlogModified: true });
     expect(detail?.backlogDigest).toMatch(/^[0-9a-f]{64}$/);
-    expect(detail?.backlog[0].priority).toBe("P0");
-    expect(detail?.backlogControl).toMatchObject({
-      source: { mode: "local-working-tree", writable: true, backlogModified: true },
-      ordering: "uninitialized",
-      writable: true
-    });
-    expect(detail?.backlogControl?.blockers).toContainEqual(expect.objectContaining({ code: "ORDERING_NOT_INITIALIZED" }));
+    expect(detail?.backlog).toEqual([
+      expect.objectContaining({ id: "AJ-B-001", title: "Local item", priority: "P0" })
+    ]);
+    expect(detail?.metrics.totalBacklog).toBe(1);
+    expect(detail?.documents).toContainEqual(expect.objectContaining({
+      document: "backlog",
+      state: "canonical",
+      diagnostics: []
+    }));
+    expect(detail?.provenance).toEqual(expect.arrayContaining([
+      expect.objectContaining({ location: "docs/ROADMAP.md" }),
+      expect.objectContaining({ location: "docs/BACKLOG.md" })
+    ]));
+    expect(detail).not.toHaveProperty("backlogControl");
     expect(detail?.digest).not.toBe(detail?.backlogDigest);
   });
 
