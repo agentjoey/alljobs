@@ -10,7 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config playwright.config.ts && playwright test --config playwright.document-adaptation.config.ts && playwright test --config playwright.document-adaptation-mobile.config.ts && playwright test --config playwright.r2.config.ts && playwright test --config playwright.r5.config.ts",
     "test:e2e:r2": "playwright test --config playwright.r2.config.ts",
     "assistant:smoke": "tsx scripts/assistant-smoke.ts",
     "planning:refresh": "tsx scripts/planning-refresh.ts",
