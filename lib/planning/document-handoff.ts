@@ -1,11 +1,9 @@
 import type {
   DocumentTriage,
-  PlanningDocumentKind,
   PlanningSourceState
 } from "./providers/contracts";
 
-const canonicalTemplates: Record<PlanningDocumentKind, string> = {
-  roadmap: `# Roadmap
+const canonicalTemplate = `# Roadmap
 
 ## phase-1: Outcome title
 
@@ -15,37 +13,16 @@ status: planned
 order: 10
 \`\`\`
 
-Describe the outcome and its role in the project Roadmap.`,
-  backlog: `# Backlog
+Describe the outcome and its role in the project Roadmap.`;
 
-## PROJECT-BL-001: Outcome title
-
-\`\`\`yaml alljobs
-work_mode: implementation
-phase: phase-1
-status: ready
-priority: P1
-owner: joey
-dependencies: []
-\`\`\`
-
-### Problem
-
-Describe the problem or required outcome.
-
-### Done When
-
-- [ ] Add an owner-verifiable completion condition.`
-};
-
-function sourceDigest(triage: DocumentTriage, source: PlanningSourceState) {
+function sourceDigest(triage: DocumentTriage & { document: "roadmap" }, source: PlanningSourceState) {
   if (triage.digest) return triage.digest;
-  return triage.document === "roadmap" ? source.roadmapDigest : source.backlogDigest;
+  return source.roadmapDigest;
 }
 
 export function buildDocumentStandardizationHandoff(input: {
   projectSlug: string;
-  triage: DocumentTriage;
+  triage: DocumentTriage & { document: "roadmap" };
   source: PlanningSourceState;
 }): string {
   const { projectSlug, triage, source } = input;
@@ -98,7 +75,7 @@ export function buildDocumentStandardizationHandoff(input: {
   lines.push(
     "",
     `Canonical template for ${triage.sourcePath}:`,
-    canonicalTemplates[triage.document],
+    canonicalTemplate,
     "",
     "Repository-agent validation:",
     "- Choose stable IDs, preserve source meaning, and validate relations in the repository's normal review workflow.",

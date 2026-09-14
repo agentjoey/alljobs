@@ -35,12 +35,18 @@ function fixedDocumentPath(document: DocumentTriage["document"]) {
   return document === "roadmap" ? "docs/ROADMAP.md" : "docs/BACKLOG.md";
 }
 
+function isRoadmapDocument(
+  document: DocumentTriage
+): document is DocumentTriage & { document: "roadmap" } {
+  return document.document === "roadmap";
+}
+
 function HandoffAction({
   document,
   source,
   projectSlug
 }: {
-  document: DocumentTriage;
+  document: DocumentTriage & { document: "roadmap" };
   source: PlanningSourceState;
   projectSlug: string;
 }) {
@@ -205,7 +211,7 @@ export function DocumentHealth({
   const allCanonical = documents.length > 0 && documents.every((document) => document.state === "canonical");
   const hasDegradedDocument = documents.length === 0 || documents.some((document) => document.state !== "canonical");
   const authority = source.writable
-    ? "Existing Backlog priority/rank writes allowed"
+    ? "Planning evidence only · no Backlog writes"
     : hasDegradedDocument
       ? "Read only · copy handoff only"
       : "Read only · no planning writes";
@@ -302,7 +308,9 @@ export function DocumentHealth({
           {document.state !== "canonical" && (
             <>
               <DocumentEvidence document={document} />
-              <HandoffAction document={document} source={source} projectSlug={projectSlug} />
+              {isRoadmapDocument(document) && (
+                <HandoffAction document={document} source={source} projectSlug={projectSlug} />
+              )}
             </>
           )}
         </article>

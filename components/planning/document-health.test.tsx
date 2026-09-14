@@ -96,7 +96,7 @@ afterEach(() => {
 });
 
 describe("DocumentHealth", () => {
-  it("names a missing local document and offers a copy-only repository handoff", () => {
+  it("names a missing local Backlog document without offering a repository handoff", () => {
     render(
       <DocumentHealth
         documents={[missingBacklog]}
@@ -109,8 +109,8 @@ describe("DocumentHealth", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Missing document");
     expect(screen.getByText("docs/BACKLOG.md")).toBeVisible();
     expect(screen.getByText("Local working tree")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Copy repository-agent handoff" })).toBeEnabled();
-    expect(screen.getByText(/Copy only\. AllJobs will not write, commit, push, merge, fetch, or start an agent\./)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Copy repository-agent handoff" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Copy only\. AllJobs will not write, commit, push, merge, fetch, or start an agent\./)).not.toBeInTheDocument();
   });
 
   it("keeps unstructured candidates visibly outside canonical planning data", () => {
@@ -177,7 +177,7 @@ describe("DocumentHealth", () => {
     expect(screen.getByText("roadmap-digest")).toBeVisible();
     expect(screen.getByText("backlog-digest")).toBeVisible();
     expect(screen.getByText("2026-08-30T00:00:00.000Z")).toBeVisible();
-    expect(screen.getByText("Existing Backlog priority/rank writes allowed")).toBeVisible();
+    expect(screen.getByText("Planning evidence only · no Backlog writes")).toBeVisible();
   });
 
   it("renders unavailable source coordinates and the known failure reason", () => {
@@ -211,7 +211,7 @@ describe("DocumentHealth", () => {
     });
     render(
       <DocumentHealth
-        documents={[missingBacklog]}
+        documents={[unstructuredRoadmap]}
         source={localReadOnly}
         projectSlug="code-project"
       />
@@ -223,7 +223,7 @@ describe("DocumentHealth", () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(writeText.mock.calls[0][0]).toContain("Project: code-project");
-    expect(writeText.mock.calls[0][0]).toContain("Document: docs/BACKLOG.md");
+    expect(writeText.mock.calls[0][0]).toContain("Document: docs/ROADMAP.md");
     expect(screen.getByText("Repository-agent handoff copied.")).toBeVisible();
   });
 
