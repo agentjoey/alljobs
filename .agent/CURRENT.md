@@ -58,13 +58,14 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
 
-## R1 Backlog Control candidate (not deployed)
+## P0 Backlog retirement candidate (not deployed)
 
-- **Branch / worktree:** `codex/r1-backlog-control` · `.worktrees/r1-backlog-control`
-- **Baseline / candidate:** `5466c33` / `47da845`
-- **Status:** Task 9 final candidate evidence and independent gates are in progress. This branch is not merged, pushed, deployed, or connected to the Control Host listener.
-- **Scope:** validated local working-tree precedence; direct existing-item `priority`/`rank` writes only; digest-guarded Proposal/Apply; read-only remote/cache fallback; copy-only new-item handoff.
-- **Remaining Human Gates:** owner-selected pilot project plus explicit pilot-write authorization; owner walkthrough; explicit release approval. No real repository Backlog may be modified until the pilot gate is granted.
+- **Branch / worktree:** `codex/p0-backlog-retirement` · `.worktrees/p0-backlog-retirement`
+- **Status:** R1 Backlog management is retired in the candidate. The branch is not merged, pushed, deployed, or connected to the Control Host listener.
+- **Current boundary:** Linear owns Backlog management. AllJobs may ingest repository Backlog only as read-only transition evidence for document health, provenance, diagnostics, counts, search, citations, assistant context, and Task references.
+- **Retired surfaces:** no Backlog tab, ordering editor, proposal/apply path, conversion command, assistant Backlog candidate, repository-agent Backlog handoff, or R1 runner remains.
+- **Historical evidence:** former R1 design, implementation, and frontend records remain in Git as retired evidence; they are not current instructions or release candidates.
+- **Remaining Human Gates:** P0-B independent review and P0-C Human Owner walkthrough/release decision. No push, deployment, production restart, or project-owned Backlog mutation is authorized by this candidate.
 
 ## Release history
 

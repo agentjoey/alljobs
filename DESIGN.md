@@ -159,7 +159,7 @@ components:
 
 AllJobs is a single-owner planning control plane engineered for high-density review of federated work across code-development and business-operation projects. The visual system is derived directly from the physical and typographical discipline of **pleurat.com** (curated 2026-08-27): warm cream paper surfaces, dark ink typography, crisp hairline rules, uppercase monospace annotations, and a single amber provenance status bar as its signature accent.
 
-The system firmly rejects dashboard card walls, scroll-narrative portfolio layouts, decorative galaxy maps, gradient text, and unearned card elevation. Backlog and Task ledgers own the dominant reading plane. Source custody and freshness are immediately legible through monospace coordinates and provenance patterns: **solid fill** marks AllJobs-native writable custody, while **hatch fill** marks external read-only projections.
+The system firmly rejects dashboard card walls, scroll-narrative portfolio layouts, decorative galaxy maps, gradient text, and unearned card elevation. Roadmap and Task views own the dominant reading plane; repository Backlog appears only as read-only document evidence. Source custody and freshness are immediately legible through monospace coordinates and provenance patterns: **solid fill** marks AllJobs-native writable custody, while **hatch fill** marks external read-only projections.
 
 **Key Characteristics:**
 
@@ -216,7 +216,7 @@ The palette is an authentic, high-contrast paper and ink system. Every foregroun
 
 The desktop shell is centered up to a 1600px max width with 24px-32px margins. The layout adheres to a **Ledger-First** composition:
 
-- **Desktop (≥1120px)**: The left column (65-70% width) is dedicated entirely to dense Backlog and Task ledgers. The right column (30-35% width) holds compact source custody facts, Roadmap milestone stages, and recovery tools.
+- **Desktop (≥1120px)**: The primary plane is dedicated to Roadmap and Task views. Compact source custody facts, read-only document health, and recovery tools remain visually secondary and never create a Backlog management surface.
 - **Intermediate (721px - 1119px)**: Grids collapse into a single column where the primary ledger leads, followed by the source custody and secondary panels.
 - **Mobile (≤720px)**: The header recomposes into a compact brand/status row with a horizontally scrollable navigation strip. Ledger rows dynamically stack into structured multi-line cards with two-line wrapping, avoiding clipped or horizontally scrollable data tables. Touch targets maintain a strict 44px minimum height.
 
@@ -239,16 +239,16 @@ The Paper Workbench is flat and tactile. Depth is established through subtle ton
 - **Primary**: Solid amber `#F3B44A` background, `#16140E` text, 6px radius, 40px height (44px on mobile). Used for the single confirmed next action.
 - **Quiet**: Transparent background, `#16140E` text, 1px `rgba(22,20,14,.32)` border.
 
-### 3. Dense Ledger Rows, Backlog Drawers & Project Cards Grid
-- **Ledger Rows**: 64px min-height, grid layout (ID, Title + Context, Project/Phase, Due/Status, Actions, Badge).
-- **Backlog Expandable Drawers**: Clicking any Backlog item expands an integrated detail drawer containing context specifications, phase/milestone bindings, source document references (`docs/BACKLOG.md`), and inline actions (Copy ID, Create Native Task, View in Repo).
+### 3. Dense Task Rows, Read-only Document Health & Project Cards Grid
+- **Task Rows**: 64px min-height, grid layout (ID, Title + Context, Project/Phase, Due/Status, Actions, Badge).
+- **Backlog Document Health**: Repository Backlog is represented only by fixed-path document state, revision, digest, diagnostics, provenance, and candidate evidence. It never renders an item ledger, expandable drawer, ordering control, proposal, handoff, or write action.
 - **Project Cards Grid**: Large structured cards in a responsive grid layout (derived from standard project workbench dashboards), displaying project name, phase/milestone subhead, freshness badge, custody tag, metrics (task & backlog count), and document paths with smooth tactile hover elevation (`translateY(-3px)`).
 - **Hover**: 2px-3px lift, hairline border darkens, chevron/arrow nudges smoothly.
 - **Mobile**: Recomposes to stacked lines with full text wrap and 44px hit targets.
 
 ### 4. Universal Header Search (`⌘K`)
 - **Position**: Integrated directly into the top application header between navigation and status.
-- **Behavior**: Real-time cross-project filtering across tasks, backlog items, and registered projects, with keyboard shortcut shortcut `⌘K` focus trap.
+- **Behavior**: Real-time cross-project filtering across tasks, read-only Backlog evidence, and registered projects, with keyboard shortcut shortcut `⌘K` focus trap.
 
 ### 5. Vertical Roadmap Timeline (`.roadmap-timeline-v`)
 - **Structure**: Vertical chronological axis connecting phase and milestone cards with circular step markers.
@@ -270,7 +270,7 @@ The Paper Workbench is flat and tactile. Depth is established through subtle ton
 ## Do's and Don'ts
 
 ### Do:
-- **Do** make Backlog and Task ledgers the dominant visual plane on every screen.
+- **Do** make Roadmap and Task views the dominant visual plane; show repository Backlog only as clearly labeled read-only evidence.
 - **Do** bind every view to the amber provenance status bar showing exact source custody, revision, and digest.
 - **Do** distinguish external read-only projections (hatch fill / dashed badge) from native writable objects (solid fill).
 - **Do** preserve full copy, error reasons, and disabled explanations in text, not color alone.
