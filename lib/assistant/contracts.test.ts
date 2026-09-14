@@ -6,8 +6,8 @@ import {
   assistantRequestIntentSchema,
   assistantRunRecordSchema,
   assistantStreamEventSchema,
-  backlogProposalSchema,
   managementAnswerSchema,
+  managementRecommendationSchema,
   sourceAccessProposalSchema,
   taskDraftSchema
 } from "./contracts";
@@ -125,6 +125,21 @@ describe("assistant request intent", () => {
     expect(assistantRequestIntentSchema.safeParse({ intent: "draft_task", project_slug: "alljobs", candidate: { id: "r1", title: "Verify citations", rationale: "Evidence is incomplete.", candidate_kind: "backlog" }, mode: "standard", expected_manifest_digest: digest }).success).toBe(false);
   });
 
+  it("rejects the retired Backlog draft intent", () => {
+    expect(assistantRequestIntentSchema.safeParse({
+      intent: ["draft", "backlog"].join("_"),
+      project_slug: "alljobs",
+      candidate: {
+        id: "r1",
+        title: "Record boundary evidence",
+        rationale: "Keep reviewed evidence visible.",
+        candidate_kind: "backlog"
+      },
+      mode: "standard",
+      expected_manifest_digest: digest
+    }).success).toBe(false);
+  });
+
   it("requires the current bounded question for source follow-up intents without allowing history", () => {
     expect(assistantRequestIntentSchema.safeParse({
       intent: "inspect_source",
@@ -181,6 +196,15 @@ describe("assistant context manifest", () => {
 });
 
 describe("assistant outcome", () => {
+  it("rejects a Backlog mutation recommendation", () => {
+    expect(managementRecommendationSchema.safeParse({
+      id: "r1",
+      title: "Record boundary evidence",
+      rationale: "Keep reviewed evidence visible.",
+      candidate_kind: "backlog"
+    }).success).toBe(false);
+  });
+
   it("parses a management answer with facts and citations", () => {
     const parsed = assistantOutcomeSchema.safeParse({
       kind: "management_answer",
@@ -264,7 +288,7 @@ describe("assistant outcome", () => {
   });
 });
 
-describe("task draft and backlog proposal", () => {
+describe("task draft", () => {
   it("parses a task draft", () => {
     const parsed = taskDraftSchema.safeParse({
       title: "Verify R2 source citations",
@@ -292,28 +316,6 @@ describe("task draft and backlog proposal", () => {
     }).success).toBe(false);
   });
 
-  it("parses a backlog proposal", () => {
-    const parsed = backlogProposalSchema.safeParse({
-      problem: "R2 contracts are undefined",
-      desired_outcome: "A strict contract graph",
-      suggested_title: "Define R2 contracts",
-      suggested_priority: "P0",
-      suggested_dependencies: [],
-      suggested_work_mode: "implementation",
-      done_when: "Contracts validate strict rejection",
-      evidence: [],
-      assumptions: [],
-      unknowns: [],
-      questions: [],
-      citation_source_ids: ["docs/ROADMAP.md"],
-      manifest_digest: digest,
-      model: "MiniMax-M3",
-      mode: "standard",
-      generated_at: "2026-09-01T00:00:00.000Z",
-      proposal_digest: digest
-    });
-    expect(parsed.success).toBe(true);
-  });
 });
 
 describe("assistant run record", () => {
@@ -361,6 +363,31 @@ describe("assistant run record", () => {
 });
 
 describe("assistant stream event", () => {
+  it("rejects the retired Backlog proposal event", () => {
+    expect(assistantStreamEventSchema.safeParse({
+      type: ["backlog", "proposal"].join("_"),
+      stale: false,
+      proposal: {
+        problem: "R2 contracts are undefined",
+        desired_outcome: "A strict contract graph",
+        suggested_title: "Define R2 contracts",
+        suggested_dependencies: [],
+        done_when: "Contracts validate strict rejection",
+        evidence: [],
+        assumptions: [],
+        unknowns: [],
+        questions: [],
+        citation_source_ids: ["docs/ROADMAP.md"],
+        manifest_digest: digest,
+        model: "MiniMax-M3",
+        mode: "standard",
+        generated_at: "2026-09-01T00:00:00.000Z",
+        proposal_digest: digest
+      },
+      handoff: "Copy-only handoff"
+    }).success).toBe(false);
+  });
+
   it("parses run status, complete, and error events", () => {
     expect(assistantStreamEventSchema.safeParse({ type: "run_status", stage: "preparing" }).success).toBe(true);
     expect(assistantStreamEventSchema.safeParse({

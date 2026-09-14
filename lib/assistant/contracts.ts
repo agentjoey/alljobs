@@ -63,12 +63,11 @@ export const managementRecommendationSchema = z.object({
   id: z.string().min(1, "recommendation id is required"),
   title: z.string().min(1, "recommendation title is required"),
   rationale: z.string().min(1, "recommendation rationale is required"),
-  candidate_kind: z.enum(["none", "task", "backlog"])
+  candidate_kind: z.enum(["none", "task"])
 }).strict();
 export type ManagementRecommendation = z.infer<typeof managementRecommendationSchema>;
 
 const taskCandidateSchema = managementRecommendationSchema.extend({ candidate_kind: z.literal("task") });
-const backlogCandidateSchema = managementRecommendationSchema.extend({ candidate_kind: z.literal("backlog") });
 
 // ---------------------------------------------------------------------------
 // Request intent
@@ -106,13 +105,6 @@ export const assistantRequestIntentSchema = z.discriminatedUnion("intent", [
     intent: z.literal("draft_task"),
     project_slug: projectSlugSchema,
     candidate: taskCandidateSchema,
-    mode: assistantModeSchema,
-    expected_manifest_digest: hexDigestSchema
-  }).strict(),
-  z.object({
-    intent: z.literal("draft_backlog"),
-    project_slug: projectSlugSchema,
-    candidate: backlogCandidateSchema,
     mode: assistantModeSchema,
     expected_manifest_digest: hexDigestSchema
   }).strict()
@@ -213,28 +205,6 @@ export const taskDraftSchema = z.object({
 }).strict();
 export type TaskDraft = z.infer<typeof taskDraftSchema>;
 
-export const backlogProposalSchema = z.object({
-  problem: z.string().min(1, "problem is required"),
-  desired_outcome: z.string().min(1, "desired_outcome is required"),
-  suggested_title: z.string().min(1, "suggested_title is required"),
-  suggested_phase: z.string().optional(),
-  suggested_priority: prioritySchema.optional(),
-  suggested_dependencies: z.array(z.string()).default([]),
-  suggested_work_mode: workModeSchema.optional(),
-  done_when: z.string().min(1, "done_when is required"),
-  evidence: z.array(z.string()),
-  assumptions: z.array(z.string()),
-  unknowns: z.array(z.string()),
-  questions: z.array(z.string()),
-  citation_source_ids: z.array(z.string().min(1)),
-  manifest_digest: hexDigestSchema,
-  model: z.string().min(1, "model is required"),
-  mode: assistantModeSchema,
-  generated_at: z.string().min(1, "generated_at is required"),
-  proposal_digest: hexDigestSchema
-}).strict();
-export type BacklogProposal = z.infer<typeof backlogProposalSchema>;
-
 // ---------------------------------------------------------------------------
 // Operational record
 // ---------------------------------------------------------------------------
@@ -299,7 +269,6 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
     outcome: assistantOutcomeSchema
   }).strict(),
   z.object({ type: z.literal("task_draft"), stale: z.boolean(), draft: taskDraftSchema, model: z.string().min(1), mode: assistantModeSchema }).strict(),
-  z.object({ type: z.literal("backlog_proposal"), stale: z.boolean(), proposal: backlogProposalSchema, handoff: z.string().min(1) }).strict(),
   z.object({
     type: z.literal("assistant_error"),
     code: assistantErrorCodeSchema,

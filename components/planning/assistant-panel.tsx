@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { AssistantEntryState } from "@/lib/assistant/context";
-import type { AssistantMode, AssistantPartialView, AssistantRequestIntent, AssistantStreamEvent, BacklogProposal, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
+import type { AssistantMode, AssistantPartialView, AssistantRequestIntent, AssistantStreamEvent, ManagementAnswer, ManagementRecommendation, SourceAccessProposal } from "@/lib/assistant/contracts";
 import { decodeAssistantEvent } from "@/lib/assistant/stream";
 import { AssistantAnswer } from "./assistant-answer";
 import { AssistantContextReceiptView } from "./assistant-context-receipt";
@@ -20,7 +20,7 @@ function selectedOptionalSources(entry?: AssistantEntryState): string[] {
 }
 
 function isTerminalEvent(event: AssistantStreamEvent): boolean {
-  return event.type === "assistant_complete" || event.type === "task_draft" || event.type === "backlog_proposal" || event.type === "assistant_error";
+  return event.type === "assistant_complete" || event.type === "task_draft" || event.type === "assistant_error";
 }
 
 async function requestAssistant(intent: AssistantRequestIntent, signal?: AbortSignal, onEvent?: (event: AssistantStreamEvent) => void): Promise<AssistantStreamEvent[]> {
@@ -73,7 +73,6 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const [message, setMessage] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [partial, setPartial] = useState<AssistantPartialView | null>(null);
-  const [backlogProposal, setBacklogProposal] = useState<{ proposal: BacklogProposal; handoff: string } | null>(null);
   const [selectedOptionalSourceIds, setSelectedOptionalSourceIds] = useState<string[]>(() => selectedOptionalSources(entry));
   const headingRef = useRef<HTMLHeadingElement>(null);
   const abortRunRef = useRef<AbortController | null>(null);
@@ -106,7 +105,7 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
   const consume = async (intent: AssistantRequestIntent) => {
     const abortController = new AbortController();
     abortRunRef.current = abortController;
-    setRunning(true); setMessage(null); setAnswer(null); setPartial(null); setProposal(null); setBacklogProposal(null); setStale(false);
+    setRunning(true); setMessage(null); setAnswer(null); setPartial(null); setProposal(null); setStale(false);
     try {
       const events = await request(intent, abortController.signal, (event) => {
         if (event.type === "assistant_partial") setPartial(event.partial);
@@ -122,10 +121,6 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
         if (event.type === "task_draft") {
           if (event.stale) nextMessage = "Stale — refresh context before using this proposed change.";
           else { onUseTaskDraft?.(toNativeTaskDraftInitialValues(event.draft, { model: event.model, mode: event.mode, manifest_digest: event.draft.manifest_digest })); setOpen(false); nextMessage = "Task draft is ready for normal-form review."; }
-        }
-        if (event.type === "backlog_proposal") {
-          if (event.stale) nextMessage = "Stale — refresh context before using this proposed change.";
-          else { setBacklogProposal({ proposal: event.proposal, handoff: event.handoff }); nextMessage = "Backlog handoff is ready to copy."; }
         }
       }
       if (nextAnswer) { setAnswer(nextAnswer); setStale(nextStale); persist(mode, nextAnswer); }
@@ -153,7 +148,13 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
     if (!proposal) return;
     void consume({ intent, project_slug: projectSlug, gate_id: proposal.gate_id, question: question.trim(), expected_manifest_digest: entry.manifest_digest });
   };
-  const draftRecommendation = (candidate: ManagementRecommendation, intent: "draft_task" | "draft_backlog") => void consume({ intent, project_slug: projectSlug, candidate: candidate as any, mode, expected_manifest_digest: entry.manifest_digest });
+  const draftRecommendation = (candidate: ManagementRecommendation) => void consume({
+    intent: "draft_task",
+    project_slug: projectSlug,
+    candidate: { ...candidate, candidate_kind: "task" },
+    mode,
+    expected_manifest_digest: entry.manifest_digest
+  });
 
   return <>
     <button type="button" className="btn" onClick={openPanel}>Management assistant</button>
@@ -172,9 +173,8 @@ export function AssistantPanel({ projectSlug, entry, request = requestAssistant,
               <code>{source.path}</code>
             </label>)}
           </fieldset>}
-          {answer && <AssistantAnswer answer={answer} stale={stale} onUseTaskDraft={(candidate) => draftRecommendation(candidate, "draft_task")} onDraftBacklog={(candidate) => draftRecommendation(candidate, "draft_backlog")} />}
+          {answer && <AssistantAnswer answer={answer} stale={stale} onUseTaskDraft={draftRecommendation} />}
           {!answer && partial && <AssistantPartialOutput partial={partial} />}
-          {backlogProposal && <section className="assistant-source-gate" aria-label="Repository-agent Backlog handoff"><h3>Copy-only Backlog handoff</h3><textarea aria-label="Repository-agent handoff" readOnly value={backlogProposal.handoff} rows={10} /><button className="btn" type="button" onClick={() => void navigator.clipboard?.writeText(backlogProposal.handoff)}>Copy repository-agent handoff</button></section>}
           {proposal && <AssistantSourceGate proposal={proposal} disabled={running} onInspect={() => respondToGate("inspect_source")} onDecline={() => respondToGate("answer_without_source")} />}
           {message && <p className="assistant-message" role="status">{message}</p>}
         </div>

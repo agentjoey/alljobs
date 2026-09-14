@@ -183,6 +183,34 @@ describe("assistant service", () => {
     expect(events).toContainEqual(expect.objectContaining({ type: "assistant_error", code: "INVALID_OUTPUT" }));
   });
 
+  it("fails closed when the model recommends a retired Backlog mutation", async () => {
+    const recordActivity = vi.fn().mockResolvedValue(undefined);
+    const service = createAssistantService({
+      assembleContext: vi.fn().mockResolvedValue(bundle()),
+      generate: vi.fn().mockResolvedValue({
+        outcome: {
+          ...validAnswer,
+          recommendations: [{
+            id: "backlog-candidate",
+            title: "Record boundary evidence",
+            rationale: "Keep reviewed evidence visible.",
+            candidate_kind: "backlog"
+          }]
+        }
+      }) as never,
+      recordActivity
+    });
+
+    const events = await collect(service.respond(ask, new AbortController().signal));
+
+    expect(events).toContainEqual(expect.objectContaining({ type: "assistant_error", code: "INVALID_OUTPUT" }));
+    expect(events).not.toContainEqual(expect.objectContaining({ type: "assistant_complete" }));
+    expect(recordActivity).toHaveBeenCalledWith(expect.objectContaining({
+      status: "invalid_output",
+      error_code: "INVALID_OUTPUT"
+    }));
+  });
+
   it("turns a source request into a digest-only one-time gate", async () => {
     const service = createAssistantService({
       assembleContext: vi.fn().mockResolvedValue(bundle()),

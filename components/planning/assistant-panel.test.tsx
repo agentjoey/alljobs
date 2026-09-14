@@ -118,23 +118,6 @@ describe("AssistantPanel", () => {
     expect(onUseTaskDraft).not.toHaveBeenCalled();
   });
 
-  it("removes an older Backlog handoff before a later stale result can be shown", async () => {
-    const user = userEvent.setup();
-    const proposal = { problem: "Problem", desired_outcome: "Outcome", suggested_title: "Title", suggested_dependencies: [], done_when: "Done", evidence: [], assumptions: [], unknowns: [], questions: [], citation_source_ids: [], manifest_digest: DIGEST, model: "MiniMax-M3", mode: "standard" as const, generated_at: "2026-09-01T00:00:00.000Z", proposal_digest: "b".repeat(64) };
-    const request = vi.fn()
-      .mockResolvedValueOnce([{ type: "backlog_proposal", stale: false, proposal, handoff: "copy-only handoff" }])
-      .mockResolvedValueOnce([{ type: "assistant_complete", stale: true, outcome: { kind: "management_answer", direct_answer: "Changed.", confirmed_facts: [], inferences: [], unknowns: [], questions: [], recommendations: [], citations: [] } }]);
-    render(<AssistantPanel projectSlug="sample-code" entry={enabled} request={request} />);
-
-    await user.click(screen.getByRole("button", { name: "Management assistant" }));
-    await user.type(screen.getByLabelText("Ask management assistant"), "Draft a backlog item");
-    await user.click(screen.getByRole("button", { name: "Ask Companion" }));
-    expect(await screen.findByRole("region", { name: "Repository-agent Backlog handoff" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Ask Companion" }));
-    expect(screen.queryByRole("region", { name: "Repository-agent Backlog handoff" })).not.toBeInTheDocument();
-    expect(await screen.findByText("Stale — refresh context")).toBeVisible();
-  });
-
   it("cancels only the active request and does not retain a partial result", async () => {
     const user = userEvent.setup();
     window.sessionStorage.clear();

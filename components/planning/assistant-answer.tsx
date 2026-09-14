@@ -1,6 +1,6 @@
 import type { ManagementAnswer, ManagementRecommendation } from "@/lib/assistant/contracts";
 
-export function AssistantAnswer({ answer, stale = false, onUseTaskDraft, onDraftBacklog }: { answer: ManagementAnswer; stale?: boolean; onUseTaskDraft?: (candidate: ManagementRecommendation) => void; onDraftBacklog?: (candidate: ManagementRecommendation) => void }) {
+export function AssistantAnswer({ answer, stale = false, onUseTaskDraft }: { answer: ManagementAnswer; stale?: boolean; onUseTaskDraft?: (candidate: ManagementRecommendation) => void }) {
   return (
     <section className="assistant-output" aria-label="Companion output">
       <div className="assistant-output__header">
@@ -12,7 +12,7 @@ export function AssistantAnswer({ answer, stale = false, onUseTaskDraft, onDraft
       {answer.inferences.length > 0 && <OutputList title="Inferences" items={answer.inferences.map((inference) => inference.text)} />}
       {answer.unknowns.length > 0 && <OutputList title="Unknowns" items={answer.unknowns} />}
       {answer.questions.length > 0 && <OutputList title="Questions" items={answer.questions} />}
-      {answer.recommendations.length > 0 && <div className="assistant-output__section"><h3>Recommendation</h3>{answer.recommendations.map((recommendation) => <div key={recommendation.id}><p>{recommendation.title}: {recommendation.rationale}</p>{!stale && recommendation.candidate_kind === "task" && <button className="btn" type="button" onClick={() => onUseTaskDraft?.(recommendation)}>Use as Task draft</button>}{!stale && recommendation.candidate_kind === "backlog" && <button className="btn" type="button" onClick={() => onDraftBacklog?.(recommendation)}>Draft Backlog proposal</button>}</div>)}</div>}
+      {answer.recommendations.length > 0 && <div className="assistant-output__section"><h3>Recommendation</h3>{answer.recommendations.map((recommendation) => <div key={recommendation.id}><p>{recommendation.title}: {recommendation.rationale}</p>{!stale && recommendation.candidate_kind === "task" && <button className="btn" type="button" onClick={() => onUseTaskDraft?.(recommendation)}>Use as Task draft</button>}</div>)}</div>}
     </section>
   );
 }

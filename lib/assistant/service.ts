@@ -16,9 +16,7 @@ import {
   type AssistantPartialView,
   type SourceAccessProposal,
   type TaskDraft,
-  type BacklogProposal,
-  taskDraftSchema,
-  backlogProposalSchema
+  taskDraftSchema
 } from "./contracts";
 import { assistantDigest } from "./digest";
 import { ASSISTANT_LIMITS } from "./limits";
@@ -28,10 +26,9 @@ import { createSourceGate, consumeSourceGate, rejectSourceGate, type SourceGateR
 import { createAssistantReadTools } from "./source-files";
 import { recordAssistantRun } from "../planning/native/activity";
 import { NativePlanningStore } from "../planning/native/store";
-import { buildAssistantBacklogHandoff } from "./handoff";
 
 export interface AssistantModelResult {
-  outcome: AssistantOutcome | TaskDraft | BacklogProposal;
+  outcome: AssistantOutcome | TaskDraft;
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
@@ -58,14 +55,13 @@ export interface AssistantServiceDependencies {
 }
 
 function modeFor(intent: AssistantRequestIntent, gate?: SourceGateRecord): AssistantMode {
-  if (intent.intent === "ask" || intent.intent === "draft_task" || intent.intent === "draft_backlog") return intent.mode;
+  if (intent.intent === "ask" || intent.intent === "draft_task") return intent.mode;
   if (gate?.max_files === ASSISTANT_LIMITS.deep.sourceFiles) return "deep";
   return "standard";
 }
 
 function outputSchemaFor(intent: AssistantRequestIntent) {
   if (intent.intent === "draft_task") return taskDraftSchema;
-  if (intent.intent === "draft_backlog") return backlogProposalSchema;
   return assistantOutcomeSchema;
 }
 
@@ -144,6 +140,7 @@ function sourceGateProposal(outcome: SourceAccessProposal, gate: SourceGateRecor
 function safeErrorCode(error: unknown, signal: AbortSignal): "ABORTED" | "STALE_CONTEXT" | "INVALID_OUTPUT" | "PROVIDER_UNAVAILABLE" {
   if (signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return "ABORTED";
   if (error instanceof Error && error.message === "OUTCOME_STALE_CONTEXT") return "STALE_CONTEXT";
+  if (error instanceof z.ZodError) return "INVALID_OUTPUT";
   if (error instanceof Error && error.message.startsWith("OUTCOME_")) return "INVALID_OUTPUT";
   return "PROVIDER_UNAVAILABLE";
 }
@@ -252,7 +249,7 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
     const startedAt = now();
     const runId = createRunId();
     let manifestDigest = intent.expected_manifest_digest;
-    let mode: AssistantMode = (intent.intent === "ask" || intent.intent === "draft_task" || intent.intent === "draft_backlog") ? intent.mode : "standard";
+    let mode: AssistantMode = (intent.intent === "ask" || intent.intent === "draft_task") ? intent.mode : "standard";
     let sourceGate: AssistantSourceGateState = "none";
     let terminal: AssistantRunRecord["status"] = "error";
     let errorCode: AssistantRunRecord["error_code"];
@@ -305,18 +302,6 @@ export function createAssistantService(deps: AssistantServiceDependencies = {}) 
         yield { type: "run_status", stage: "validating" };
         const secondContext = await assemble(contextInput(intent, mode));
         yield { type: "task_draft", stale: secondContext.manifest.manifest_digest !== manifestDigest, draft, model: MINIMAX_TOKEN_PLAN_MODEL, mode };
-        terminal = secondContext.manifest.manifest_digest !== manifestDigest ? "stale" : "complete";
-        yield { type: "run_status", stage: "complete" };
-        return;
-      }
-      if (intent.intent === "draft_backlog") {
-        const proposal = backlogProposalSchema.parse(outcome);
-        const { proposal_digest, ...unsigned } = proposal;
-        if (proposal.manifest_digest !== manifestDigest || assistantDigest(unsigned) !== proposal_digest) throw new Error("OUTCOME_INVALID_PROPOSAL");
-        validateDraftCitations(proposal.citation_source_ids, firstContext);
-        yield { type: "run_status", stage: "validating" };
-        const secondContext = await assemble(contextInput(intent, mode));
-        yield { type: "backlog_proposal", stale: secondContext.manifest.manifest_digest !== manifestDigest, proposal, handoff: buildAssistantBacklogHandoff(proposal) };
         terminal = secondContext.manifest.manifest_digest !== manifestDigest ? "stale" : "complete";
         yield { type: "run_status", stage: "complete" };
         return;

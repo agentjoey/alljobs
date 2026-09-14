@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import type { AssistantRequestIntent, AssistantStreamEvent, BacklogProposal } from "@/lib/assistant/contracts";
+import { managementAnswerSchema, type AssistantRequestIntent, type AssistantStreamEvent } from "@/lib/assistant/contracts";
 import { mutateR2Manifest, readR2Activity, setR2AssistantEnabled } from "./r2-fixtures";
 
 function ndjson(events: AssistantStreamEvent[]) {
@@ -18,33 +18,10 @@ function answer(digest: string, overrides: Record<string, unknown> = {}) {
     inferences: [],
     unknowns: [],
     questions: [],
-    recommendations: [{ id: "candidate-backlog", title: "Record boundary evidence", rationale: "Keep the reviewed evidence visible.", candidate_kind: "backlog" as const }],
+    recommendations: [],
     citations: [{ source_id: "docs/BACKLOG.md", label: "Dirty local Backlog" }],
     ...overrides
   };
-}
-
-function backlogProposal(digest: string): BacklogProposal {
-  const unsigned = {
-    problem: "Boundary evidence needs an owner-reviewed backlog entry.",
-    desired_outcome: "A repository agent can apply a reviewed proposal.",
-    suggested_title: "Record R2 boundary evidence",
-    suggested_phase: "phase-1",
-    suggested_priority: "P1" as const,
-    suggested_dependencies: [],
-    suggested_work_mode: "implementation" as const,
-    done_when: "The owner has reviewed the evidence.",
-    evidence: ["Dirty local Backlog was read."],
-    assumptions: [],
-    unknowns: [],
-    questions: [],
-    citation_source_ids: ["docs/BACKLOG.md"],
-    manifest_digest: digest,
-    model: "MiniMax-M3",
-    mode: "standard" as const,
-    generated_at: "2026-09-01T00:00:00.000Z"
-  };
-  return { ...unsigned, proposal_digest: "a".repeat(64) };
 }
 
 async function interceptAssistant(page: Page, responder: (intent: AssistantRequestIntent) => AssistantStreamEvent[]) {
@@ -72,31 +49,31 @@ async function assertNoHorizontalScroll(page: Page) {
 }
 
 test.describe("R2 management assistant browser and authority boundaries", () => {
-  test("runs a fresh standard answer, then copies a server-shaped Backlog handoff", async ({ page, context }) => {
-    const requests: AssistantRequestIntent[] = [];
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3466" });
+  test("surfaces a model-shaped Backlog recommendation as INVALID_OUTPUT without an action", async ({ page }) => {
+    let rejectedModelShape = false;
     await interceptAssistant(page, (intent) => {
-      requests.push(intent);
-      if (intent.intent === "draft_backlog") {
-        const proposal = backlogProposal(intent.expected_manifest_digest);
-        return [{ type: "backlog_proposal", stale: false, proposal, handoff: "Application owner: repository agent or Human Owner\nAllJobs did not write to docs/BACKLOG.md." }];
-      }
-      return [{ type: "assistant_complete", stale: false, outcome: answer(intent.expected_manifest_digest) }];
+      rejectedModelShape = !managementAnswerSchema.safeParse(answer(intent.expected_manifest_digest, {
+        recommendations: [{
+          id: "candidate-backlog",
+          title: "Record boundary evidence",
+          rationale: "Keep the reviewed evidence visible.",
+          candidate_kind: "backlog"
+        }]
+      })).success;
+      return [{
+        type: "assistant_error",
+        code: "INVALID_OUTPUT",
+        message: "Assistant output could not be validated against the current project context."
+      }];
     });
 
     await openAssistant(page);
     await page.getByLabel("Ask management assistant").fill("What is ready?");
     await page.getByRole("button", { name: "Ask Companion" }).click();
-    await expect(page.getByRole("region", { name: "Companion output" })).toContainText("AJ-B-101 is ready for owner review.");
-    await expect(page.getByRole("button", { name: "Draft Backlog proposal" })).toBeVisible();
-    await page.getByRole("button", { name: "Draft Backlog proposal" }).click();
-    await expect(page.getByRole("region", { name: "Repository-agent Backlog handoff" })).toContainText("Copy-only Backlog handoff");
-    await page.getByRole("button", { name: "Copy repository-agent handoff" }).click();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("AllJobs did not write to docs/BACKLOG.md.");
-
-    expect(requests).toHaveLength(2);
-    expect(requests[0]).toMatchObject({ intent: "ask", mode: "standard", project_slug: "r2-ready", selected_optional_source_ids: [] });
-    expect(JSON.stringify(requests)).not.toMatch(/root|model|tool|budget|content/i);
+    await expect(page.getByRole("status")).toHaveText("Assistant output could not be validated against the current project context.");
+    await expect(page.getByRole("button", { name: "Use as Task draft" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Backlog proposal/i })).toHaveCount(0);
+    expect(rejectedModelShape).toBe(true);
   });
 
   test("keeps source access owner-gated, keyboard reachable, and usable at mobile width", async ({ page }) => {
