@@ -3,11 +3,13 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-08-28 by Antigravity; 同日 Kimi Code 完成全量 code review + 修复发布（fbe7f46，见 `.agent/frontend-design/code-review-2026-08-28.md`）
+Last Updated:   2026-09-14 by Codex after the Human-approved P0 Backlog management retirement release
 
 ## Current decision
 
 The previously developed AllJobs product was retired and replaced with the federated Planning Core V1 greenfield build. All legacy routes, UI directions, and sample data were removed.
+
+Linear now owns Backlog management. AllJobs retains repository Backlog only as read-only planning evidence and has no Backlog management, proposal, conversion, repair, or handoff path.
 
 The legacy release remains recoverable only through Git history and `archive/v0.1.0-retired`.
 
@@ -34,7 +36,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **App Listener (`com.agentjoey.alljobs`)**: Running on `127.0.0.1:3456`
 - **Refresh Worker (`com.agentjoey.alljobs-refresh`)**: Running bare mirror sync every 300s
 - **Cloudflare Tunnel (`com.agentjoey.cloudflared`)**: Forwarding `alljobs.agentjoey.ai` → `http://localhost:3456` with Access OTP auth
-- **Verification Evidence**: 53 Vitest unit/integration tests passing (100%), 6 Playwright E2E/a11y tests passing (0 WCAG AA violations), Next.js 16.3 Turbopack production build verified, deployment safety invariants verified.
+- **Verification Evidence**: 68 Vitest files / 744 tests passing, 27 Playwright E2E tests passing with 1 conditional evidence capture skipped, Next.js 16.3 Turbopack production build verified, deployment safety invariants verified, loopback smoke 200, and Cloudflare Access entry 302.
 
 ## Completed Tasks Summary
 
@@ -49,7 +51,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **Task 8 (Projections & Typed Server Actions)**: `lib/planning/queries/portfolio.ts`, `project.ts`, `tasks.ts`, `attention.ts`, `app/actions/projects.ts`, `native-planning.ts`, `refresh.ts`.
 - **Task 9 (Agent Skill)**: `skills/alljobs-planning/SKILL.md`, references, examples, and `planning:skill:validate`.
 - **Task 10 (Shell & Overview)**: AppShell, Universal Search (`⌘K`), SourceStatus amber strip, Portfolio Personal Workbench, Project Card Grid.
-- **Task 11 (Detail & Journeys)**: Vertical Roadmap timeline, Accordion Backlog Drawers, Universal Task Ledger, Native Task Form, 2-phase Registration & Restore flows.
+- **Task 11 (Historical V1 Detail & Journeys)**: Vertical Roadmap timeline, former Backlog drawers retired by P0, Universal Task Ledger, Native Task Form, 2-phase Registration & Restore flows.
 - **Task 12 (E2E & Accessibility)**: Playwright E2E suites, Axe WCAG AA audits, Verification Record, Review Packet.
 - **Task 13 (Deployment & Operations)**: LaunchAgents (`alljobs`, `alljobs-refresh`), deployment invariant verifier, operational recovery documentation.
 - **Task 14 (Release & Cutover)**: Merged to `main`, launchd services active, live domain verified.
@@ -58,14 +60,14 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
 
-## P0 Backlog retirement candidate (not deployed)
+## P0 Backlog retirement (live)
 
 - **Branch / worktree:** `codex/p0-backlog-retirement` · `.worktrees/p0-backlog-retirement`
-- **Status:** R1 Backlog management is retired in the candidate. The branch is not merged, pushed, deployed, or connected to the Control Host listener.
+- **Status:** R1 Backlog management is retired on `main` and live on the Control Host. Human Gates P0-A, P0-B, and P0-C are complete.
 - **Current boundary:** Linear owns Backlog management. AllJobs may ingest repository Backlog only as read-only transition evidence for document health, provenance, diagnostics, counts, search, citations, assistant context, and Task references.
 - **Retired surfaces:** no Backlog tab, ordering editor, proposal/apply path, conversion command, assistant Backlog candidate, repository-agent Backlog handoff, or R1 runner remains.
 - **Historical evidence:** former R1 design, implementation, and frontend records remain in Git as retired evidence; they are not current instructions or release candidates.
-- **Remaining Human Gates:** P0-B independent review and P0-C Human Owner walkthrough/release decision. No push, deployment, production restart, or project-owned Backlog mutation is authorized by this candidate.
+- **Release boundary:** the app service was rebuilt and restarted without changing the refresh worker, Tunnel, Cloudflare Access, domain, or mandatory loopback binding. No external project-owned Backlog was mutated.
 
 ## Release history
 
@@ -73,3 +75,4 @@ Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/bus
 |---|---|---|---|
 | v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |
 | v1.0.0 | 2026-08-28 | Live in Production | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git bare mirrors, and digest protection |
+| P0 retirement | 2026-09-14 | Live in Production | Removed R1 Backlog management and proposal paths; retained repository Backlog solely as read-only evidence under Linear ownership |

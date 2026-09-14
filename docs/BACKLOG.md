@@ -4,7 +4,7 @@ Canonical implementation backlog for the AllJobs repository. The Roadmap at
 `docs/ROADMAP.md` remains the phase-level source of intent; this file holds
 the executable, priority-ordered items within those phases.
 
-## AJ-B-001: Backlog Control
+## AJ-B-001: Backlog Management Retirement
 
 ```yaml alljobs
 id: AJ-B-001
@@ -14,11 +14,13 @@ status: done
 priority: P0
 rank: 100
 dependencies: []
-done_when: The approved R1 Backlog Control delivery is live without giving AllJobs authority to create or apply repository Backlog changes.
+done_when: R1 Backlog management and proposal paths are removed while repository Backlog remains available only as read-only planning evidence.
 ```
 
-The completed R1 delivery establishes safe priority and rank proposals for
-existing repository-owned Backlog items.
+The former R1 management delivery is retired. Linear owns Backlog management;
+AllJobs preserves parser output, provenance, diagnostics, counts, citations,
+assistant context, and Task references without creating, reordering, repairing,
+standardizing, proposing, applying, or handing off Backlog changes.
 
 ## AJ-B-002: Planning and Management Assistant
 
@@ -59,7 +61,7 @@ priority: P1
 rank: 100
 dependencies:
   - AJ-B-003
-done_when: Backlog and Task provide the primary, non-duplicated planning workflow while retaining the Paper Workbench direction.
+done_when: Roadmap and Task provide the primary, non-duplicated planning workflow while read-only Backlog evidence retains the Paper Workbench direction.
 ```
 
 ## AJ-B-005: Console Dashboard
