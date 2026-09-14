@@ -3,9 +3,9 @@
 ## Architectural Principles
 
 1. **Federated Custody & Single Source of Truth**:
-   - Code repositories own their development planning in fixed files: `docs/ROADMAP.md` and `docs/BACKLOG.md`.
+   - Code repositories own Roadmap planning in `docs/ROADMAP.md` and retain custody of any transition-period `docs/BACKLOG.md` bytes; Linear owns Backlog management.
    - Business initiatives own their planning in AllJobs-native storage (`data/roadmaps/`, `data/tasks/`).
-   - R1 Backlog Control may change only `priority` and `rank` YAML scalars on an existing code-project Backlog Item. It never creates an item or changes its substantive content.
+   - Linear owns Backlog management. During the transition, AllJobs may ingest a repository's `docs/BACKLOG.md` only as read-only planning evidence; it cannot reorder, propose, regenerate, or write Backlog content.
 
 2. **Projections & No Database**:
    - External projections are computed by a safe background Git runner (`-c core.hooksPath=/dev/null`) synchronizing local bare mirrors.
@@ -18,11 +18,10 @@
 4. **Human Gated Consequential Lifecycle**:
    - Registration, archive, and restore require two-phase inspect -> review proposal digest -> explicit confirmation.
 
-## R1 Backlog Control
+## Retired R1 Backlog Control
 
-- **Source selection:** a validated registered Control Host working tree is authoritative, including its uncommitted `docs/BACKLOG.md` bytes. AllJobs falls back to the remote commit or cache only when the entire workspace is unavailable. A present-but-invalid local source remains visible, read-only, and never silently falls through.
-- **Ordering:** Backlog read order is `Phase → Priority → Rank`; rank is a positive integer scoped to one Phase and priority lane. Initialization assigns `100`, `200`, and so on, while repairs or moves renumber only the affected lane when necessary. Markdown section order remains editorial.
-- **Proposal and Apply:** the browser submits structured intent, not a path, Markdown, field name, or patch. The server derives fixed trusted paths, validates the document, displays a field-only proposal plus complete-file and proposal digests, then revalidates under an exclusive lock before an atomic replacement.
-- **Write safety:** planning files must be regular files below the trusted root, never symlinks or conflict-marked/ambiguous/oversized documents. A stale digest, invalid source, unsafe path, or failed atomic replacement produces zero repository write. Preservation checks reject any byte change outside the affected `priority` and `rank` scalar ranges.
-- **No Git side effects:** R1 does not commit, push, merge, fetch, execute project code, create backups, or start a coding agent. Activity records contain mutation metadata and digests only, never a Backlog body or secrets.
-- **Recovery:** refresh the source and create a new proposal after a stale/locked/invalid result. To disable R1, roll back the AllJobs application to the prior read-only build; do not attempt to reverse an owner-confirmed repository edit automatically.
+- **Current ownership:** Linear is the only Backlog management system. AllJobs may display repository Backlog document health, provenance, diagnostics, counts, citations, and assistant context as read-only evidence during the transition.
+- **No mutation surface:** AllJobs has no Backlog tab, ordering editor, proposal/apply flow, conversion command, assistant Backlog candidate, or repository-agent Backlog handoff. Repository Backlog bytes remain project-owned.
+- **Projection boundary:** a validated Control Host working tree may be projected before its remote or cached fallback, but every Backlog projection is read-only. Missing, malformed, unsafe, or unavailable documents remain explicit evidence states and never enable a write path.
+- **Retired evidence:** the former R1 behavior remains available only as historical evidence in the [R1 design](superpowers/specs/2026-08-29-alljobs-r1-backlog-control-design.md), [R1 implementation plan](superpowers/plans/2026-08-29-alljobs-r1-backlog-control.md), and [R1 frontend verification](../.agent/frontend-design/r1-backlog-control/verification.md). These records do not describe current capabilities.
+- **Rollback:** revert the P0 retirement commits with Git in reverse order and re-run their verification gates. Never regenerate, rewrite, or otherwise mutate a project-owned `docs/BACKLOG.md` as part of rollback.

@@ -21,17 +21,17 @@ npm run planning:refresh -- --once
 - Native data files live under `./data/` (Markdown and JSON). Back up directory using standard Time Machine / filesystem backups.
 - Mirrors live under `~/.alljobs/mirrors/` and can be reconstructed at any time by refreshing from remotes.
 
-## R1 Backlog Control Operations
+## Backlog Retirement Operations
 
-R1 reads a registered project's validated local working tree first. A modified local `docs/BACKLOG.md` is expected: its complete-file digest protects the owner’s existing work. Remote commit and cached projections are deliberately read-only fallback states; a malformed, unsafe, or missing local document must be repaired in its repository and never masked with remote data.
+Linear owns Backlog management. During the transition, AllJobs may ingest a registered repository's `docs/BACKLOG.md` only as read-only planning evidence. Local working-tree, remote-commit, and cached projections may expose document health, provenance, diagnostics, counts, citations, and assistant context, but they must never create an ordering, proposal, handoff, conversion, or write path.
 
-Before an owner confirms a direct change, AllJobs presents the project source facts, full Backlog digest, and an exact field-only diff. The only permitted direct edits are `priority` and `rank` on existing items; rank initialization and reordering are scoped to one `Phase → Priority` lane. A stale result, lock contention, source error, or preservation failure makes no write. Re-inspect the source, then create a fresh proposal instead of retrying an old one.
+A malformed, unsafe, missing, or unavailable repository Backlog remains an explicit read-only evidence state. Repair or migration happens in the system that owns the data, under Human Owner direction; operators must not use AllJobs to regenerate or mutate the file.
 
-R1 never performs Git mutations or project-code execution: no commit, push, merge, fetch, backup, agent launch, or refresh-worker action. New Backlog Items remain copy-only repository-agent proposals.
+Former R1 behavior is retained only as retired evidence in the [R1 design](superpowers/specs/2026-08-29-alljobs-r1-backlog-control-design.md), [R1 implementation plan](superpowers/plans/2026-08-29-alljobs-r1-backlog-control.md), and [R1 frontend verification](../.agent/frontend-design/r1-backlog-control/verification.md). These historical records are not current operational instructions.
 
-### Disable / rollback
+### Rollback
 
-If R1 must be disabled, deploy the previously approved read-only AllJobs application build using the established release procedure. Do not modify a repository Backlog to "roll back" the feature, and do not restart or alter the Tunnel, Cloudflare Access, refresh worker, domain, or the mandatory `127.0.0.1:3456` listener as part of this recovery. An owner-confirmed `priority` or `rank` edit is repository-owned and must be retained or reverted only by explicit Human Owner direction.
+Rollback is a Git revert of the P0 retirement commits in reverse order, followed by the normal test and review gates. Never regenerate, rewrite, or otherwise mutate a project-owned `docs/BACKLOG.md` during rollback. Do not restart or alter the Tunnel, Cloudflare Access, refresh worker, domain, or mandatory `127.0.0.1:3456` listener unless a separately approved release plan explicitly requires it.
 
 ## R2 Management Assistant Operations
 
@@ -59,9 +59,9 @@ If R1 must be disabled, deploy the previously approved read-only AllJobs applica
   MiniMax.
 - malformed terminal model JSON: treat it as `INVALID_OUTPUT`; raw stream text
   remains server-side and must never be copied into the activity record or UI.
-- stale or incomplete output: it may remain readable, but Task and Backlog
-  actions must remain unavailable. Re-open/refresh the Project and start a new
-  bounded run.
+- stale or incomplete output: it may remain readable, but Task actions must
+  remain unavailable. Backlog actions do not exist. Re-open/refresh the Project
+  and start a new bounded run.
 - denied source gate: continue with the document-only answer and its unknowns;
   do not widen an allowlist as a workaround.
 

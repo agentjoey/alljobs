@@ -1,10 +1,10 @@
 # AllJobs — Federated Planning Core
 
-Joey 的个人多项目规划工作台。统一可视化和管理 Project → Roadmap → Backlog / Task，同时保持代码项目的 Roadmap/Backlog 在各自 repo 内作为唯一事实源。
+Joey 的个人多项目规划工作台。统一可视化和管理 Project → Roadmap → Task；Backlog 管理由 Linear 负责。过渡期间，代码仓库中的 `docs/BACKLOG.md` 仅作为只读规划证据被 AllJobs 投影，不提供排序、提案或写入能力。
 
 ## Architecture & Data Model
 
-- **Federated Read-Only Mirrors**: 代码项目的 `docs/ROADMAP.md` 与 `docs/BACKLOG.md` 留在各自代码仓库内作为唯一事实源，AllJobs 仅维护只读 Git 投影与摘要比对，绝不向外部代码仓库写入。
+- **Federated Read-Only Mirrors**: 代码项目的 `docs/ROADMAP.md` 与过渡期 `docs/BACKLOG.md` 留在各自代码仓库内；AllJobs 仅维护只读 Git 投影与摘要比对，绝不向外部代码仓库写入或生成 Backlog 变更提案。
 - **AllJobs-Native Writable Tasks**: 业务运营项目的 Milestones 与 Tasks 直接由 AllJobs Markdown 保管。
 - **No Database**: 纯 Markdown 驱动，零 SQL/NoSQL 数据库。
 - **Paper Workbench**: 温暖纸面基底 (`#F1EEE6` / `#FBF7E6`)、深墨排版 (`#16140E`) 与琥珀色 Provenance 状态条 (`#F3B44A`)。
