@@ -11,12 +11,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:r1": "playwright test --config playwright.r1.config.ts",
     "test:e2e:r2": "playwright test --config playwright.r2.config.ts",
     "assistant:smoke": "tsx scripts/assistant-smoke.ts",
     "planning:refresh": "tsx scripts/planning-refresh.ts",
     "monitoring:refresh": "tsx scripts/monitoring-refresh.ts --once",
-    "planning:convert": "tsx scripts/convert-backlog.ts",
     "planning:skill:validate": "node scripts/validate-planning-skill.mjs",
     "verify:deploy": "node scripts/verify-deployment-config.mjs"
   },
