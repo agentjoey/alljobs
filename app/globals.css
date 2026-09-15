@@ -78,6 +78,9 @@
 .caphub-error h3 { margin: 0; font-size: 15px; }
 .caphub-error p { margin: 3px 0 0; color: var(--ink-muted); font-size: 12.5px; }
 .caphub-error code { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.caphub-error > button { margin-top: 12px; }
+.caphub-error > button:disabled { color: var(--ink-faint); background: var(--paper-recessed); cursor: not-allowed; }
+.caphub-error + .caphub-receipt { margin-top: 16px; }
 .caphub-boundaries { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 34px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--hairline-strong); border-bottom: 1px solid var(--hairline-strong); }
 .caphub-boundaries li { min-width: 0; padding: 18px 18px 20px 0; }
 .caphub-boundaries li + li { padding-left: 18px; border-left: 1px solid var(--hairline); }

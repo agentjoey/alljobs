@@ -1,5 +1,23 @@
-import React from "react";
+"use client";
+
+import React, { createContext, useContext, useEffect, useState } from "react";
 import type { PlanningSourceState } from "@/lib/planning/providers/contracts";
+
+type CaphubModuleState = "Ready" | "Receiving" | "Received" | "Disabled" | "Validation Error" | "Storage Error" | "Read Error";
+const CaphubStateContext = createContext<CaphubModuleState | null>(null);
+const CaphubPublishContext = createContext<((state: CaphubModuleState | null) => void) | null>(null);
+
+/** Scope capture state to this shell instance; never mutate shared module state. */
+export function CaphubStatusProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<CaphubModuleState | null>(null);
+  return <CaphubPublishContext value={setState}><CaphubStateContext value={state}>{children}</CaphubStateContext></CaphubPublishContext>;
+}
+
+export function usePublishCaphubState(state: CaphubModuleState) {
+  const publish = useContext(CaphubPublishContext);
+  useEffect(() => { publish?.(state); }, [publish, state]);
+  useEffect(() => () => { publish?.(null); }, [publish]);
+}
 
 export interface SourceStatusProps {
   routePath?: string;
@@ -27,6 +45,8 @@ export function SourceStatus({
   freshness,
   source
 }: SourceStatusProps) {
+  const caphubState = useContext(CaphubStateContext);
+  const isCaphub = routePath === "/caphub" || routePath?.startsWith("/caphub/");
   // Only render provenance facts that are actually known; never fabricate.
   const shortId = revision && revision !== "native" && revision !== "unknown"
     ? `rev ${revision.slice(0, 7)}`
@@ -60,12 +80,12 @@ export function SourceStatus({
       </div>
       <div className="status-strip__segment">
         <span className="status-strip__item">
-          <strong>STATE</strong> {shortId}
+          <strong>STATE</strong> {isCaphub ? caphubState ?? "Checking" : shortId}
         </span>
         <span className="status-strip__sep">/</span>
         <span className="status-strip__item">
           <strong>SYNC</strong>{" "}
-          {freshness ? (
+          {isCaphub ? "N/A" : freshness ? (
             <span className={freshness === "fresh" ? "badge badge--done" : freshness === "stale" ? "badge badge--waiting" : "badge badge--blocked"}>
               {freshness.toUpperCase()}
             </span>

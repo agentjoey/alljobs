@@ -1,11 +1,14 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CaphubPage from "@/app/caphub/page";
 import { CaptureForm } from "./capture-form";
+import { AppShell } from "@/components/planning/app-shell";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/caphub" }));
 
 const CAPTURE_ID = "cap_31f86a209ab84b72ad89f7f82d13e4c1";
 const receipt = {
@@ -31,17 +34,20 @@ afterEach(() => {
   for (const home of temporaryHomes.splice(0)) rmSync(home, { recursive: true, force: true });
 });
 
-function setup() {
+function setup(options: { shell?: boolean; enabled?: boolean } = {}) {
   const user = userEvent.setup({ applyAccept: false });
   const requests: { url: string; init: RequestInit }[] = [];
   const responses: (() => Promise<Response>)[] = [];
+  const getResponses: (() => Promise<Response>)[] = [];
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     requests.push({ url, init });
+    if (init.method === "GET") return getResponses.shift()?.() ?? Response.json({ capture: receipt.capture });
     return responses.shift()?.() ?? Response.json(receipt, { status: 201 });
   });
-  render(<CaptureForm enabled maxUploadBytes={1_048_576} />);
+  const form = <CaptureForm enabled={options.enabled ?? true} maxUploadBytes={1_048_576} />;
+  render(options.shell ? <AppShell>{form}</AppShell> : form);
   return {
-    user, requests, responses,
+    user, requests, responses, getResponses,
     fileInput: screen.getByLabelText("Screenshot image") as HTMLInputElement,
     image: new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], "evidence.png", { type: "image/png", lastModified: 1 })
   };
@@ -162,6 +168,20 @@ describe("Web Capture intake", () => {
     expect(screen.queryByRole("link", { name: /example.com/ })).not.toBeInTheDocument();
   });
 
+  it.each(["not-a-url", "https://", "   "])("shows recoverable source validation for malformed user input %j without sending bytes", async (source) => {
+    const { user, fileInput, image, requests } = setup();
+    await user.upload(fileInput, image);
+    await user.type(screen.getByLabelText(/Source URL/), source);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/valid HTTPS URL/i);
+    expect(screen.getByLabelText(/Source URL/)).toHaveAttribute("aria-invalid", "true");
+    expect(requests).toHaveLength(0);
+    await user.clear(screen.getByLabelText(/Source URL/));
+    await user.type(screen.getByLabelText(/Source URL/), "https://example.com/source");
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    expect(await screen.findByText(CAPTURE_ID)).toBeVisible();
+  });
+
   it("enforces note and source length before request, including programmatic form input", async () => {
     const { user, fileInput, image, requests } = setup();
     await user.upload(fileInput, image);
@@ -190,7 +210,7 @@ describe("Web Capture intake", () => {
     await user.click(screen.getByRole("button", { name: "Retry same capture" }));
     expect(await screen.findByText("Duplicate — existing receipt returned")).toBeVisible();
     expect(screen.queryByText("Capture received")).not.toBeInTheDocument();
-    const [first, second] = requests.map(({ init }) => init.body as FormData);
+    const [first, second] = requests.filter(({ init }) => init.method === "POST").map(({ init }) => init.body as FormData);
     expect(second.get("idempotency_key")).toBe(first.get("idempotency_key"));
     expect(second.get("image")).toBe(first.get("image"));
     expect(second.get("note")).toBe("Keep this context.");
@@ -209,7 +229,8 @@ describe("Web Capture intake", () => {
     expect(screen.getByLabelText(/^Note/)).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "Receive capture" }));
     await screen.findByText(CAPTURE_ID);
-    expect((requests[1].init.body as FormData).get("idempotency_key")).not.toBe((requests[0].init.body as FormData).get("idempotency_key"));
+    const posts = requests.filter(({ init }) => init.method === "POST");
+    expect((posts[1].init.body as FormData).get("idempotency_key")).not.toBe((posts[0].init.body as FormData).get("idempotency_key"));
   });
 
   it.each(["CAPHUB_DISABLED", "ORIGIN_NOT_ALLOWED"])("renders safe unavailability after %s and disables all intake controls", async (code) => {
@@ -241,6 +262,134 @@ describe("Web Capture intake", () => {
     expect(screen.queryByText(CAPTURE_ID)).not.toBeInTheDocument();
     expect(screen.queryByText(/private-object|private\/secret|private-idempotency/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry same capture" })).toBeEnabled();
+  });
+});
+
+describe("Known receipt metadata reads", () => {
+  it.each(["created", "duplicate"])("refreshes the known %s receipt through GET while retaining its identity and outcome", async (kind) => {
+    const { user, fileInput, image, requests, responses, getResponses } = setup();
+    responses.push(async () => Response.json({ ...receipt, kind }, { status: kind === "created" ? 201 : 200 }));
+    let finishRead!: (response: Response) => void;
+    getResponses.push(() => new Promise<Response>((resolve) => { finishRead = resolve; }));
+    await user.upload(fileInput, image);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    expect(await screen.findByText(CAPTURE_ID)).toBeVisible();
+    await waitFor(() => expect(requests.map(({ init }) => init.method)).toEqual(["POST", "GET"]));
+    expect(requests[1].url).toBe(`/api/caphub/captures/${CAPTURE_ID}`);
+    expect(requests[1].init.body).toBeUndefined();
+    expect(requests[1].init.cache).toBe("no-store");
+    expect(screen.getByText(/Reading receipt metadata/)).toBeVisible();
+    await act(async () => finishRead(Response.json({ capture: { ...receipt.capture, source: { kind: "web", original_filename: "confirmed-evidence.png" } } })));
+    expect(await screen.findByText("confirmed-evidence.png")).toBeVisible();
+    expect(screen.getByText(CAPTURE_ID)).toBeVisible();
+    expect(screen.getByText(kind === "created" ? "Capture received" : "Duplicate — existing receipt returned")).toBeVisible();
+    expect(screen.queryByText(/Reading receipt metadata/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: "network failure", response: async () => { throw new Error("/private/secret read failure"); } },
+    { name: "non-OK response", response: async () => Response.json({ error: { code: "STORAGE_UNAVAILABLE", message: "/private/secret" } }, { status: 503 }) },
+    { name: "unreadable response", response: async () => new Response("not JSON", { status: 200 }) },
+    { name: "private object key", response: async () => Response.json({ capture: { ...receipt.capture, object: { ...receipt.capture.object, key: "sha256/private-key" } } }) },
+    { name: "extra envelope field", response: async () => Response.json({ capture: receipt.capture, debug: "/private/secret" }) },
+    { name: "different Capture ID", response: async () => Response.json({ capture: { ...receipt.capture, id: "cap_" + "a".repeat(32) } }) },
+    { name: "invalid review requirement", response: async () => Response.json({ capture: { ...receipt.capture, human_review_required: false } }) },
+    { name: "malformed source metadata", response: async () => Response.json({ capture: { ...receipt.capture, source: { ...receipt.capture.source, source_url: "not-a-url" } } }) }
+  ])("preserves the known ID after $name and retries only the same metadata GET", async ({ response }) => {
+    const { user, fileInput, image, requests, getResponses } = setup();
+    getResponses.push(response);
+    await user.upload(fileInput, image);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    expect(await screen.findByRole("heading", { name: "Receipt metadata is temporarily unavailable" })).toBeVisible();
+    expect(screen.getByText(CAPTURE_ID)).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Capture receipt" })).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent(/does not mean.*lost/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/image will not be submitted again/i);
+    expect(document.body).not.toHaveTextContent(/private\/secret|private-key|not-a-url/);
+    expect(screen.queryByRole("button", { name: "Retry same capture" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry receipt read" }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Receipt metadata is temporarily unavailable" })).not.toBeInTheDocument());
+    expect(screen.getByText(CAPTURE_ID)).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Receipt metadata refreshed. Human review is required.");
+    expect(requests.map(({ init }) => init.method)).toEqual(["POST", "GET", "GET"]);
+    for (const request of requests.slice(1)) {
+      expect(request.url).toBe(`/api/caphub/captures/${CAPTURE_ID}`);
+      expect(request.init.body).toBeUndefined();
+    }
+  });
+
+  it("keeps metadata retry single-flight and ignores an old read after a new file selection", async () => {
+    const { user, fileInput, image, requests, getResponses } = setup();
+    getResponses.push(async () => new Response(null, { status: 503 }));
+    let finishRead!: (response: Response) => void;
+    getResponses.push(() => new Promise<Response>((resolve) => { finishRead = resolve; }));
+    await user.upload(fileInput, image);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    await user.dblClick(await screen.findByRole("button", { name: "Retry receipt read" }));
+    expect(screen.getByRole("button", { name: "Reading receipt…" })).toBeDisabled();
+    expect(requests.map(({ init }) => init.method)).toEqual(["POST", "GET", "GET"]);
+    await user.upload(fileInput, new File(["new"], "new.png", { type: "image/png" }));
+    await act(async () => finishRead(Response.json({ capture: receipt.capture })));
+    expect(screen.queryByText(CAPTURE_ID)).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receive capture" })).toBeEnabled();
+  });
+
+  it("returns focus to the receipt heading when a metadata retry also fails", async () => {
+    const { user, fileInput, image, getResponses } = setup();
+    getResponses.push(async () => new Response(null, { status: 503 }));
+    getResponses.push(async () => new Response(null, { status: 503 }));
+    await user.upload(fileInput, image);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    await user.click(await screen.findByRole("button", { name: "Retry receipt read" }));
+    expect(screen.getByRole("heading", { name: "Capture receipt" })).toHaveFocus();
+    expect(screen.getByText(CAPTURE_ID)).toBeVisible();
+  });
+});
+
+describe("Caphub module status strip", () => {
+  const strip = () => screen.getByRole("region", { name: "Planning Source Provenance" });
+  function expectState(state: string) {
+    expect(strip()).toHaveTextContent(new RegExp(`STATE\\s+${state}`));
+    expect(strip()).toHaveTextContent(/SYNC\s+N\/A/);
+  }
+
+  it("follows real capture validation, receiving, read failure and read recovery transitions", async () => {
+    const { user, fileInput, image, responses, getResponses } = setup({ shell: true });
+    expectState("Ready");
+    await user.upload(fileInput, new File(["image"], "image.heic", { type: "image/heic" }));
+    expectState("Validation Error");
+    await user.upload(fileInput, image);
+    expectState("Ready");
+    let finishPost!: (response: Response) => void;
+    responses.push(() => new Promise<Response>((resolve) => { finishPost = resolve; }));
+    getResponses.push(async () => new Response(null, { status: 503 }));
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    expectState("Receiving");
+    await act(async () => finishPost(Response.json(receipt, { status: 201 })));
+    expect(await screen.findByRole("button", { name: "Retry receipt read" })).toBeEnabled();
+    expectState("Read Error");
+    await user.click(screen.getByRole("button", { name: "Retry receipt read" }));
+    await waitFor(() => expectState("Received"));
+    await user.upload(fileInput, new File(["new"], "new.png", { type: "image/png" }));
+    expectState("Ready");
+    responses.push(async () => Response.json({ error: { code: "STORAGE_UNAVAILABLE", message: "safe" } }, { status: 503 }));
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    await waitFor(() => expectState("Storage Error"));
+  });
+
+  it("reports disabled configuration instead of claiming readiness", () => {
+    setup({ shell: true, enabled: false });
+    expectState("Disabled");
+    expect(screen.getByRole("button", { name: "Capture unavailable" })).toBeDisabled();
+  });
+
+  it("distinguishes a server validation rejection from a storage failure", async () => {
+    const { user, fileInput, image, responses } = setup({ shell: true });
+    responses.push(async () => Response.json({ error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "safe" } }, { status: 415 }));
+    await user.upload(fileInput, image);
+    await user.click(screen.getByRole("button", { name: "Receive capture" }));
+    await waitFor(() => expectState("Validation Error"));
   });
 });
 

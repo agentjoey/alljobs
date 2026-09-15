@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertCircle, Upload } from "lucide-react";
 import { z } from "zod";
 import { captureMimeTypeSchema, captureRecordSchema } from "@/lib/caphub/domain/schemas";
-import { CaptureStatus, captureReceiptSchema, type CaptureError, type CaptureReceipt } from "./capture-status";
+import { usePublishCaphubState } from "@/components/planning/source-status";
+import { CaptureStatus, captureMetadataSchema, captureReceiptSchema, type CaptureError, type CaptureReceipt } from "./capture-status";
 
 const errorCodeSchema = z.enum([
   "CAPHUB_DISABLED", "ORIGIN_NOT_ALLOWED", "INVALID_INPUT", "INVALID_REQUEST",
@@ -13,6 +14,7 @@ const errorCodeSchema = z.enum([
 ]);
 const errorResponseSchema = z.object({ error: z.object({ code: errorCodeSchema, message: z.string() }).strict() }).strict();
 const RETRY_MESSAGE = "No receipt was returned. Retry this same capture with its retained idempotency key, or stop and inspect operations.";
+const VALIDATION_CODES = new Set(["INVALID_INPUT", "INVALID_REQUEST", "UNSUPPORTED_MEDIA_TYPE", "PAYLOAD_TOO_LARGE", "IDEMPOTENCY_CONFLICT", "CONTENT_LENGTH_REQUIRED"]);
 
 interface Selection { image: File; key: string }
 interface ValidationError { field: "image" | "source" | "note"; message: string }
@@ -31,12 +33,47 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
   const [validation, setValidation] = useState<ValidationError | null>(null);
   const [error, setError] = useState<CaptureError | null>(null);
   const [receipt, setReceipt] = useState<CaptureReceipt | null>(null);
+  const [readPending, setReadPending] = useState(false);
+  const [readError, setReadError] = useState<{ attempt: number } | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const inFlight = useRef(false);
+  const readInFlight = useRef(false);
+  const readSequence = useRef(0);
   const disabled = !enabled || unavailable;
   const contextLocked = disabled || pending || attempted;
   const limit = formatBytes(maxUploadBytes);
+  usePublishCaphubState(disabled ? "Disabled" : validation || (error && VALIDATION_CODES.has(error.code)) ? "Validation Error" : pending ? "Receiving"
+    : readError ? "Read Error" : receipt ? "Received" : error ? "Storage Error" : "Ready");
+
+  // A later selection or unmount must not restore an earlier receipt.
+  useEffect(() => () => { readSequence.current += 1; }, []);
+
+  async function readReceipt(known: CaptureReceipt) {
+    if (readInFlight.current) return;
+    readInFlight.current = true;
+    const sequence = ++readSequence.current;
+    setReadPending(true);
+    try {
+      const response = await fetch(`/api/caphub/captures/${known.capture.id}`, { method: "GET", cache: "no-store" });
+      if (!response.ok) throw new Error("Receipt read unavailable");
+      const result = captureMetadataSchema.safeParse(await response.json());
+      if (!result.success || result.data.capture.id !== known.capture.id) throw new Error("Unverified receipt metadata");
+      if (sequence !== readSequence.current) return;
+      setReceipt({ kind: known.kind, capture: result.data.capture });
+      setReadError(null);
+      setAnnouncement("Receipt metadata refreshed. Human review is required.");
+    } catch {
+      if (sequence !== readSequence.current) return;
+      setReadError({ attempt: sequence });
+      setAnnouncement("Receipt metadata is temporarily unavailable. The known receipt remains available. Retry reads metadata only.");
+    } finally {
+      if (sequence === readSequence.current) {
+        readInFlight.current = false;
+        setReadPending(false);
+      }
+    }
+  }
 
   function chooseFiles(files: FileList | File[]) {
     if (disabled || inFlight.current || files.length === 0) return;
@@ -48,6 +85,10 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
     else if (image.size > maxUploadBytes) message = `This image is larger than ${limit}. No bytes were staged. Choose a smaller PNG, JPEG, or WebP.`;
     else if (image.name.length === 0 || image.name.length > 255) message = "Use an image filename between 1 and 255 characters.";
 
+    readSequence.current += 1;
+    readInFlight.current = false;
+    setReadPending(false);
+    setReadError(null);
     setReceipt(null);
     setError(null);
     setAttempted(false);
@@ -65,7 +106,14 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (disabled || inFlight.current || receipt || !selection) return;
-    if (!captureRecordSchema.shape.source.shape.source_url.safeParse(sourceUrl || undefined).success) {
+    let validSource = false;
+    try {
+      validSource = captureRecordSchema.shape.source.shape.source_url.safeParse(sourceUrl || undefined).success;
+    } catch {
+      // The shared HTTPS refinement can throw for malformed URL syntax.
+      // All browser input failures still become recoverable field feedback.
+    }
+    if (!validSource) {
       setValidation({ field: "source", message: "Enter a valid HTTPS URL of at most 2,048 characters, or leave this field empty." });
       return;
     }
@@ -99,6 +147,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
         }
         setReceipt(result.data);
         setAnnouncement(result.data.kind === "created" ? "Capture received. Human review is required." : "Duplicate detected. The existing Capture receipt was returned. Human review is required.");
+        void readReceipt(result.data);
         return;
       }
       const failure = errorResponseSchema.safeParse(payload);
@@ -175,7 +224,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
           <div className="caphub-section-heading"><h2 id="capture-context-title">Known context</h2><span>Optional</span></div>
           <div className="caphub-field" data-invalid={validation?.field === "source" || undefined}>
             <label htmlFor="capture-source">Source URL <span>HTTPS only</span></label>
-            <input id="capture-source" type="url" placeholder="https://www.douyin.com/…" maxLength={2048} value={sourceUrl} disabled={contextLocked}
+            <input id="capture-source" type="text" inputMode="url" placeholder="https://www.douyin.com/…" maxLength={2048} value={sourceUrl} disabled={contextLocked}
               aria-invalid={validation?.field === "source"} aria-describedby="capture-source-help capture-context-error" onChange={(event) => setSourceUrl(event.target.value)} />
             <p id="capture-source-help">Stored as metadata only. P1 does not open or fetch this URL.</p>
           </div>
@@ -202,7 +251,8 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
         </div>
         <span className="caphub-custody__state">Human review required</span>
       </section>
-      <CaptureStatus receipt={receipt} error={error} onChooseAnother={openChooser} />
+      <CaptureStatus receipt={receipt} error={error} readPending={readPending} readError={readError}
+        onRetryRead={() => { if (receipt) void readReceipt(receipt); }} onChooseAnother={openChooser} />
     </>
   );
 }

@@ -8,7 +8,7 @@ import {
   type SearchResults
 } from "@/app/actions/search";
 import { PrimaryNav } from "./primary-nav";
-import { SourceStatus, type SourceStatusProps } from "./source-status";
+import { CaphubStatusProvider, SourceStatus, type SourceStatusProps } from "./source-status";
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -234,11 +234,12 @@ export function AppShell({ children, statusProps }: AppShellProps) {
         </div>
       </header>
 
-      <SourceStatus routePath={pathname} custody={custodyForPath(pathname)} {...statusProps} />
-
-      <main id="main" className="main-content">
-        {children}
-      </main>
+      <CaphubStatusProvider>
+        <SourceStatus routePath={pathname} custody={custodyForPath(pathname)} {...statusProps} />
+        <main id="main" className="main-content">
+          {children}
+        </main>
+      </CaphubStatusProvider>
     </div>
   );
 }

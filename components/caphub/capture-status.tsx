@@ -7,16 +7,15 @@ import { captureRecordSchema, objectRefSchema } from "@/lib/caphub/domain/schema
 
 // The HTTP projection deliberately omits storage keys and idempotency keys.
 // Keep every level strict so a server contract drift cannot become UI content.
-export const captureReceiptSchema = z.object({
-  kind: z.enum(["created", "duplicate"]),
-  capture: captureRecordSchema.omit({ object: true, idempotency_key: true }).extend({
-    object: z.object({
-      algorithm: objectRefSchema.shape.algorithm,
-      digest: objectRefSchema.shape.digest,
-      bytes: objectRefSchema.shape.bytes
-    }).strict()
+const publicCaptureSchema = captureRecordSchema.omit({ object: true, idempotency_key: true }).extend({
+  object: z.object({
+    algorithm: objectRefSchema.shape.algorithm,
+    digest: objectRefSchema.shape.digest,
+    bytes: objectRefSchema.shape.bytes
   }).strict()
 }).strict();
+export const captureMetadataSchema = z.object({ capture: publicCaptureSchema }).strict();
+export const captureReceiptSchema = captureMetadataSchema.extend({ kind: z.enum(["created", "duplicate"]) }).strict();
 
 export type CaptureReceipt = z.infer<typeof captureReceiptSchema>;
 export interface CaptureError {
@@ -24,15 +23,18 @@ export interface CaptureError {
   message: string;
 }
 
-export function CaptureStatus({ receipt, error, onChooseAnother }: {
+export function CaptureStatus({ receipt, error, readPending = false, readError = null, onRetryRead, onChooseAnother }: {
   receipt: CaptureReceipt | null;
   error?: CaptureError | null;
+  readPending?: boolean;
+  readError?: { attempt: number } | null;
+  onRetryRead?: () => void;
   onChooseAnother?: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (receipt || error) headingRef.current?.focus();
-  }, [receipt, error]);
+  }, [receipt, error, readError]);
 
   const capture = receipt?.capture;
   const duplicate = receipt?.kind === "duplicate";
@@ -43,6 +45,14 @@ export function CaptureStatus({ receipt, error, onChooseAnother }: {
         <h2 id="capture-receipt-title" ref={headingRef} tabIndex={-1}>Capture receipt</h2>
         <span>Metadata only</span>
       </div>
+      {capture && readError && <div className="caphub-error" role="alert">
+        <h3>Receipt metadata is temporarily unavailable</h3>
+        <p>The known receipt below remains available. This read failure does not mean the capture was lost. Retry reads metadata only; the image will not be submitted again.</p>
+        <button className="caphub-quiet-button" type="button" onClick={onRetryRead} disabled={readPending}>
+          {readPending ? "Reading receipt…" : "Retry receipt read"}
+        </button>
+      </div>}
+      {capture && readPending && !readError && <p aria-live="polite">Reading receipt metadata… The known receipt remains available.</p>}
       {capture ? (
         <article className="caphub-receipt" data-kind={receipt.kind} aria-label={duplicate ? "Duplicate capture receipt" : "Created capture receipt"}>
           <div className="caphub-receipt__lead">
