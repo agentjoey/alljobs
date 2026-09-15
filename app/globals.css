@@ -1,5 +1,122 @@
 @import "tailwindcss";
 
+/* Caphub — the approved Paper Workbench accession lane. */
+.caphub-page { min-width: 0; }
+.caphub-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 400px); align-items: end; gap: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--hairline-strong); }
+.caphub-intro h1 { max-width: 14ch; margin: 0; font-size: clamp(30px, 3vw, 44px); font-weight: 650; letter-spacing: -0.035em; line-height: 0.98; }
+.caphub-intro p { max-width: 65ch; margin: 12px 0 0; color: var(--ink-muted); font-size: 16px; }
+.caphub-intro .caphub-scope { margin: 0; padding: 14px 16px; background: var(--paper-raised); border: 1px solid var(--hairline); border-radius: var(--radius-lg); font-size: 13px; }
+.caphub-scope strong { display: block; margin-bottom: 4px; color: var(--ink); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.caphub-notice { display: flex; align-items: flex-start; gap: 12px; margin-top: 22px; padding: 14px 16px; background: var(--amber-soft); border: 1px solid var(--amber); border-radius: var(--radius-md); }
+.caphub-notice svg { flex: 0 0 auto; width: 20px; height: 20px; }
+.caphub-notice h2 { margin: 0; font-size: 14px; }
+.caphub-notice p { margin: 2px 0 0; color: var(--ink-muted); font-size: 13px; }
+.caphub-workbench { display: grid; grid-template-columns: minmax(0, 7fr) minmax(310px, 5fr); margin-top: 22px; background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: var(--radius-lg); }
+.caphub-evidence-panel, .caphub-context-panel { min-width: 0; padding: 24px; }
+.caphub-evidence-panel { border-right: 1px solid var(--hairline-strong); }
+.caphub-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.caphub-section-heading h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.015em; }
+.caphub-section-heading > span { color: var(--ink-faint); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; }
+.caphub-drop-zone { display: grid; min-height: 258px; place-items: center; padding: 28px; text-align: center; background-color: var(--paper); background-image: repeating-linear-gradient(-45deg, transparent 0, transparent 8px, var(--hairline-faint) 8px, var(--hairline-faint) 9px); border: 1px dashed var(--hairline-strong); border-radius: var(--radius-lg); }
+.caphub-drop-content { display: grid; justify-items: center; max-width: 430px; }
+.caphub-upload-mark { display: grid; width: 54px; height: 54px; margin-bottom: 16px; place-items: center; background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: 50%; }
+.caphub-upload-mark svg { width: 24px; height: 24px; }
+.caphub-drop-zone h3 { margin: 0; font-size: 16.5px; font-weight: 650; letter-spacing: -0.02em; }
+.caphub-drop-content > p { max-width: 46ch; margin: 7px 0 0; color: var(--ink-muted); font-size: 13.5px; }
+.caphub-promise { margin-bottom: 10px; padding: 4px 7px; color: var(--ink); background: var(--amber-soft); border: 1px solid var(--amber); border-radius: var(--radius-sm); font-size: 10.5px; font-weight: 700; }
+.caphub-quiet-button { min-height: 44px; padding: 8px 14px; color: var(--ink); background: transparent; border: 1px solid var(--hairline-strong); border-radius: var(--radius-md); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.caphub-quiet-button:hover:not(:disabled) { background: var(--paper-recessed); }
+.caphub-drop-content > button { margin-top: 18px; }
+.caphub-selected-file { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; padding: 14px; text-align: left; background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: var(--radius-md); }
+.caphub-file-mark { display: grid; width: 38px; height: 46px; place-items: center; color: var(--paper); background: var(--ink); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
+.caphub-selected-file strong, .caphub-selected-file small { display: block; overflow-wrap: anywhere; }
+.caphub-selected-file strong { font-size: 14px; }
+.caphub-selected-file small { margin-top: 3px; color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; }
+.caphub-selected-file button { grid-column: 1 / -1; }
+.caphub-inline-error { width: 100%; margin: 12px 0 0; padding: 12px; text-align: left; color: var(--rust); background: var(--rust-soft); border: 1px solid var(--rust-border); border-radius: var(--radius-md); font-size: 13px; }
+.caphub-field + .caphub-field { margin-top: 18px; }
+.caphub-field label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 7px; font-size: 13px; font-weight: 700; }
+.caphub-field label span { color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.05em; }
+.caphub-field input, .caphub-field textarea { width: 100%; min-width: 0; padding: 10px 12px; color: var(--ink); background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: var(--radius-md); font: inherit; font-size: 14px; }
+.caphub-field input { min-height: 44px; }
+.caphub-field textarea { min-height: 112px; resize: vertical; }
+.caphub-field input::placeholder, .caphub-field textarea::placeholder { color: var(--ink-faint); }
+.caphub-field [aria-invalid="true"] { border-color: var(--rust); }
+.caphub-field > p, .caphub-retry-help { margin: 6px 0 0; color: var(--ink-faint); font-size: 12.5px; }
+.caphub-submit { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 46px; margin-top: 22px; padding: 10px 16px; color: var(--ink); background: var(--amber); border: 1px solid var(--ink); border-radius: var(--radius-md); font: inherit; font-weight: 700; cursor: pointer; }
+.caphub-submit:hover:not(:disabled) { background: var(--amber-hover); }
+.caphub-workbench :disabled { color: var(--ink-faint); cursor: not-allowed; background: var(--paper-recessed); border-color: var(--hairline); opacity: 1; }
+.caphub-spinner { width: 16px; height: 16px; border: 2px solid var(--hairline-strong); border-top-color: var(--ink); border-radius: 50%; animation: caphub-spin 0.75s linear infinite; }
+@keyframes caphub-spin { to { transform: rotate(360deg); } }
+.caphub-custody { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; margin-top: 16px; padding: 16px 18px; color: var(--paper); background: var(--ink); border-radius: var(--radius-lg); }
+.caphub-custody strong { display: block; font-size: 14px; }
+.caphub-custody__identity { display: block; margin-bottom: 5px; color: var(--amber); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; overflow-wrap: anywhere; animation: caphub-custody-in 0.24s var(--ease) both; }
+@keyframes caphub-custody-in { from { opacity: 0.72; transform: translateY(4px); } }
+.caphub-custody p { max-width: 78ch; margin: 3px 0 0; color: var(--paper-recessed); font-size: 12.5px; }
+.caphub-custody__state { padding: 5px 8px; color: var(--ink); background: var(--amber); border-radius: var(--radius-sm); font-size: 10px; font-weight: 700; }
+.caphub-receipt-area { margin-top: 28px; }
+.caphub-receipt-area .caphub-section-heading { margin-bottom: 10px; }
+.caphub-receipt-empty { margin: 0; padding: 18px; color: var(--ink-muted); background: var(--paper-raised); border: 1px dashed var(--hairline-strong); border-radius: var(--radius-lg); font-size: 13px; }
+.caphub-receipt { background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: var(--radius-lg); }
+.caphub-receipt__lead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 16px 18px; border-bottom: 1px solid var(--hairline); }
+.caphub-receipt__mark { display: grid; width: 36px; height: 36px; place-items: center; color: var(--green); background: var(--green-soft); border: 1px solid var(--green-border); border-radius: 50%; }
+.caphub-receipt__mark svg { width: 20px; height: 20px; }
+.caphub-receipt__lead h3 { margin: 0; font-size: 15px; }
+.caphub-receipt__lead p { margin: 2px 0 0; color: var(--ink-muted); font-size: 12.5px; }
+.caphub-receipt__badge { padding: 5px 8px; color: var(--green); background: var(--green-soft); border: 1px solid var(--green-border); border-radius: var(--radius-sm); font-size: 10px; font-weight: 700; }
+.caphub-receipt[data-kind="duplicate"] .caphub-receipt__mark, .caphub-receipt[data-kind="duplicate"] .caphub-receipt__badge { color: var(--ink); background: var(--amber-soft); border-color: var(--amber); }
+.caphub-receipt__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.caphub-receipt__grid > div { min-width: 0; padding: 14px 18px 16px; }
+.caphub-receipt__grid > div + div { border-left: 1px solid var(--hairline); }
+.caphub-receipt__grid > div:nth-child(4) { border-top: 1px solid var(--hairline); border-left: 0; }
+.caphub-receipt__grid > div:nth-child(n + 5) { border-top: 1px solid var(--hairline); }
+.caphub-receipt__grid dt { margin-bottom: 5px; color: var(--ink-faint); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; }
+.caphub-receipt__grid dd { margin: 0; overflow-wrap: anywhere; font-size: 12.5px; font-weight: 650; }
+.caphub-receipt__grid code { font-family: var(--font-mono); font-size: 11px; }
+.caphub-receipt__actions { display: flex; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--hairline); }
+.caphub-error { padding: 16px 18px; background: var(--rust-soft); border: 1px solid var(--rust-border); border-radius: var(--radius-lg); }
+.caphub-error h3 { margin: 0; font-size: 15px; }
+.caphub-error p { margin: 3px 0 0; color: var(--ink-muted); font-size: 12.5px; }
+.caphub-error code { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.caphub-boundaries { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 34px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--hairline-strong); border-bottom: 1px solid var(--hairline-strong); }
+.caphub-boundaries li { min-width: 0; padding: 18px 18px 20px 0; }
+.caphub-boundaries li + li { padding-left: 18px; border-left: 1px solid var(--hairline); }
+.caphub-boundaries strong { display: block; margin-bottom: 4px; font-size: 13px; }
+.caphub-boundaries span { color: var(--ink-muted); font-size: 12px; }
+@media (max-width: 1080px) {
+  .caphub-intro { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+@media (max-width: 720px) {
+  .caphub-intro { gap: 16px; padding-bottom: 18px; }
+  .caphub-intro h1 { max-width: none; font-size: 30px; line-height: 1; }
+  .caphub-intro p { margin-top: 8px; font-size: 13.5px; }
+  .caphub-intro .caphub-scope { padding: 10px 12px; font-size: 12px; }
+  .caphub-workbench { grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
+  .caphub-evidence-panel, .caphub-context-panel { padding: 16px; }
+  .caphub-evidence-panel { border-right: 0; border-bottom: 1px solid var(--hairline-strong); }
+  .caphub-section-heading { align-items: flex-start; margin-bottom: 12px; }
+  .caphub-section-heading > span { text-align: right; }
+  .caphub-drop-zone { min-height: 200px; padding: 18px 14px; }
+  .caphub-upload-mark { width: 42px; height: 42px; margin-bottom: 8px; }
+  .caphub-field input, .caphub-field textarea { font-size: 16px; }
+  .caphub-custody { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px; }
+  .caphub-custody__state { justify-self: start; }
+  .caphub-receipt-area { margin-top: 24px; }
+  .caphub-receipt__lead { grid-template-columns: auto minmax(0, 1fr); padding: 14px; }
+  .caphub-receipt__badge { grid-column: 1 / -1; justify-self: start; }
+  .caphub-receipt__grid { grid-template-columns: minmax(0, 1fr); }
+  .caphub-receipt__grid > div { padding: 12px 14px; }
+  .caphub-receipt__grid > div + div { border-top: 1px solid var(--hairline); border-left: 0; }
+  .caphub-receipt__actions { padding: 12px 14px; }
+  .caphub-quiet-button { width: 100%; }
+  .caphub-boundaries { grid-template-columns: minmax(0, 1fr); }
+  .caphub-boundaries li, .caphub-boundaries li + li { padding: 14px 0; border-left: 0; }
+  .caphub-boundaries li + li { border-top: 1px solid var(--hairline); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caphub-custody__identity, .caphub-spinner { animation: none; transform: none; }
+}
+
 :root {
   --font-sans: "General Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

@@ -27,6 +27,9 @@ export function PrimaryNav() {
       <Link href="/monitoring" aria-current={isCurrent("/monitoring") ? "page" : undefined}>
         Monitoring
       </Link>
+      <Link href="/caphub" aria-current={isCurrent("/caphub") ? "page" : undefined}>
+        Caphub
+      </Link>
       <Link href="/register" aria-current={isCurrent("/register") ? "page" : undefined}>
         Register
       </Link>

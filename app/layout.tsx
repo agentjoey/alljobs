@@ -3,8 +3,8 @@ import { AppShell } from "@/components/planning/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AllJobs — Federated Planning Core",
-  description: "Personal multi-project planning workbench for code and business initiatives"
+  title: "AllJobs — Personal Operations Control Plane",
+  description: "Personal operations control plane for project planning, application monitoring, and immutable screenshot capture."
 };
 
 export default function RootLayout({
