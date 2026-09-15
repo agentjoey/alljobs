@@ -62,6 +62,7 @@ describe("objectRefSchema", () => {
     expect(() => objectRefSchema.parse({ ...validObject, bytes: -1 })).toThrow();
     expect(() => objectRefSchema.parse({ ...validObject, digest: "A".repeat(64) })).toThrow();
     expect(() => objectRefSchema.parse({ ...validObject, key: `sha256/zz/${"a".repeat(64)}` })).toThrow();
+    expect(() => objectRefSchema.parse({ ...validObject, key: `sha256/bb/${"a".repeat(64)}` })).toThrow();
     expect(() => objectRefSchema.parse({ ...validObject, extra: "not allowed" })).toThrow();
   });
 });
@@ -112,6 +113,7 @@ describe("captureAuditEventSchema", () => {
   });
 
   it("rejects invalid audit timestamps and unknown fields", () => {
+    expect(() => captureAuditEventSchema.parse({ ...validEvent, event_id: `evt_${"D".repeat(32)}` })).toThrow();
     expect(() => captureAuditEventSchema.parse({ ...validEvent, occurred_at: "not-a-timestamp" })).toThrow();
     expect(() => captureAuditEventSchema.parse({ ...validEvent, approval: true })).toThrow();
   });

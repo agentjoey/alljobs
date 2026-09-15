@@ -19,7 +19,10 @@ export const objectRefSchema = z.object({
   digest: z.string().regex(/^[a-f0-9]{64}$/),
   key: z.string().regex(/^sha256\/[a-f0-9]{2}\/[a-f0-9]{64}$/),
   bytes: z.number().int().positive()
-}).strict();
+}).strict().refine(
+  ({ digest, key }) => key === `sha256/${digest.slice(0, 2)}/${digest}`,
+  "object key must match the SHA-256 digest shard"
+);
 
 const httpsUrlSchema = z
   .string()
