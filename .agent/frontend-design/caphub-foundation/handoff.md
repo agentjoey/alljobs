@@ -3,7 +3,7 @@
 **Task / Brief / revision:** Caphub Foundation and Web Capture · Human Gate P1-A · `brief.md` revision 1  
 **Agent role / harness / session:** Primary Agent / Codex; independent fresh-context Design Review and Verification completed  
 **Branch / worktree:** `codex/caphub-foundation` · `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-foundation`  
-**Base commit / current implementation commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / `6118f7ccaa438da2da1ca2f49fcac05fd3214011`
+**Base commit / current implementation commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / `68b9e43d4f2f5da84f427b6241dcd1df556b3046`
 
 ## Human Gate P1-A approval — 2026-09-15
 
@@ -44,7 +44,7 @@ The Human Owner explicitly approved Brief revision 1 SHA-256 `e694eae5615074afeb
 - Independent Design Review verdict pass: **PASS** with contract disposition `ship`.
 - Independent Verification verdict pass: **PASS** across all 10 states at 1440px and true 390px, with zero root overflow and no live side effects or sensitive values.
 
-## P1 implementation checkpoint — Tasks 1–7
+## P1 implementation checkpoint — Tasks 1–8
 
 The standing authorization advanced P1 through the provider-free configuration, domain, path, storage, service, HTTP route, and approved Web Capture UI layers. Each task used focused RED→GREEN work, an independent task review, controller verification, and a narrow local commit. Review findings were resolved in scoped fix rounds and independently re-reviewed before the next task began.
 
@@ -57,6 +57,7 @@ The standing authorization advanced P1 through the provider-free configuration, 
 | 5 — idempotent receipt service | `AGE-246` Done | `ed9e487` | service 21/21 |
 | 6 — bounded POST / metadata-only GET | `AGE-247` Done | `b1ea700` | route boundary 43/43 |
 | 7 — approved Web Capture inbox | `AGE-248` Done | `625af7a` + `6118f7c` | final focused 62/62; focused re-review Approved |
+| 8 — browser-to-filesystem proof | `AGE-245` Done | `68b9e43` | sentinel guards 3/3; Playwright 5/5; focused review Approved |
 
 Final controller verification at this checkpoint:
 
@@ -71,6 +72,8 @@ git diff --check  -> implementation and fix ranges passed
 No Caphub configuration was enabled. No service was restarted, no deployment or external provider was invoked, and no branch was pushed or merged. The main checkout and the pre-existing modified `AGENTS.md` in this worktree remain untouched by the P1 implementation commits.
 
 Task 7 final-build evidence at `6118f7c` used the webpack production builder because Turbopack's CSS worker could not bind its sandbox-only temporary port. The isolated HTTPS loopback probe then passed 1440px and true 390px states, keyboard upload, real POST and metadata GET, immutable filesystem bytes, safe duplicate retry after an injected lost receipt, reduced motion, WCAG A/AA checks, and zero root overflow or browser page errors. Evidence is retained under `/private/tmp/alljobs-caphub-task7.ZjBbm1/run-orWDTF/`.
+
+Task 8 committed a sentinel-owned Playwright fixture and formalized the built browser → route → service → filesystem → metadata GET proof. The final one-worker suite passed 5/5 and retained ready, selected, received, and oversize screenshots at 1440px/390px under `test-results/caphub-foundation/`. Independent focused review approved both spec compliance and task quality with no findings.
 
 ## Commands / checks run
 
@@ -91,10 +94,10 @@ git diff --check                              -> passed
 - **Human Gate P1-A is complete.** This record preserves the exact approved Brief/mockup hashes; the Brief itself remains byte-for-byte unchanged.
 - The high-level roadmap retains earlier Web JSON / `WAITING_FOR_REVIEW` wording. The detailed P1 plan and this Brief use the later fixed multipart screenshot / `received` contract. Reconcile the roadmap as a documentation-only P1 follow-up.
 - Impeccable reported `.impeccable/design.json` stale relative to `DESIGN.md`. This is unrelated drift; do not repair it as a side effect. `$impeccable document` may refresh it only if the Human Owner asks.
-- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, and `AGE-248` are `Done`. Task 8 is tracked by `AGE-245` and is `In Progress`.
+- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, `AGE-248`, and `AGE-245` are `Done`. Task 9 is tracked by `AGE-249` and is `In Progress`.
 - **Task 7 workflow ruling — 2026-09-16:** the Human Owner explicitly removed `/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` as an authority for Caphub development. Its absence is no longer a blocker. Task 7 proceeds from the approved Brief/mockup and development plan with TDD/BDD, independent Review/Verification, final-build browser evidence, screenshots, Linear tracking, and all existing safety/production gates preserved.
 - **Bounded verification ruling — 2026-09-16:** task work uses one independent focused review and related tests; a fix round receives only a focused re-review of the changed findings. Full-suite, production-build, all-state browser, and phase-wide Verification runs belong at plan-specified or batch gates rather than being repeated at every ordinary task boundary.
 
 ## Next safe action
 
-Implement Task 8's sentinel-owned Playwright fixture and browser-to-filesystem boundary suite while `AGE-245` is `In Progress`. Do not enable Caphub, restart production services, deploy, push, merge, or cross the final P1-C production gate.
+Implement Task 9's Caphub foundation, architecture, and operations documentation while `AGE-249` is `In Progress`. Do not enable Caphub, restart production services, deploy, push, merge, or cross the final P1-C production gate.
