@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Caphub Foundation — P1-A Mockup</title>
+    <style>
+      :root {
+        --paper: #f1eee6;
+        --paper-raised: #fbf7e6;
+        --paper-recessed: #e8e4da;
+        --ink: #16140e;
+        --ink-muted: #4a463c;
+        --ink-faint: #5e584d;
+        --hairline: rgba(22, 20, 14, 0.16);
+        --hairline-strong: rgba(22, 20, 14, 0.34);
+        --amber: #f3b44a;
+        --amber-hover: #e09f35;
+        --amber-soft: #fdf2de;
+        --rust: #8f2e2e;
+        --rust-soft: #fbeaea;
+        --rust-border: #d99393;
+        --green: #1e683b;
+        --green-soft: #e8f5ee;
+        --green-border: #7eb996;
+        --sans: "General Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--paper);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background-color: var(--paper);
+        background-image: radial-gradient(rgba(22, 20, 14, 0.09) 1.1px, transparent 1.1px);
+        background-size: 24px 24px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button,
+      select,
+      input,
+      textarea {
+        color: var(--ink);
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--ink);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 5px var(--amber);
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .skip-link {
+        position: fixed;
+        top: -60px;
+        left: 16px;
+        z-index: 100;
+        padding: 10px 14px;
+        color: var(--paper);
+        background: var(--ink);
+        border-radius: 6px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .skip-link:focus {
+        top: 12px;
+      }
+
+      .mockup-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 40px;
+        padding: 6px 16px;
+        color: #fff;
+        background: #2f2d28;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+      }
+
+      .mockup-toolbar label {
+        white-space: nowrap;
+      }
+
+      .mockup-toolbar select {
+        min-height: 28px;
+        padding: 3px 30px 3px 8px;
+        color: var(--ink);
+        background: #fff;
+        border: 1px solid #fff;
+        border-radius: 4px;
+      }
+
+      .app-header {
+        display: grid;
+        grid-template-columns: auto 1fr minmax(220px, 380px);
+        align-items: center;
+        min-height: 58px;
+        padding: 0 24px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--hairline);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .brand svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .brand-subtle {
+        color: var(--ink-muted);
+        font-weight: 400;
+      }
+
+      .primary-nav {
+        display: flex;
+        align-self: stretch;
+        justify-content: center;
+        min-width: 0;
+      }
+
+      .primary-nav a {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        min-height: 58px;
+        padding: 0 15px;
+        color: var(--ink-muted);
+        font-size: 13.5px;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .primary-nav a[aria-current="page"] {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .primary-nav a[aria-current="page"]::after {
+        position: absolute;
+        right: 15px;
+        bottom: 0;
+        left: 15px;
+        height: 2px;
+        content: "";
+        background: var(--amber);
+      }
+
+      .header-search {
+        position: relative;
+      }
+
+      .header-search input {
+        width: 100%;
+        height: 36px;
+        padding: 6px 44px 6px 12px;
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline-strong);
+        border-radius: 6px;
+        font-size: 12.5px;
+      }
+
+      .header-search kbd {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 1px 5px;
+        color: var(--ink-faint);
+        background: var(--paper-recessed);
+        border: 1px solid var(--hairline);
+        border-radius: 3px;
+        font-family: var(--mono);
+        font-size: 10px;
+      }
+
+      .status-strip {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 36px;
+        padding: 9px 24px 8px;
+        color: var(--ink);
+        background: var(--amber);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 650;
+        letter-spacing: 0.09em;
+        line-height: 1.7;
+        text-transform: uppercase;
+      }
+
+      .status-strip__group {
+        display: flex;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .status-strip__divider {
+        opacity: 0.45;
+      }
+
+      .page-shell {
+        width: min(1230px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 42px 0 72px;
+      }
+
+      .page-intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(270px, 400px);
+        gap: 48px;
+        align-items: end;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--hairline-strong);
+      }
+
+      .page-intro h1 {
+        max-width: 14ch;
+        margin: 0;
+        font-size: clamp(30px, 3vw, 44px);
+        font-weight: 650;
+        letter-spacing: -0.035em;
+        line-height: 0.98;
+      }
+
+      .page-intro__summary {
+        max-width: 65ch;
+        margin: 12px 0 0;
+        color: var(--ink-muted);
+        font-size: 16px;
+      }
+
+      .scope-note {
+        margin: 0;
+        padding: 14px 16px;
+        color: var(--ink-muted);
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline);
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      .scope-note strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .system-notice {
+        display: none;
+        align-items: flex-start;
+        gap: 12px;
+        margin: 22px 0 0;
+        padding: 14px 16px;
+        background: var(--amber-soft);
+        border: 1px solid var(--amber);
+        border-radius: 6px;
+      }
+
+      .system-notice svg,
+      .inline-alert svg,
+      .receipt-mark svg {
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+      }
+
+      .system-notice h2,
+      .inline-alert strong {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .system-notice p,
+      .inline-alert p {
+        margin: 2px 0 0;
+        color: var(--ink-muted);
+        font-size: 13px;
+      }
+
+      body[data-state="disabled"] .system-notice {
+        display: flex;
+      }
+
+      .capture-workbench {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(310px, 5fr);
+        margin-top: 22px;
+        overflow: hidden;
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline-strong);
+        border-radius: 8px;
+      }
+
+      .evidence-panel,
+      .context-panel {
+        min-width: 0;
+        padding: 24px;
+      }
+
+      .evidence-panel {
+        border-right: 1px solid var(--hairline-strong);
+      }
+
+      .panel-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .panel-heading h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 650;
+        letter-spacing: -0.015em;
+      }
+
+      .panel-heading span {
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .drop-zone {
+        position: relative;
+        display: grid;
+        min-height: 258px;
+        place-items: center;
+        padding: 28px;
+        text-align: center;
+        background-color: var(--paper);
+        background-image: repeating-linear-gradient(-45deg, transparent 0, transparent 8px, rgba(22, 20, 14, 0.035) 8px, rgba(22, 20, 14, 0.035) 9px);
+        border: 1px dashed var(--hairline-strong);
+        border-radius: 8px;
+      }
+
+      .drop-zone__content {
+        display: grid;
+        justify-items: center;
+        max-width: 430px;
+      }
+
+      .drop-zone__icon {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        margin-bottom: 16px;
+        place-items: center;
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline-strong);
+        border-radius: 50%;
+      }
+
+      .drop-zone__icon svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .drop-zone h3 {
+        margin: 0;
+        font-size: 16.5px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+      }
+
+      .drop-zone p {
+        max-width: 46ch;
+        margin: 7px 0 0;
+        color: var(--ink-muted);
+        font-size: 13.5px;
+      }
+
+      .drop-zone__promise {
+        margin-bottom: 10px;
+        padding: 4px 7px;
+        color: var(--ink);
+        background: var(--amber-soft);
+        border: 1px solid var(--amber);
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .file-button {
+        min-height: 42px;
+        margin-top: 18px;
+        padding: 8px 16px;
+        color: var(--ink);
+        background: transparent;
+        border: 1px solid var(--hairline-strong);
+        border-radius: 6px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .file-button:hover:not(:disabled) {
+        background: var(--paper-recessed);
+      }
+
+      .selected-file {
+        display: none;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        padding: 14px;
+        text-align: left;
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline-strong);
+        border-radius: 6px;
+      }
+
+      .selected-file__mark {
+        display: grid;
+        width: 38px;
+        height: 46px;
+        place-items: center;
+        color: var(--paper);
+        background: var(--ink);
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .selected-file strong,
+      .selected-file small {
+        display: block;
+        overflow-wrap: anywhere;
+      }
+
+      .selected-file strong {
+        font-size: 14px;
+      }
+
+      .selected-file small {
+        margin-top: 3px;
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10.5px;
+      }
+
+      .selected-file__replace {
+        min-height: 36px;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid var(--hairline-strong);
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      body:not([data-state="ready"]):not([data-state="disabled"]) .drop-zone__empty {
+        display: none;
+      }
+
+      body:not([data-state="ready"]):not([data-state="disabled"]) .selected-file {
+        display: grid;
+      }
+
+      body[data-state="disabled"] .drop-zone {
+        color: var(--ink-faint);
+        background-color: var(--paper-recessed);
+        background-image: none;
+      }
+
+      .inline-alert {
+        display: none;
+        align-items: flex-start;
+        gap: 10px;
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px;
+        text-align: left;
+        background: var(--rust-soft);
+        border: 1px solid var(--rust-border);
+        border-radius: 6px;
+      }
+
+      body[data-state="oversize"] .inline-alert--oversize,
+      body[data-state="invalid-type"] .inline-alert--invalid {
+        display: flex;
+      }
+
+      body[data-state="oversize"] .selected-file__mark,
+      body[data-state="invalid-type"] .selected-file__mark {
+        color: #fff;
+        background: var(--rust);
+      }
+
+      .field-group + .field-group {
+        margin-top: 18px;
+      }
+
+      .field-group label {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .field-group label span {
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .field-group input,
+      .field-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        background: #fffdf5;
+        border: 1px solid var(--hairline-strong);
+        border-radius: 6px;
+      }
+
+      .field-group input {
+        min-height: 42px;
+      }
+
+      .field-group textarea {
+        min-height: 112px;
+        resize: vertical;
+      }
+
+      .field-group input::placeholder,
+      .field-group textarea::placeholder {
+        color: var(--ink-faint);
+      }
+
+      .field-group__help {
+        margin: 6px 0 0;
+        color: var(--ink-faint);
+        font-size: 12.5px;
+      }
+
+      .submit-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        width: 100%;
+        min-height: 46px;
+        margin-top: 22px;
+        padding: 10px 16px;
+        color: var(--ink);
+        background: var(--amber);
+        border: 1px solid var(--ink);
+        border-radius: 6px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+
+      .submit-button:hover:not(:disabled) {
+        background: var(--amber-hover);
+      }
+
+      .submit-button:disabled,
+      .file-button:disabled,
+      .selected-file__replace:disabled,
+      input:disabled,
+      textarea:disabled {
+        color: #777166;
+        cursor: not-allowed;
+        background: var(--paper-recessed);
+        border-color: var(--hairline);
+        opacity: 1;
+      }
+
+      .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(22, 20, 14, 0.28);
+        border-top-color: var(--ink);
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+      }
+
+      body[data-state="submitting"] .spinner {
+        display: block;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .custody-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: center;
+        margin-top: 16px;
+        padding: 16px 18px;
+        color: var(--paper);
+        background: var(--ink);
+        border-radius: 8px;
+        animation: custody-in 0.24s var(--ease) both;
+      }
+
+      @keyframes custody-in {
+        from {
+          opacity: 0.72;
+          transform: translateY(4px);
+        }
+      }
+
+      .custody-strip strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .custody-strip__identity {
+        display: none;
+        margin-bottom: 5px;
+        color: var(--amber);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        overflow-wrap: anywhere;
+      }
+
+      body[data-state="selected"] .custody-strip__identity,
+      body[data-state="submitting"] .custody-strip__identity,
+      body[data-state="success"] .custody-strip__identity,
+      body[data-state="duplicate"] .custody-strip__identity,
+      body[data-state="read-error"] .custody-strip__identity,
+      body[data-state="service-error"] .custody-strip__identity {
+        display: block;
+      }
+
+      .custody-strip p {
+        max-width: 78ch;
+        margin: 3px 0 0;
+        color: #d8d2c5;
+        font-size: 12.5px;
+      }
+
+      .custody-strip__state {
+        padding: 5px 8px;
+        color: var(--ink);
+        background: var(--amber);
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .receipt-area {
+        margin-top: 28px;
+      }
+
+      .receipt-area__heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 10px;
+      }
+
+      .receipt-area__heading h2 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: -0.015em;
+      }
+
+      .receipt-area__heading span {
+        color: var(--ink-faint);
+        font-size: 12px;
+      }
+
+      .receipt-empty {
+        padding: 18px;
+        color: var(--ink-muted);
+        background: rgba(251, 247, 230, 0.72);
+        border: 1px dashed var(--hairline-strong);
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      .receipt {
+        display: none;
+        overflow: hidden;
+        background: var(--paper-raised);
+        border: 1px solid var(--hairline-strong);
+        border-radius: 8px;
+      }
+
+      .receipt__lead {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 13px;
+        align-items: center;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--hairline);
+      }
+
+      .receipt-mark {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        color: var(--green);
+        background: var(--green-soft);
+        border: 1px solid var(--green-border);
+        border-radius: 50%;
+      }
+
+      .receipt__lead h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .receipt__lead p {
+        margin: 2px 0 0;
+        color: var(--ink-muted);
+        font-size: 12.5px;
+      }
+
+      .receipt__badge {
+        padding: 5px 8px;
+        color: var(--green);
+        background: var(--green-soft);
+        border: 1px solid var(--green-border);
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .receipt__grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .receipt__fact {
+        min-width: 0;
+        padding: 14px 18px 16px;
+      }
+
+      .receipt__fact + .receipt__fact {
+        border-left: 1px solid var(--hairline);
+      }
+
+      .receipt__fact:nth-child(4) {
+        border-top: 1px solid var(--hairline);
+        border-left: 0;
+      }
+
+      .receipt__fact:nth-child(n + 5) {
+        border-top: 1px solid var(--hairline);
+      }
+
+      .receipt__actions {
+        display: flex;
+        justify-content: flex-end;
+        padding: 12px 18px;
+        border-top: 1px solid var(--hairline);
+      }
+
+      .receipt__fact dt {
+        margin-bottom: 5px;
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .receipt__fact dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+        font-size: 12.5px;
+        font-weight: 650;
+      }
+
+      .receipt__fact code {
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .read-error {
+        display: none;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        padding: 16px 18px;
+        background: var(--rust-soft);
+        border: 1px solid var(--rust-border);
+        border-radius: 8px;
+      }
+
+      .service-error {
+        display: none;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        padding: 16px 18px;
+        background: var(--rust-soft);
+        border: 1px solid var(--rust-border);
+        border-radius: 8px;
+      }
+
+      .service-error h3,
+      .service-error p {
+        margin: 0;
+      }
+
+      .service-error p {
+        margin-top: 3px;
+        color: var(--ink-muted);
+        font-size: 12.5px;
+      }
+
+      .service-error code {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .read-error h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .read-error p {
+        margin: 3px 0 0;
+        color: var(--ink-muted);
+        font-size: 12.5px;
+      }
+
+      .quiet-button {
+        min-height: 40px;
+        padding: 8px 14px;
+        background: transparent;
+        border: 1px solid var(--hairline-strong);
+        border-radius: 6px;
+        font-size: 12.5px;
+        font-weight: 700;
+      }
+
+      body[data-state="success"] .receipt--success,
+      body[data-state="duplicate"] .receipt--duplicate {
+        display: block;
+      }
+
+      body[data-state="read-error"] .read-error {
+        display: grid;
+      }
+
+      body[data-state="service-error"] .service-error {
+        display: grid;
+      }
+
+      body[data-state="success"] .receipt-empty,
+      body[data-state="duplicate"] .receipt-empty,
+      body[data-state="read-error"] .receipt-empty,
+      body[data-state="service-error"] .receipt-empty {
+        display: none;
+      }
+
+      .receipt--duplicate .receipt-mark {
+        color: var(--ink);
+        background: var(--amber-soft);
+        border-color: var(--amber);
+      }
+
+      .receipt--duplicate .receipt__badge {
+        color: var(--ink);
+        background: var(--amber-soft);
+        border-color: var(--amber);
+      }
+
+      .boundary-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 34px 0 0;
+        padding: 0;
+        list-style: none;
+        border-top: 1px solid var(--hairline-strong);
+        border-bottom: 1px solid var(--hairline-strong);
+      }
+
+      .boundary-list li {
+        min-width: 0;
+        padding: 18px 18px 20px 0;
+      }
+
+      .boundary-list li + li {
+        padding-left: 18px;
+        border-left: 1px solid var(--hairline);
+      }
+
+      .boundary-list strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .boundary-list span {
+        color: var(--ink-muted);
+        font-size: 12px;
+      }
+
+      .synthetic-note {
+        margin: 18px 0 0;
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 1080px) {
+        .app-header {
+          grid-template-columns: auto minmax(0, 1fr);
+          padding-right: 16px;
+          padding-left: 16px;
+        }
+
+        .primary-nav {
+          grid-column: 1 / -1;
+          justify-content: flex-start;
+          overflow-x: auto;
+          border-top: 1px solid var(--hairline);
+        }
+
+        .primary-nav a {
+          min-height: 46px;
+        }
+
+        .header-search {
+          justify-self: end;
+          width: min(100%, 360px);
+        }
+
+        .page-intro {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 20px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .mockup-toolbar {
+          justify-content: space-between;
+          padding-right: 10px;
+          padding-left: 10px;
+        }
+
+        .mockup-toolbar__hint {
+          display: none;
+        }
+
+        .app-header {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 10px 10px 0;
+        }
+
+        .brand {
+          min-height: 34px;
+          font-size: 14px;
+        }
+
+        .brand svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .header-search {
+          width: 100%;
+          margin: 8px 0 10px;
+        }
+
+        .primary-nav {
+          width: calc(100% + 20px);
+          margin-left: -10px;
+          padding: 0 4px;
+          order: 3;
+        }
+
+        .primary-nav a {
+          min-height: 44px;
+          padding: 0 11px;
+          font-size: 12px;
+        }
+
+        .primary-nav a[aria-current="page"]::after {
+          right: 11px;
+          left: 11px;
+        }
+
+        .status-strip {
+          display: grid;
+          gap: 2px;
+          padding: 8px 10px;
+          font-size: 10.5px;
+        }
+
+        .status-strip__group {
+          gap: 7px;
+          flex-wrap: wrap;
+        }
+
+        .page-shell {
+          width: calc(100% - 20px);
+          padding: 20px 0 52px;
+        }
+
+        .page-intro {
+          gap: 16px;
+          padding-bottom: 18px;
+        }
+
+        .page-intro h1 {
+          max-width: none;
+          font-size: 30px;
+          line-height: 1;
+        }
+
+        .page-intro__summary {
+          margin-top: 8px;
+          font-size: 13.5px;
+        }
+
+        .scope-note {
+          padding: 10px 12px;
+          font-size: 12px;
+        }
+
+        .capture-workbench {
+          margin-top: 14px;
+        }
+
+        .capture-workbench {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .evidence-panel,
+        .context-panel {
+          padding: 16px;
+        }
+
+        .evidence-panel {
+          border-right: 0;
+          border-bottom: 1px solid var(--hairline-strong);
+        }
+
+        .panel-heading {
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .panel-heading span {
+          text-align: right;
+        }
+
+        .drop-zone {
+          min-height: 200px;
+          padding: 18px 14px;
+        }
+
+        .drop-zone__icon {
+          width: 42px;
+          height: 42px;
+          margin-bottom: 8px;
+        }
+
+        .file-button,
+        .selected-file__replace {
+          min-height: 44px;
+        }
+
+        .selected-file {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .selected-file__replace {
+          grid-column: 1 / -1;
+          width: 100%;
+        }
+
+        .field-group input,
+        .field-group textarea,
+        .submit-button,
+        .quiet-button {
+          min-height: 44px;
+        }
+
+        .custody-strip {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+          padding: 14px;
+        }
+
+        .custody-strip__state {
+          justify-self: start;
+        }
+
+        .receipt-area {
+          margin-top: 24px;
+        }
+
+        .receipt-area__heading {
+          align-items: flex-start;
+        }
+
+        .receipt__lead {
+          grid-template-columns: auto minmax(0, 1fr);
+          padding: 14px;
+        }
+
+        .receipt__badge {
+          grid-column: 1 / -1;
+          justify-self: start;
+        }
+
+        .receipt__grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .receipt__fact {
+          padding: 12px 14px;
+        }
+
+        .receipt__fact + .receipt__fact {
+          border-top: 1px solid var(--hairline);
+          border-left: 0;
+        }
+
+        .read-error {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 14px;
+        }
+
+        .service-error {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 14px;
+        }
+
+        .receipt__actions {
+          padding: 12px 14px;
+        }
+
+        .quiet-button {
+          width: 100%;
+        }
+
+        .boundary-list {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .boundary-list li,
+        .boundary-list li + li {
+          padding: 14px 0;
+          border-left: 0;
+        }
+
+        .boundary-list li + li {
+          border-top: 1px solid var(--hairline);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body data-state="ready">
+    <!--
+      THESIS: One evidence accession lane turns a screenshot into a traceable receipt; it refuses the dashboard-card wall and capability-marketplace ruts.
+      OWN-WORLD: AllJobs Paper Workbench — warm paper, dark ink, hairline ledgers, and one amber custody strip.
+      STORY: Joey chooses one image, adds optional source context, submits once, and sees that immutable evidence was received for Human review.
+      FIRST VIEWPORT: Existing shell, compact boundary statement, 7/5 evidence-and-context workbench, custody handoff, then one receipt ledger.
+      FORM: Grounded accession-lane structure, assigned candidate 6, seed a0a79201.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
+    <a class="skip-link" href="#main">Skip to Caphub intake</a>
+
+    <div class="mockup-toolbar" aria-label="Mockup controls">
+      <span class="mockup-toolbar__hint">P1-A synthetic preview · no upload or live data</span>
+      <label for="state-picker">Preview state</label>
+      <select id="state-picker">
+        <option value="ready">Ready / empty</option>
+        <option value="selected">Valid file selected</option>
+        <option value="submitting">Submitting</option>
+        <option value="success">Created receipt</option>
+        <option value="duplicate">Duplicate receipt</option>
+        <option value="disabled">Module disabled</option>
+        <option value="oversize">Oversize validation</option>
+        <option value="invalid-type">Invalid type validation</option>
+        <option value="service-error">Service / storage error</option>
+        <option value="read-error">Receipt read error</option>
+      </select>
+    </div>
+
+    <header class="app-header">
+      <a class="brand" href="#" aria-label="AllJobs home">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+          <path d="M8 3v18M8 8h13" fill="none" stroke="currentColor" stroke-width="1.7" />
+        </svg>
+        <span>AllJobs <span class="brand-subtle">/ Planning</span></span>
+      </a>
+
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a href="#">Portfolio</a>
+        <a href="#">Projects</a>
+        <a href="#">Tasks</a>
+        <a href="#">Monitoring</a>
+        <a href="#" aria-current="page">Caphub</a>
+        <a href="#">Register</a>
+        <a href="#">Archived</a>
+      </nav>
+
+      <div class="header-search">
+        <label for="search" hidden>Universal search</label>
+        <input id="search" type="search" placeholder="Universal search (projects, tasks, evidence)…" />
+        <kbd>⌘K</kbd>
+      </div>
+    </header>
+
+    <div class="status-strip" aria-label="Route and custody status">
+      <div class="status-strip__group">
+        <span>Path /Caphub</span>
+        <span class="status-strip__divider" aria-hidden="true">/</span>
+        <span>Custody Native: Local Capture</span>
+      </div>
+      <div class="status-strip__group">
+        <span id="module-state">State Ready</span>
+        <span class="status-strip__divider" aria-hidden="true">/</span>
+        <span>Sync N/A</span>
+      </div>
+    </div>
+
+    <main id="main" class="page-shell">
+      <p id="state-announcement" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
+
+      <section class="page-intro" aria-labelledby="page-title">
+        <div>
+          <h1 id="page-title">Preserve the evidence first.</h1>
+          <p class="page-intro__summary">
+            Send one screenshot into Caphub as immutable evidence. Add the context you already know; analysis and capability decisions happen in later, Human-approved phases.
+          </p>
+        </div>
+        <p class="scope-note">
+          <strong>P1 boundary</strong>
+          This inbox stores a traceable Capture and audit event. It does not read the screenshot, call a model, install anything, or publish a capability.
+        </p>
+      </section>
+
+      <section class="system-notice" role="alert" aria-labelledby="disabled-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v6m0 4h.01" />
+        </svg>
+        <div>
+          <h2 id="disabled-title">Caphub capture is disabled on this Control Host</h2>
+          <p>Capture remains unavailable until a separate Human-approved configuration and release gate. This page cannot change that boundary.</p>
+        </div>
+      </section>
+
+      <form class="capture-workbench" aria-label="Receive one screenshot">
+        <section class="evidence-panel" aria-labelledby="evidence-title">
+          <div class="panel-heading">
+            <h2 id="evidence-title">Evidence</h2>
+            <span>One image · max 10 MiB</span>
+          </div>
+
+          <div class="drop-zone">
+            <div class="drop-zone__content drop-zone__empty">
+              <span class="drop-zone__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" />
+                  <path d="M5 14v4.5A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5V14" />
+                </svg>
+              </span>
+              <span class="drop-zone__promise">Immutable · Human review required</span>
+              <h3>Drop a screenshot here</h3>
+              <p>PNG, JPEG, or WebP. Caphub preserves the original bytes and records their SHA-256 digest.</p>
+              <button class="file-button" type="button">Choose image</button>
+            </div>
+
+            <div class="selected-file" aria-live="polite">
+              <span class="selected-file__mark" id="file-mark">PNG</span>
+              <span>
+                <strong id="file-name">douyin-agent-workflow.png</strong>
+                <small id="file-meta">image/png · 4.8 MiB · ready to receive</small>
+              </span>
+              <button class="selected-file__replace" type="button">Choose different image</button>
+            </div>
+
+            <div class="inline-alert inline-alert--oversize" role="alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3l9 16H3L12 3z" />
+                <path d="M12 9v4m0 3h.01" />
+              </svg>
+              <div>
+                <strong>This image is larger than 10 MiB</strong>
+                <p>No bytes were staged. Choose a smaller PNG, JPEG, or WebP and try again.</p>
+              </div>
+            </div>
+
+            <div class="inline-alert inline-alert--invalid" role="alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3l9 16H3L12 3z" />
+                <path d="M12 9v4m0 3h.01" />
+              </svg>
+              <div>
+                <strong>HEIC is not a supported image type</strong>
+                <p>No bytes were staged. Choose a PNG, JPEG, or WebP file.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="context-panel" aria-labelledby="context-title">
+          <div class="panel-heading">
+            <h2 id="context-title">Known context</h2>
+            <span>Optional</span>
+          </div>
+
+          <div class="field-group">
+            <label for="source-url">Source URL <span>HTTPS only</span></label>
+            <input id="source-url" type="url" placeholder="https://www.douyin.com/…" />
+            <p class="field-group__help">Stored as metadata only. P1 does not open or fetch this URL.</p>
+          </div>
+
+          <div class="field-group">
+            <label for="note">Note <span>0 / 4,000</span></label>
+            <textarea id="note" placeholder="Why is this worth investigating? What should future review verify?"></textarea>
+          </div>
+
+          <button class="submit-button" type="submit" disabled>
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="submit-label">Choose an image to continue</span>
+          </button>
+        </section>
+      </form>
+
+      <section class="custody-strip" aria-label="Capture custody boundary">
+        <div>
+          <span id="custody-identity" class="custody-strip__identity">douyin-agent-workflow.png → immutable local evidence</span>
+          <strong id="custody-title">Evidence becomes immutable; conclusions do not exist yet.</strong>
+          <p id="custody-copy">Caphub stores the original bytes, strict Capture metadata, idempotency record, and one audit event once. P1 cannot delete captures.</p>
+        </div>
+        <span class="custody-strip__state">Human review required</span>
+      </section>
+
+      <section class="receipt-area" aria-labelledby="receipt-title">
+        <div class="receipt-area__heading">
+          <h2 id="receipt-title" tabindex="-1">Capture receipt</h2>
+          <span>Metadata only · synthetic preview</span>
+        </div>
+
+        <div class="receipt-empty" aria-live="polite">
+          A receipt appears here after Caphub validates and stores the evidence. The raw image and object key are never shown on this page.
+        </div>
+
+        <article class="receipt receipt--success" aria-label="Created capture receipt">
+          <div class="receipt__lead">
+            <span class="receipt-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12.5l4.2 4L19 7" />
+              </svg>
+            </span>
+            <div>
+              <h3>Capture received</h3>
+              <p>The original bytes and metadata were stored once. No analysis has started.</p>
+            </div>
+            <span class="receipt__badge">Created</span>
+          </div>
+          <dl class="receipt__grid">
+            <div class="receipt__fact"><dt>Capture ID</dt><dd><code>cap_31f86a209ab84b72ad89f7f82d13e4c1</code></dd></div>
+            <div class="receipt__fact"><dt>Filename</dt><dd>douyin-agent-workflow.png</dd></div>
+            <div class="receipt__fact"><dt>Created</dt><dd><time datetime="2026-09-15T08:42:19+08:00">15 Sep 2026 · 08:42 SGT</time></dd></div>
+            <div class="receipt__fact"><dt>Status</dt><dd>received</dd></div>
+            <div class="receipt__fact"><dt>Digest</dt><dd><code>8f2a91d3…</code></dd></div>
+            <div class="receipt__fact"><dt>Review</dt><dd>Human required</dd></div>
+          </dl>
+          <div class="receipt__actions"><button class="quiet-button" type="button">Receive another image</button></div>
+        </article>
+
+        <article class="receipt receipt--duplicate" aria-label="Duplicate capture receipt">
+          <div class="receipt__lead">
+            <span class="receipt-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="7" y="7" width="11" height="11" rx="2" />
+                <path d="M16 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h2" />
+              </svg>
+            </span>
+            <div>
+              <h3>Duplicate — existing receipt returned</h3>
+              <p>The same idempotency key and payload already exist. Caphub did not create another record, object, or audit event.</p>
+            </div>
+            <span class="receipt__badge">Existing</span>
+          </div>
+          <dl class="receipt__grid">
+            <div class="receipt__fact"><dt>Capture ID</dt><dd><code>cap_31f86a209ab84b72ad89f7f82d13e4c1</code></dd></div>
+            <div class="receipt__fact"><dt>Filename</dt><dd>douyin-agent-workflow.png</dd></div>
+            <div class="receipt__fact"><dt>Created</dt><dd><time datetime="2026-09-15T08:42:19+08:00">15 Sep 2026 · 08:42 SGT</time></dd></div>
+            <div class="receipt__fact"><dt>Status</dt><dd>received</dd></div>
+            <div class="receipt__fact"><dt>Digest</dt><dd><code>8f2a91d3…</code></dd></div>
+            <div class="receipt__fact"><dt>Review</dt><dd>Human required</dd></div>
+          </dl>
+          <div class="receipt__actions"><button class="quiet-button" type="button">Receive another image</button></div>
+        </article>
+
+        <div class="service-error" role="alert">
+          <div>
+            <h3>Capture was not received</h3>
+            <p><code>STORAGE_UNAVAILABLE</code> · Caphub returned no receipt. Retry this same capture with its retained idempotency key, or stop and inspect operations.</p>
+          </div>
+          <button class="quiet-button" type="button">Retry same capture</button>
+        </div>
+
+        <div class="read-error" role="alert">
+          <div>
+            <h3>Receipt metadata is temporarily unavailable</h3>
+            <p>Capture <code>cap_31f86a20…</code> is still known. Retry the metadata read; Caphub will not resubmit the image automatically.</p>
+          </div>
+          <button class="quiet-button" type="button">Retry receipt read</button>
+        </div>
+      </section>
+
+      <ul class="boundary-list" aria-label="P1 safeguards">
+        <li><strong>Immutable evidence</strong><span>Content-addressed bytes are never overwritten and are not exposed from this page.</span></li>
+        <li><strong>Safe retry</strong><span>One idempotency key stays bound to the selected image until a receipt is returned.</span></li>
+        <li><strong>Human boundary</strong><span>Every Capture stops at received. Analysis, approval, and release remain absent.</span></li>
+      </ul>
+
+      <p class="synthetic-note">All filenames, identifiers, URLs, and states shown here are synthetic design evidence.</p>
+    </main>
+
+    <script>
+      const body = document.body;
+      const picker = document.querySelector("#state-picker");
+      const moduleState = document.querySelector("#module-state");
+      const submitButton = document.querySelector(".submit-button");
+      const submitLabel = document.querySelector("#submit-label");
+      const formControls = document.querySelectorAll(".capture-workbench input, .capture-workbench textarea, .file-button, .selected-file__replace");
+      const fileMark = document.querySelector("#file-mark");
+      const fileName = document.querySelector("#file-name");
+      const fileMeta = document.querySelector("#file-meta");
+      const stateAnnouncement = document.querySelector("#state-announcement");
+      const receiptTitle = document.querySelector("#receipt-title");
+      const custodyIdentity = document.querySelector("#custody-identity");
+      const custodyTitle = document.querySelector("#custody-title");
+      const custodyCopy = document.querySelector("#custody-copy");
+
+      const states = {
+        ready: { module: "State Ready", submit: "Choose an image to continue", submitDisabled: true },
+        selected: { module: "State Ready", submit: "Receive capture", submitDisabled: false },
+        submitting: { module: "State Receiving", submit: "Receiving capture…", submitDisabled: true },
+        success: { module: "State Received", submit: "Receipt returned", submitDisabled: true },
+        duplicate: { module: "State Received", submit: "Existing receipt returned", submitDisabled: true },
+        disabled: { module: "State Disabled", submit: "Capture unavailable", submitDisabled: true },
+        oversize: { module: "State Validation Error", submit: "Choose a smaller image", submitDisabled: true },
+        "invalid-type": { module: "State Validation Error", submit: "Choose PNG, JPEG, or WebP", submitDisabled: true },
+        "service-error": { module: "State Storage Error", submit: "Retry same capture", submitDisabled: false },
+        "read-error": { module: "State Read Error", submit: "Receipt already created", submitDisabled: true }
+      };
+
+      const announcements = {
+        ready: "Caphub is ready. Choose one supported image to begin.",
+        selected: "Image selected and ready to receive.",
+        submitting: "Receiving capture. Keep this page open.",
+        success: "Capture received. Human review is required.",
+        duplicate: "Duplicate detected. The existing Capture receipt was returned.",
+        disabled: "Caphub capture is disabled on this Control Host.",
+        oversize: "The selected image is larger than the 10 MiB limit.",
+        "invalid-type": "The selected image type is unsupported. Choose PNG, JPEG, or WebP.",
+        "service-error": "Capture was not received because storage is unavailable. Retry with the retained idempotency key.",
+        "read-error": "Capture receipt metadata is temporarily unavailable. Retry the metadata read."
+      };
+
+      function setState(nextState) {
+        const state = states[nextState] ? nextState : "ready";
+        const config = states[state];
+        body.dataset.state = state;
+        picker.value = state;
+        moduleState.textContent = config.module;
+        submitLabel.textContent = config.submit;
+        submitButton.disabled = config.submitDisabled;
+
+        formControls.forEach((control) => {
+          control.disabled = state === "disabled" || state === "submitting" || state === "success" || state === "duplicate" || state === "read-error";
+        });
+
+        fileMark.textContent = state === "invalid-type" ? "HEIC" : "PNG";
+        fileName.textContent = state === "invalid-type" ? "IMG_1847.HEIC" : "douyin-agent-workflow.png";
+        fileMeta.textContent = state === "oversize"
+          ? "image/png · 14.2 MiB · rejected before upload"
+          : state === "invalid-type"
+            ? "image/heic · 3.1 MiB · unsupported type"
+            : "image/png · 4.8 MiB · ready to receive";
+
+        stateAnnouncement.textContent = announcements[state];
+
+        if (state === "selected") {
+          custodyTitle.textContent = "Selected evidence is ready for immutable custody.";
+          custodyCopy.textContent = "Submit once to store the original bytes, strict metadata, idempotency record, and audit event. Conclusions do not exist yet.";
+        } else if (state === "submitting") {
+          custodyTitle.textContent = "Receiving selected evidence into immutable custody.";
+          custodyCopy.textContent = "Keep this page open. Caphub is validating and storing this image once; a second request is unavailable.";
+        } else if (state === "success" || state === "duplicate" || state === "read-error") {
+          custodyTitle.textContent = "Selected evidence is retained in immutable custody.";
+          custodyCopy.textContent = "Caphub stored this evidence once. The receipt contains metadata only, and Human review remains required.";
+        } else if (state === "service-error") {
+          custodyTitle.textContent = "Selected evidence has not crossed into immutable custody.";
+          custodyCopy.textContent = "No receipt was returned. Retry with the retained idempotency key; do not assume that analysis or review has started.";
+        } else {
+          custodyTitle.textContent = "Evidence becomes immutable; conclusions do not exist yet.";
+          custodyCopy.textContent = "Caphub stores the original bytes, strict Capture metadata, idempotency record, and one audit event once. P1 cannot delete captures.";
+        }
+
+        custodyIdentity.textContent = `${fileName.textContent} → immutable local evidence`;
+
+        if (state === "success" || state === "duplicate" || state === "read-error" || state === "service-error") {
+          requestAnimationFrame(() => receiptTitle.focus());
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.set("state", state);
+        window.history.replaceState({}, "", url);
+      }
+
+      picker.addEventListener("change", (event) => setState(event.target.value));
+      document.querySelector(".capture-workbench").addEventListener("submit", (event) => event.preventDefault());
+      const initial = new URL(window.location.href).searchParams.get("state") || "ready";
+      setState(initial);
+    </script>
+  </body>
+</html>
