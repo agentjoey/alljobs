@@ -21,6 +21,68 @@ npm run planning:refresh -- --once
 - Native data files live under `./data/` (Markdown and JSON). Back up directory using standard Time Machine / filesystem backups.
 - Mirrors live under `~/.alljobs/mirrors/` and can be reconstructed at any time by refreshing from remotes.
 
+## Caphub P1 Quick Operations
+
+The detailed [Caphub P1 custody and operations guide](caphub-foundation.md) is
+the authority for the resolved state tree, request limits, idempotency, audit
+repair, backup/recovery checks, and code-versus-data rollback boundary.
+
+### Safe-off
+
+Caphub is disabled unless the strict Control Host block explicitly sets
+`caphub.enabled: true`. For an incident or planned backup, stop capture writes
+first by returning the module to disabled state through a separately approved
+configuration procedure and obtain read-only operational confirmation that no
+Caphub writer is accepting requests. The default safe-off/backup procedure does
+not send a live capture POST. Do not change the Tunnel, Access policy, loopback
+binding, or another AllJobs module as part of Caphub safe-off.
+
+This section does not authorize a production configuration change, service
+restart/reload, re-enable action, deployment, or live smoke test. Those remain
+under their applicable Human Gate.
+
+### Backup and recovery
+
+- Resolve the one exact absolute `<ALLJOBS_HOME>/state/caphub` path from the
+  active Control Host configuration. Reject unresolved, symlinked, broadened,
+  or guessed paths.
+- With writes stopped, back up the entire resolved Caphub root as one
+  consistency unit. Preserve ownership, permissions, byte content, and
+  symlink safety; never copy only objects, records, or events.
+- Restore only while Caphub remains disabled, only into that exact resolved
+  root, and only as a complete backup unit. Do not combine files from different
+  backup times.
+- Before any separately approved re-enable decision, validate owner-controlled
+  non-symlink directories, file modes, strict Capture/index schemas,
+  idempotency target/key pairs, object digests and sizes, and every monthly
+  NDJSON event. Preserve and escalate any unindexed Capture, unreferenced
+  object, missing deterministic event, duplicate event ID, or partial tail;
+  do not hand-edit or remove it.
+- A code rollback preserves Caphub data. Data migration, retention, or disposal
+  is a separate destructive operation requiring its own plan and explicit
+  Human authorization.
+
+Never operate on `~`, `$HOME`, `/`, a glob, an unresolved environment variable,
+or an operator-guessed directory. Caphub P1 has no delete API and no operational
+cleanup step.
+
+### Incident triage
+
+1. Return Caphub to safe-off and preserve the complete state root and relevant
+   metadata-only logs as evidence.
+2. Classify the bounded public error: configuration/disabled, origin, request
+   validation, idempotency conflict, storage unavailable, or audit failure.
+3. For an uncertain POST or audit failure, keep the original image, filename,
+   MIME type, note, source URL, and idempotency key unchanged. Same-key retry
+   is a stable duplicate/audit-healing operation only after the matching index
+   is known durable under the single active writer process. A failure before
+   index finalization can leave an object or unindexed Capture; multiple writer
+   processes are unsupported and can leave orphan/duplicate evidence.
+4. If index durability or custody validation is uncertain, remain safe-off and
+   escalate before any separately approved retry. Do not hand-edit
+   Capture JSON, idempotency indexes, object bytes, or audit lines, and do not
+   expose secrets, raw bytes, idempotency keys, or host paths in reports.
+
 ## Backlog Retirement Operations
 
 Linear owns Backlog management. During the transition, AllJobs may ingest a registered repository's `docs/BACKLOG.md` only as read-only planning evidence. Local working-tree, remote-commit, and cached projections may expose document health, provenance, diagnostics, counts, citations, and assistant context, but they must never create an ordering, proposal, handoff, conversion, or write path.
