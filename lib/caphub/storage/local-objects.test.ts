@@ -141,15 +141,12 @@ describe("LocalCaptureObjectStore", () => {
     let observedTempPath = "";
 
     const store = new LocalCaptureObjectStore(root, {
-      async publish(tempPath, requestedFinalPath) {
+      async beforePublish(tempPath, requestedFinalPath) {
         observedTempPath = tempPath;
         expect(requestedFinalPath).toBe(finalPath);
         expect(dirname(tempPath)).toBe(dirname(finalPath));
         expect(lstatSync(tempPath).isFile()).toBe(true);
         writeFileSync(finalPath, "late different winner", { flag: "wx", mode: 0o600 });
-        const error = new Error("exclusive publish conflict") as NodeJS.ErrnoException;
-        error.code = "EEXIST";
-        throw error;
       }
     });
 

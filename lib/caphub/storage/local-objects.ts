@@ -37,7 +37,7 @@ export class ImmutableObjectMismatchError extends Error {
 }
 
 export interface ImmutableObjectFileOperations {
-  publish(tempPath: string, finalPath: string): Promise<void>;
+  beforePublish(tempPath: string, finalPath: string): Promise<void>;
 }
 
 function currentUid(): number {
@@ -196,7 +196,9 @@ export class LocalCaptureObjectStore implements CaptureObjectStore {
 
   constructor(root: string, operations: Partial<ImmutableObjectFileOperations> = {}) {
     this.root = resolveCaphubRoot(root);
-    this.operations = { publish: operations.publish ?? defaultPublish };
+    this.operations = {
+      beforePublish: operations.beforePublish ?? (async () => undefined)
+    };
   }
 
   async putImmutable(input: {
@@ -246,8 +248,10 @@ export class LocalCaptureObjectStore implements CaptureObjectStore {
       const staged = await readAllAt(handle, input.bytes.byteLength);
       if (!sameBytes(staged, input.bytes)) throw new ImmutableObjectMismatchError();
       await assertSecureDirectoryChain(this.root, parent);
+      await this.operations.beforePublish(tempPath, finalPath);
+      await assertSecureDirectoryChain(this.root, parent);
       try {
-        await this.operations.publish(tempPath, finalPath);
+        await defaultPublish(tempPath, finalPath);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       }

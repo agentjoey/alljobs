@@ -20,6 +20,7 @@ import {
   captureReceivedEventId,
   FilesystemCaptureAuditLog
 } from "./audit-log";
+import { syncDirectory } from "./local-objects";
 
 const FIXTURE_PREFIX = "alljobs-caphub-audit-";
 const SENTINEL_NAME = ".caphub-audit-test-owner.json";
@@ -184,6 +185,43 @@ describe("FilesystemCaptureAuditLog", () => {
     expect(attempts).toBe(2);
     expect(readNdjson(join(root, "events", "2026-09.jsonl"))).toEqual([input]);
   });
+
+  it.each(["file", "parent"] as const)(
+    "flushes a complete event and its parent again before returning existing after %s sync failure",
+    async (failurePoint) => {
+      const fixture = createOwnedFixture();
+      const root = createCaphubRoot(fixture);
+      const input = event();
+      let fileSyncAttempts = 0;
+      let parentSyncAttempts = 0;
+      const audit = new FilesystemCaptureAuditLog(root, {
+        async syncFile(handle: FileHandle) {
+          fileSyncAttempts += 1;
+          if (failurePoint === "file" && fileSyncAttempts === 1) {
+            throw new Error("injected audit file sync failure");
+          }
+          await handle.sync();
+        },
+        async syncParent(path: string) {
+          parentSyncAttempts += 1;
+          if (failurePoint === "parent" && parentSyncAttempts === 1) {
+            throw new Error("injected audit parent sync failure");
+          }
+          await syncDirectory(path);
+        }
+      });
+
+      await expect(audit.ensure(input)).rejects.toThrow(
+        `injected audit ${failurePoint} sync failure`
+      );
+      expect(readNdjson(join(root, "events", "2026-09.jsonl"))).toEqual([input]);
+
+      await expect(audit.ensure(input)).resolves.toBe("existing");
+      expect(fileSyncAttempts).toBe(2);
+      expect(parentSyncAttempts).toBe(failurePoint === "file" ? 1 : 2);
+      expect(readNdjson(join(root, "events", "2026-09.jsonl"))).toEqual([input]);
+    }
+  );
 
   it("rejects invalid, unknown-key, and non-deterministic events without appending", async () => {
     const fixture = createOwnedFixture();

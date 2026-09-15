@@ -19,6 +19,8 @@ const auditChains = new Map<string, Promise<void>>();
 
 export interface AuditFileOperations {
   append(handle: FileHandle, bytes: Uint8Array): Promise<void>;
+  syncFile(handle: FileHandle): Promise<void>;
+  syncParent(path: string): Promise<void>;
 }
 
 interface AuditScan {
@@ -152,13 +154,36 @@ async function repairPartialTail(root: string, path: string, truncateTo: number)
   }
 }
 
+async function flushAuditFile(
+  root: string,
+  path: string,
+  operations: AuditFileOperations
+): Promise<void> {
+  const parent = dirname(path);
+  await assertSecureDirectoryChain(root, parent);
+  const handle = await open(path, constants.O_WRONLY | constants.O_NOFOLLOW);
+  try {
+    await assertSecureFileHandle(handle);
+    await assertSecureDirectoryChain(root, parent);
+    await operations.syncFile(handle);
+    await assertSecureDirectoryChain(root, parent);
+    await operations.syncParent(parent);
+  } finally {
+    await handle.close();
+  }
+}
+
 export class FilesystemCaptureAuditLog implements CaptureAuditLog {
   private readonly root: string;
   private readonly operations: AuditFileOperations;
 
   constructor(root: string, operations: Partial<AuditFileOperations> = {}) {
     this.root = resolveCaphubRoot(root);
-    this.operations = { append: operations.append ?? appendAll };
+    this.operations = {
+      append: operations.append ?? appendAll,
+      syncFile: operations.syncFile ?? ((handle) => handle.sync()),
+      syncParent: operations.syncParent ?? syncDirectory
+    };
   }
 
   async ensure(event: CaptureAuditEvent): Promise<"appended" | "existing"> {
@@ -176,7 +201,10 @@ export class FilesystemCaptureAuditLog implements CaptureAuditLog {
       if (scan.truncateTo !== null) {
         await repairPartialTail(this.root, path, scan.truncateTo);
       }
-      if (scan.matching) return "existing";
+      if (scan.matching) {
+        await flushAuditFile(this.root, path, this.operations);
+        return "existing";
+      }
 
       const bytes = new TextEncoder().encode(`${JSON.stringify(parsed)}\n`);
       await assertSecureDirectoryChain(this.root, parent);
@@ -189,9 +217,9 @@ export class FilesystemCaptureAuditLog implements CaptureAuditLog {
         await assertSecureFileHandle(handle);
         await assertSecureDirectoryChain(this.root, parent);
         await this.operations.append(handle, bytes);
-        await handle.sync();
+        await this.operations.syncFile(handle);
         await assertSecureDirectoryChain(this.root, parent);
-        await syncDirectory(parent);
+        await this.operations.syncParent(parent);
       } finally {
         await handle.close();
       }
