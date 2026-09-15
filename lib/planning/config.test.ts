@@ -231,6 +231,54 @@ describe("control host monitoring config", () => {
   });
 });
 
+describe("control host Caphub config", () => {
+  it("defaults an included Caphub block to disabled with the bounded upload limit", () => {
+    const parsed = controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub: {} });
+    expect(parsed.caphub?.enabled).toBe(false);
+    expect(parsed.caphub?.allowedOrigins).toEqual([]);
+    expect(parsed.caphub?.maxUploadBytes).toBe(10_485_760);
+  });
+
+  it("accepts only exact HTTPS Caphub allowed origins", () => {
+    const parsed = controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      caphub: { allowedOrigins: ["https://alljobs.agentjoey.ai"] }
+    });
+    expect(parsed.caphub?.allowedOrigins).toEqual(["https://alljobs.agentjoey.ai"]);
+
+    for (const origin of ["http://alljobs.agentjoey.ai", "https://alljobs.agentjoey.ai/caphub", "https://user:pass@alljobs.agentjoey.ai"]) {
+      expect(() => controlHostConfigSchema.parse({
+        trustedCodeRoots: ["/workspace"],
+        caphub: { allowedOrigins: [origin] }
+      })).toThrow();
+    }
+  });
+
+  it("bounds Caphub uploads to one through twenty mebibytes", () => {
+    for (const maxUploadBytes of [1_048_575, 20_971_521]) {
+      expect(() => controlHostConfigSchema.parse({
+        trustedCodeRoots: ["/workspace"],
+        caphub: { maxUploadBytes }
+      })).toThrow();
+    }
+
+    for (const maxUploadBytes of [1_048_576, 20_971_520]) {
+      const parsed = controlHostConfigSchema.parse({
+        trustedCodeRoots: ["/workspace"],
+        caphub: { maxUploadBytes }
+      });
+      expect(parsed.caphub?.maxUploadBytes).toBe(maxUploadBytes);
+    }
+  });
+
+  it("rejects unknown Caphub keys, including configurable filesystem roots", () => {
+    expect(() => controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      caphub: { enabled: false, stateDir: "/elsewhere" }
+    })).toThrow();
+  });
+});
+
 describe("control host monitoring resolved paths", () => {
   it("resolves stateDir and monitoringStateDir as descendants of ALLJOBS_HOME and creates only those", () => {
     const home = mkdtempSync(join(tmpdir(), "alljobs-monitoring-config-"));
@@ -258,5 +306,24 @@ describe("control host monitoring resolved paths", () => {
     const parsed = controlHostConfigSchema.parse(raw);
     expect(parsed.monitoring?.enabled).toBe(false);
     expect(readFileSync(examplePath, "utf8")).not.toMatch(/sk-[A-Za-z0-9]|Bearer\s+[A-Za-z0-9]/);
+  });
+});
+
+describe("control host Caphub resolved paths", () => {
+  it("derives and creates Caphub state only beneath the Control Host state directory", () => {
+    const home = mkdtempSync(join(tmpdir(), "alljobs-caphub-config-"));
+    try {
+      writeFileSync(join(home, "config.json"), JSON.stringify({
+        trustedCodeRoots: ["/workspace"],
+        caphub: { enabled: false }
+      }));
+      const resolved = loadControlHostConfig(home);
+      expect(resolved.caphubStateDir).toBe(resolve(home, "state", "caphub"));
+      const caphubStateDir = resolved.caphubStateDir as string;
+      expect(caphubStateDir.startsWith(resolved.homeDir + sep)).toBe(true);
+      expect(existsSync(caphubStateDir)).toBe(true);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });

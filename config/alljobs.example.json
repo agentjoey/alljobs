@@ -12,6 +12,11 @@
       "https://alljobs.agentjoey.ai"
     ]
   },
+  "caphub": {
+    "enabled": false,
+    "allowedOrigins": ["https://alljobs.agentjoey.ai"],
+    "maxUploadBytes": 10485760
+  },
   "monitoring": {
     "enabled": false,
     "refreshIntervalSeconds": 300,

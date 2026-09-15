@@ -37,6 +37,14 @@ export const controlHostAssistantConfigSchema = z.object({
   deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)
 }).strict();
 
+// Caphub is disabled unless explicitly enabled. Its browser origins are exact
+// HTTPS origins and its state root is always derived below ALLJOBS_HOME.
+export const controlHostCaphubConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
+  maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760)
+}).strict();
+
 const monitoringCredentialRefKeySchema = z
   .string()
   .max(64)
@@ -79,6 +87,7 @@ export const controlHostConfigSchema = z.object({
   logsDir: z.string().optional(),
   cacheDir: z.string().optional(),
   assistant: controlHostAssistantConfigSchema.optional(),
+  caphub: controlHostCaphubConfigSchema.optional(),
   monitoring: controlHostMonitoringConfigSchema.optional()
 });
 
@@ -93,6 +102,7 @@ export interface ControlHostResolvedPaths {
   // Always set by loadControlHostConfig; optional so existing test fixtures
   // that construct this shape literally keep compiling.
   stateDir?: string;
+  caphubStateDir?: string;
   monitoringStateDir?: string;
   config: ControlHostConfig;
 }
@@ -139,11 +149,13 @@ export function loadControlHostConfig(customHome?: string): ControlHostResolvedP
   // configurable, so directory creation only ever touches descendants of the
   // resolved Control Host home.
   const stateDir = resolve(homeDir, "state");
+  const caphubStateDir = resolve(stateDir, "caphub");
   const monitoringStateDir = resolve(stateDir, "monitoring");
 
   if (!existsSync(mirrorsDir)) mkdirSync(mirrorsDir, { recursive: true });
   if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
   if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  if (!existsSync(caphubStateDir)) mkdirSync(caphubStateDir, { recursive: true });
   if (!existsSync(monitoringStateDir)) mkdirSync(monitoringStateDir, { recursive: true });
 
   return {
@@ -153,6 +165,7 @@ export function loadControlHostConfig(customHome?: string): ControlHostResolvedP
     logsDir,
     cacheDir,
     stateDir,
+    caphubStateDir,
     monitoringStateDir,
     config
   };
