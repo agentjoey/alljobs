@@ -160,6 +160,8 @@ function setup(options: {
   store?: CaptureStore;
   objects?: CaptureObjectStore;
   audit?: CaptureAuditLog;
+  clock?: () => Date;
+  idFactory?: () => string;
   maxUploadBytes?: number;
 } = {}) {
   const operations: string[] = [];
@@ -170,8 +172,8 @@ function setup(options: {
     store,
     objects,
     audit,
-    clock: () => new Date(CREATED_AT),
-    idFactory: () => CAPTURE_ID,
+    clock: options.clock ?? (() => new Date(CREATED_AT)),
+    idFactory: options.idFactory ?? (() => CAPTURE_ID),
     eventIdFactory: (captureId) => captureId === WINNER_ID ? WINNER_EVENT_ID : EVENT_ID,
     maxUploadBytes: options.maxUploadBytes ?? 10
   });
@@ -227,6 +229,54 @@ describe("createCaptureService", () => {
       object_digest: HELLO_DIGEST
     });
     expect(Object.keys(service).sort()).toEqual(["get", "receive"]);
+  });
+
+  it("owns an immutable byte snapshot before an awaited object-store boundary", async () => {
+    let signalObjectEntered: (() => void) | undefined;
+    const objectEntered = new Promise<void>((resolve) => {
+      signalObjectEntered = resolve;
+    });
+    let releaseObject: (() => void) | undefined;
+    const objectReleased = new Promise<void>((resolve) => {
+      releaseObject = resolve;
+    });
+    let storedBytes: number[] = [];
+    const objects: CaptureObjectStore = {
+      async putImmutable({ bytes }) {
+        const ref = objectRef(bytes);
+        signalObjectEntered?.();
+        await objectReleased;
+        storedBytes = Array.from(bytes);
+        return ref;
+      }
+    };
+    const callerBytes = new TextEncoder().encode("hello");
+    const { service } = setup({ objects });
+
+    const receiving = service.receive(input({ bytes: callerBytes }));
+    await objectEntered;
+    callerBytes.fill(120);
+    releaseObject?.();
+
+    await expect(receiving).resolves.toEqual({
+      kind: "created",
+      capture: captureRecord()
+    });
+    expect(storedBytes).toEqual([104, 101, 108, 108, 111]);
+  });
+
+  it("maps an idFactory exception to STORAGE_UNAVAILABLE before object storage", async () => {
+    const { service, store, objects, audit } = setup({
+      idFactory() {
+        throw new Error("injected ID factory failure");
+      }
+    });
+
+    await expectCode(service.receive(input()), "STORAGE_UNAVAILABLE");
+
+    expect((objects as MemoryObjects).calls).toBe(0);
+    expect((store as MemoryStore).createCalls).toBe(0);
+    expect((audit as MemoryAudit).attempts).toHaveLength(0);
   });
 
   it("returns the original for a duplicate key and ensures no second audit event", async () => {
@@ -290,6 +340,51 @@ describe("createCaptureService", () => {
     );
     expect((objects as MemoryObjects).calls).toBe(1);
     expect((audit as MemoryAudit).attempts).toHaveLength(1);
+  });
+
+  it.each([
+    ["idempotency key", { idempotency_key: "capture.request-20260916:stored-other" }],
+    ["object byte count", {
+      object: {
+        algorithm: "sha256" as const,
+        digest: HELLO_DIGEST,
+        key: `sha256/2c/${HELLO_DIGEST}`,
+        bytes: 6
+      }
+    }]
+  ])("rejects a stored record with a mismatched %s", async (_label, overrides) => {
+    const store = new MemoryStore();
+    const mutated = captureRecord(overrides as Partial<CaptureRecord>);
+    store.records.set(mutated.id, mutated);
+    store.idempotency.set(IDEMPOTENCY_KEY, mutated.id);
+    const { service, objects, audit } = setup({ store });
+
+    await expectCode(service.receive(input()), "IDEMPOTENCY_CONFLICT");
+
+    expect((objects as MemoryObjects).calls).toBe(0);
+    expect((audit as MemoryAudit).attempts).toHaveLength(0);
+  });
+
+  it("repairs the original audit event on retry even when the clock advances", async () => {
+    const times = [
+      new Date(CREATED_AT),
+      new Date("2026-09-16T02:04:04.000Z")
+    ];
+    let clockCalls = 0;
+    const audit = new MemoryAudit();
+    audit.failuresRemaining = 1;
+    const { service } = setup({
+      audit,
+      clock: () => times[clockCalls++] as Date
+    });
+
+    await expectCode(service.receive(input()), "AUDIT_WRITE_FAILED");
+    await expect(service.receive(input())).resolves.toMatchObject({ kind: "duplicate" });
+
+    expect(clockCalls).toBe(1);
+    expect(audit.attempts).toHaveLength(2);
+    expect(audit.attempts[0]).toEqual(audit.attempts[1]);
+    expect(audit.attempts[1]?.occurred_at).toBe(CREATED_AT);
   });
 
   it("rejects unsupported MIME before any storage call", async () => {

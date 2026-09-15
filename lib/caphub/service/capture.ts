@@ -127,7 +127,7 @@ function validateInput(input: ReceiveCaptureInput, maxUploadBytes: number): Vali
     idempotencyKey: parsed.data.idempotencyKey,
     filename: parsed.data.filename,
     mimeType: mimeType.data,
-    bytes: parsed.data.bytes,
+    bytes: Uint8Array.from(parsed.data.bytes),
     note: parsed.data.note ?? "",
     sourceUrl: parsed.data.sourceUrl
   };
@@ -217,9 +217,10 @@ export function createCaptureService(dependencies: CaptureServiceDependencies): 
       const existing = await findByIdempotencyKey(input.idempotencyKey);
       if (existing) return duplicateOrConflict(existing, input, digest);
 
-      const id = captureIdSchema.safeParse(idFactory());
+      let id: ReturnType<typeof captureIdSchema.safeParse>;
       let createdAt: string;
       try {
+        id = captureIdSchema.safeParse(idFactory());
         createdAt = clock().toISOString();
       } catch {
         throw operationalError("STORAGE_UNAVAILABLE");
