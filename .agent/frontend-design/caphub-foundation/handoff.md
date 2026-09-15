@@ -3,7 +3,7 @@
 **Task / Brief / revision:** Caphub Foundation and Web Capture · Human Gate P1-A · `brief.md` revision 1  
 **Agent role / harness / session:** Primary Agent / Codex; independent fresh-context Design Review and Verification completed  
 **Branch / worktree:** `codex/caphub-foundation` · `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-foundation`  
-**Base commit / current commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / unchanged at gate approval; P1-A artifacts are ready for an exact-scope local commit
+**Base commit / current implementation commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / `b1ea70050c6b0b08862bd006a934540957df7ffb`
 
 ## Human Gate P1-A approval — 2026-09-15
 
@@ -44,6 +44,31 @@ The Human Owner explicitly approved Brief revision 1 SHA-256 `e694eae5615074afeb
 - Independent Design Review verdict pass: **PASS** with contract disposition `ship`.
 - Independent Verification verdict pass: **PASS** across all 10 states at 1440px and true 390px, with zero root overflow and no live side effects or sensitive values.
 
+## P1 implementation checkpoint — Tasks 1–6
+
+The standing authorization advanced P1 through the provider-free configuration, domain, path, storage, service, and HTTP route layers. Each task used focused RED→GREEN work, an independent task review, controller verification, and a narrow local commit. Review findings in Tasks 2, 4, 5, and 6 were resolved in scoped fix rounds and independently re-reviewed before the next task began.
+
+| Task | Linear | Final commit | Final focused evidence |
+|---|---|---|---|
+| 1 — disabled Control Host config | `AGE-240` Done | `62ae6ef` | config 28/28 |
+| 2 — strict domain contracts | `AGE-242` Done | `62f066a` | domain 11/11 |
+| 3 — safe state paths | `AGE-244` Done | `2ac303d` | paths 8/8 |
+| 4 — immutable storage adapters | `AGE-243` Done | `28d2098` | storage 28/28 |
+| 5 — idempotent receipt service | `AGE-246` Done | `ed9e487` | service 21/21 |
+| 6 — bounded POST / metadata-only GET | `AGE-247` Done | `b1ea700` | route boundary 43/43 |
+
+Final controller verification at this checkpoint:
+
+```text
+npm test          -> 76 files / 852 tests passed
+npm run build     -> Next.js 16.3.0 Turbopack production build passed; both Caphub API routes present
+npm run typecheck -> passed when run serially after build
+npm run lint      -> exit 0; 67 warnings (66 baseline plus one deferred Task 3 unused test import)
+git diff --check  -> implementation and fix ranges passed
+```
+
+No Caphub configuration was enabled. No service was restarted, no deployment or external provider was invoked, and no branch was pushed or merged. The main checkout and the pre-existing modified `AGENTS.md` in this worktree remain untouched by the P1 implementation commits.
+
 ## Commands / checks run
 
 ```text
@@ -63,8 +88,9 @@ git diff --check                              -> passed
 - **Human Gate P1-A is complete.** This record preserves the exact approved Brief/mockup hashes; the Brief itself remains byte-for-byte unchanged.
 - The high-level roadmap retains earlier Web JSON / `WAITING_FOR_REVIEW` wording. The detailed P1 plan and this Brief use the later fixed multipart screenshot / `received` contract. Reconcile the roadmap as a documentation-only P1 follow-up.
 - Impeccable reported `.impeccable/design.json` stale relative to `DESIGN.md`. This is unrelated drift; do not repair it as a side effect. `$impeccable document` may refresh it only if the Human Owner asks.
-- Linear AGE-241 is `Done`; P1 Task 1 is tracked by AGE-240.
+- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, and `AGE-247` are `Done`. Task 7 is tracked by `AGE-248` and remains unstarted.
+- **Task 7 hard stop:** `/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` is absent after exact-path and filename searches. A prior v3.3 copy was recoverable only as historical memory evidence, and that workflow explicitly requires stopping rather than relying on memory when the authority file or critical chapters are missing. Task 7 cannot be dispatched under the current frontend rules.
 
 ## Next safe action
 
-Commit only the intended P1 planning/design artifacts, then implement Task 1 with test-driven development in this isolated worktree. Do not enable Caphub, restart services, deploy, or cross a later production gate.
+Restore the authoritative `/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` file, or obtain an explicit Human ruling that binds an identified replacement as the current frontend authority. Then re-read it in full, load the required frontend skills, move `AGE-248` to `In Progress`, and implement Task 7 from the already approved Brief/mockup. Do not enable Caphub, restart services, deploy, push, merge, or cross the final P1-C production gate.
