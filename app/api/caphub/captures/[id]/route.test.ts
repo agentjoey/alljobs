@@ -84,6 +84,10 @@ describe("GET /api/caphub/captures/[id]", () => {
 
   it("returns stored metadata without bytes, paths, object keys, or idempotency keys", async () => {
     const capture = captureRecord();
+    Object.assign(capture.source, {
+      internal_path: "/Users/operator/.alljobs/state/caphub/private",
+      secret: "SOURCE_SECRET"
+    });
     const get = vi.fn<CaptureService["get"]>().mockResolvedValue(capture);
     const response = await createCaptureGetRoute({ get })(
       new Request(ROUTE_URL),
@@ -98,7 +102,11 @@ describe("GET /api/caphub/captures/[id]", () => {
       capture: {
         schema_version: 1,
         id: CAPTURE_ID,
-        source: capture.source,
+        source: {
+          kind: "web",
+          original_filename: "browser-capture.png",
+          source_url: "https://example.com/source"
+        },
         note: capture.note,
         mime_type: "image/png",
         object: { algorithm: "sha256", digest: DIGEST, bytes: IMAGE_BYTES.byteLength },
@@ -111,6 +119,8 @@ describe("GET /api/caphub/captures/[id]", () => {
     expect(text).not.toContain(capture.object.key);
     expect(text).not.toContain(capture.idempotency_key);
     expect(text).not.toContain("/Users/");
+    expect(text).not.toContain("internal_path");
+    expect(text).not.toContain("SOURCE_SECRET");
   });
 
   it("returns 503 at the real production route while Caphub is disabled", async () => {

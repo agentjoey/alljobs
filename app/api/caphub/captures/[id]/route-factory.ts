@@ -25,7 +25,13 @@ function publicCapture(capture: CaptureRecord) {
   return {
     schema_version: capture.schema_version,
     id: capture.id,
-    source: capture.source,
+    source: {
+      kind: capture.source.kind,
+      original_filename: capture.source.original_filename,
+      ...(capture.source.source_url === undefined
+        ? {}
+        : { source_url: capture.source.source_url })
+    },
     note: capture.note,
     mime_type: capture.mime_type,
     object: {

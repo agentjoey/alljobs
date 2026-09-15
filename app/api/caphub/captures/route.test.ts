@@ -168,9 +168,12 @@ describe("POST /api/caphub/captures", () => {
     ["foreign", "https://foreign.example"]
   ])("rejects a %s Origin before capture work", async (_label, origin) => {
     const { POST, receive } = setup();
-    const response = await POST(request(form(), { origin }));
+    const incoming = request(form(), { origin });
+    const parser = vi.spyOn(incoming, "formData");
+    const response = await POST(incoming);
 
     await expectSafeError(response, 403, "ORIGIN_NOT_ALLOWED");
+    expect(parser).not.toHaveBeenCalled();
     expect(receive).not.toHaveBeenCalled();
     expect(await response.clone().text()).not.toContain(origin ?? "undefined");
   });
@@ -203,6 +206,29 @@ describe("POST /api/caphub/captures", () => {
     expect(receive).not.toHaveBeenCalled();
   });
 
+  it("returns 413 for a digit-only Content-Length beyond Number.MAX_SAFE_INTEGER", async () => {
+    const { POST, receive } = setup();
+    const incoming = request(form(), { contentLength: "9007199254740992" });
+    const parser = vi.spyOn(incoming, "formData");
+
+    await expectSafeError(await POST(incoming), 413, "PAYLOAD_TOO_LARGE");
+    expect(parser).not.toHaveBeenCalled();
+    expect(receive).not.toHaveBeenCalled();
+  });
+
+  it.each(["01", "1e3", "-1"])(
+    "returns 400 for malformed or noncanonical Content-Length %s",
+    async (contentLength) => {
+      const { POST, receive } = setup();
+      const incoming = request(form(), { contentLength });
+      const parser = vi.spyOn(incoming, "formData");
+
+      await expectSafeError(await POST(incoming), 400, "INVALID_REQUEST");
+      expect(parser).not.toHaveBeenCalled();
+      expect(receive).not.toHaveBeenCalled();
+    }
+  );
+
   it("accepts a file at the configured limit inside a larger bounded multipart envelope", async () => {
     const { POST, receive } = setup();
     const image = new File([new Uint8Array(1024)], "limit.png", { type: "image/png" });
@@ -221,18 +247,30 @@ describe("POST /api/caphub/captures", () => {
 
   it("allows the fixed valid text and filename ranges inside the bounded envelope", async () => {
     const { POST, receive } = setup();
+    const idempotencyKey = "k".repeat(128);
     const note = "界".repeat(4000);
-    const sourceUrl = `https://example.com/${"界".repeat(2000)}`;
+    const sourceUrl = `https://example.com/${"界".repeat(2028)}`;
     const image = new File([new Uint8Array(1024)], `${"界".repeat(251)}.png`, {
       type: "image/png"
     });
-    const incoming = await requestWithActualLength(form({ image, note, sourceUrl }));
+    const incoming = await requestWithActualLength(form({
+      image,
+      idempotencyKey,
+      note,
+      sourceUrl
+    }));
 
     const response = await POST(incoming);
 
+    expect(idempotencyKey).toHaveLength(128);
+    expect(sourceUrl).toHaveLength(2048);
     expect(response.status).toBe(201);
     expect(Number(incoming.headers.get("content-length"))).toBeGreaterThan(17_408);
-    expect(receive).toHaveBeenCalledWith(expect.objectContaining({ note, sourceUrl }));
+    expect(receive).toHaveBeenCalledWith(expect.objectContaining({
+      idempotencyKey,
+      note,
+      sourceUrl
+    }));
   });
 
   it.each([
@@ -280,11 +318,14 @@ describe("POST /api/caphub/captures", () => {
 
   it("rejects an unsupported File MIME before reading bytes", async () => {
     const { POST, receive } = setup();
-    const response = await POST(request(form({
+    const data = form({
       image: new File([IMAGE_BYTES], "browser-capture.gif", { type: "image/gif" })
-    })));
+    });
+    const arrayBuffer = vi.spyOn(File.prototype, "arrayBuffer");
+    const response = await POST(request(data));
 
     await expectSafeError(response, 415, "UNSUPPORTED_MEDIA_TYPE");
+    expect(arrayBuffer).not.toHaveBeenCalled();
     expect(receive).not.toHaveBeenCalled();
   });
 
@@ -306,6 +347,10 @@ describe("POST /api/caphub/captures", () => {
     ["duplicate", 200]
   ] as const)("returns a safe metadata-only %s receipt", async (kind, status) => {
     const capture = captureRecord();
+    Object.assign(capture.source, {
+      internal_path: "/Users/operator/.alljobs/state/caphub/private",
+      secret: "SOURCE_SECRET"
+    });
     const { POST, receive } = setup({ kind, capture });
     const response = await POST(request(form()));
     const body = await response.json();
@@ -318,7 +363,11 @@ describe("POST /api/caphub/captures", () => {
       capture: {
         schema_version: 1,
         id: CAPTURE_ID,
-        source: capture.source,
+        source: {
+          kind: "web",
+          original_filename: "browser-capture.png",
+          source_url: "https://example.com/source"
+        },
         note: capture.note,
         mime_type: "image/png",
         object: { algorithm: "sha256", digest: DIGEST, bytes: IMAGE_BYTES.byteLength },
@@ -329,6 +378,8 @@ describe("POST /api/caphub/captures", () => {
     });
     expect(JSON.stringify(body)).not.toContain(capture.object.key);
     expect(JSON.stringify(body)).not.toContain(IDEMPOTENCY_KEY);
+    expect(JSON.stringify(body)).not.toContain("internal_path");
+    expect(JSON.stringify(body)).not.toContain("SOURCE_SECRET");
     expect(receive).toHaveBeenCalledWith({
       idempotencyKey: IDEMPOTENCY_KEY,
       filename: "browser-capture.png",

@@ -29,7 +29,13 @@ function publicCapture(capture: CaptureRecord) {
   return {
     schema_version: capture.schema_version,
     id: capture.id,
-    source: capture.source,
+    source: {
+      kind: capture.source.kind,
+      original_filename: capture.source.original_filename,
+      ...(capture.source.source_url === undefined
+        ? {}
+        : { source_url: capture.source.source_url })
+    },
     note: capture.note,
     mime_type: capture.mime_type,
     object: {
@@ -99,14 +105,16 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
     if (contentLength === null) {
       return safeError(411, "CONTENT_LENGTH_REQUIRED", "Capture request must include Content-Length.");
     }
-    if (!/^\d+$/.test(contentLength)) {
+    if (!/^(0|[1-9]\d*)$/.test(contentLength)) {
       return safeError(400, "INVALID_REQUEST", "Capture request is invalid.");
     }
-    const declaredBytes = Number(contentLength);
-    if (!Number.isSafeInteger(declaredBytes)) {
-      return safeError(400, "INVALID_REQUEST", "Capture request is invalid.");
-    }
-    if (declaredBytes > dependencies.maxUploadBytes + MAX_MULTIPART_OVERHEAD_BYTES) {
+    const maximumLength = String(
+      dependencies.maxUploadBytes + MAX_MULTIPART_OVERHEAD_BYTES
+    );
+    if (
+      contentLength.length > maximumLength.length
+      || (contentLength.length === maximumLength.length && contentLength > maximumLength)
+    ) {
       return safeError(413, "PAYLOAD_TOO_LARGE", "Capture request exceeds the configured limit.");
     }
 
