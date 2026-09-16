@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-16
 **Gate:** P2-A — real provider requests require separate Human authorization
-**Authorization:** Human Owner explicitly replied `授权` to the bounded probe set: one MiniMax image/JSON request, one Kimi local-login no-tool request, and a Kimi API request only if the existing credential was clearly applicable. After the initial evidence identified the missing API binding, the Human Owner supplied `https://api.kimi.com/coding` and explicitly authorized the API probe.
+**Authorization:** Human Owner explicitly replied `授权` to the bounded probe set: one MiniMax image/JSON request, one Kimi local-login no-tool request, and a Kimi API request only if the existing credential was clearly applicable. After the initial evidence identified the missing API binding, the Human Owner supplied `https://api.kimi.com/coding` and explicitly authorized the API probe. After focused review separated CLI compatibility from the canonical direct-HTTP contract, the Human Owner separately replied `授权` for one direct-HTTP probe and specified that Caphub must use model `k3-256k`.
 
 ## Safety envelope
 
@@ -12,6 +12,7 @@
 - Kimi ran with an explicit no-tools agent. Its OAuth/config material was copied into a canonical `0700` temporary Kimi Home; all generated session/log/update data stayed there.
 - The exact temporary Kimi Home was inspected and removed after the probe. The default Kimi Home was not the session write target.
 - Kimi API-key mode used the documented versioned root `https://api.kimi.com/coding/v1`, derived from the Human-supplied base URL, and mapped the existing `KIMI_CODE_API_KEY` into an in-memory provider only. No persistent provider configuration was changed.
+- The direct-HTTP probe used an instrumented `fetch` boundary that allowed only one `POST` to `/coding/v1/chat/completions`, blocked any second network attempt, set `maxRetries: 0`, registered no tools, and emitted metadata only.
 
 ## MiniMax M3
 
@@ -74,12 +75,36 @@ This proves the local-login path can return a schema-valid no-tool result from a
 
 This proves the existing `KIMI_CODE_API_KEY` is accepted by a Kimi Code CLI in-memory API-key provider at the Human-supplied Kimi Coding endpoint and can return a schema-valid no-tool result from an isolated temporary profile. The key value and raw response were not logged. It does not prove the canonical server-side direct-HTTP JSON Schema Structured Output adapter required by spec §9.3. This single probe does not authorize an additional direct-HTTP probe, other provider requests, or production use.
 
+## Kimi API-key direct-HTTP structured output
+
+**Provider/model:** server-side OpenAI-compatible chat-completions adapter, `https://api.kimi.com/coding/v1`, Human-specified `k3-256k`.
+**Request:** one `generateText({ output: Output.object({ schema }), maxRetries: 0 })` call with no tools and a 64-token output ceiling.
+**Result:** FAIL — endpoint and credential were accepted, but the SDK produced no schema-valid final object.
+
+```json
+{
+  "status": "failed",
+  "model": "k3-256k",
+  "mode": "direct_http",
+  "endpoint_path": "/coding/v1/chat/completions",
+  "request_count": 1,
+  "http_status": 200,
+  "content_type": "application/json",
+  "authorization_present": true,
+  "failure_class": "transport_or_validation",
+  "error_type": "AI_NoOutputGeneratedError"
+}
+```
+
+This proves that the key, endpoint, and `k3-256k` model identifier are accepted at the direct HTTP boundary. It does not prove JSON Schema Structured Output compatibility: the single response did not yield a schema-valid final object. No raw response, reasoning, prompt body, or credential was logged, and no retry was attempted. Diagnosing or changing the live request contract requires a separately authorized future provider call; fixture-driven implementation may continue without one.
+
 ## Gate disposition
 
 - MiniMax image + strict JSON compatibility: PASS.
 - Kimi local-login no-tool compatibility: PASS.
 - Kimi API-key credential/endpoint compatibility through Kimi Code CLI: PASS.
-- Canonical direct-HTTP Kimi API-key JSON Schema compatibility: NOT RUN / NOT PROVEN.
-- P2-A provider compatibility preflight: PARTIAL. The implementation plan may be drafted and fixture implementation may proceed, but the canonical API-key path cannot be marked live-compatible or close P2-A until one separately authorized direct-HTTP structured-output probe passes.
+- Direct-HTTP Kimi API-key endpoint, credential, and `k3-256k` model acceptance: PASS.
+- Canonical direct-HTTP Kimi API-key JSON Schema compatibility: FAIL / NOT PROVEN (`HTTP 200`, `AI_NoOutputGeneratedError`).
+- P2-A provider compatibility preflight: PARTIAL. The implementation plan and fixture implementation may proceed, but the canonical API-key path cannot be marked live-compatible or close P2-A until a future separately authorized direct-HTTP structured-output probe passes after fixture-driven contract diagnosis.
 
 No production configuration, Caphub enablement, service restart, deployment, publication, push, merge, tag, release, or data deletion occurred. Only the temporary credential/session copy created for this probe was removed after verification.

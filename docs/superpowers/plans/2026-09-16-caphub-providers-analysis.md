@@ -28,7 +28,7 @@
 
 ## Remaining P2-A proof
 
-The completed Kimi API-key probe used Kimi Code CLI's in-memory provider. It proved the credential and Kimi Coding endpoint but did not prove spec §9.3's canonical server-side direct-HTTP JSON Schema transport. Tasks 1–6 may implement and fixture-test that adapter, but P2-A remains partial and Task 10 cannot claim live API-mode compatibility until the Human Owner separately authorizes one direct-HTTP `Output.object` probe and it passes without retry.
+The initial Kimi API-key probe used Kimi Code CLI's in-memory provider. A subsequently authorized single direct-HTTP `Output.object` probe used the Human-specified `k3-256k` model and reached `/coding/v1/chat/completions` once with `HTTP 200`, but ended in `AI_NoOutputGeneratedError` without a schema-valid final object. No retry was attempted. Tasks 1–6 may implement and fixture-test the adapter, but P2-A remains partial and Task 10 cannot claim live API-mode compatibility until fixture-driven contract diagnosis is complete and a future separately authorized direct-HTTP probe passes.
 
 ## Proposed P2-B bounded policy
 
@@ -473,7 +473,7 @@ Use `createOpenAI` with the fixed `https://api.kimi.com/coding/v1` base and `gen
 
 ```ts
 const result = await generateText({
-  model: provider("kimi-for-coding"),
+  model: provider.chat("k3-256k"),
   output: Output.object({ schema }),
   prompt,
   maxOutputTokens,
