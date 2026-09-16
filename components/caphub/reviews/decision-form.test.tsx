@@ -78,6 +78,41 @@ describe("DecisionForm", () => {
     expect(screen.getAllByText(DIGEST)).toHaveLength(2);
   });
 
+  it("renders an approved-unconsumed revoke form with exact phrase and mandatory rationale", () => {
+    const approval = { id: `dec_${"e".repeat(32)}`, action: "approve", disposition: "build", rationale: "", actor: "human:owner", recordedAt: "2026-09-16T13:00:00.000Z", revokesDecisionId: null } as const;
+    render(<DecisionForm detail={reviewDetail({
+      request: { ...reviewDetail().request, state: "APPROVED", lockVersion: 2 },
+      decision: approval,
+      authority: { state: "unconsumed", consumedBy: null, revocable: true }
+    })} />);
+    expect(screen.getByText("REVOKE CANDIDATE 22222222")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Rationale \(required\)/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Revoke approval/i })).toBeDisabled();
+  });
+
+  it("approves a non-Candidate review without sending a Candidate disposition", async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      decision: { id: `dec_${"d".repeat(32)}`, action: "approve" },
+      consequence: "No release or build was created."
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    const base = reviewDetail();
+    render(<DecisionForm detail={reviewDetail({ request: {
+      ...base.request,
+      reviewKind: "build",
+      subjectKind: "build_proposal",
+      subjectId: `bld_${"2".repeat(32)}`,
+      approveConfirmation: "APPROVE BUILD 22222222",
+      rejectConfirmation: "REJECT BUILD 22222222"
+    } })} />);
+    expect(screen.queryByText(/Approval disposition/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Typed confirmation/i), { target: { value: "APPROVE BUILD 22222222" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve this version/i }));
+    await screen.findByRole("heading", { name: "Decision recorded" });
+    const body = JSON.parse(String((fetch.mock.calls[0]?.[1] as RequestInit).body));
+    expect(body).not.toHaveProperty("disposition");
+  });
+
   it("renders consumed, rejected, revoked, and superseded states without unsafe controls", () => {
     const approval = { id: `dec_${"e".repeat(32)}`, action: "approve", disposition: "build", rationale: "", actor: "human:owner", recordedAt: "2026-09-16T13:00:00.000Z", revokesDecisionId: null } as const;
     const { rerender } = render(<DecisionForm detail={reviewDetail({

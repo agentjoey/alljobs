@@ -27,6 +27,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
   const storedDecision = detail.decision;
   const revocable = storedDecision?.action === "approve" && detail.authority?.revocable === true;
   const activeAction: DecisionAction = revocable ? "revoke" : action;
+  const candidateApproval = activeAction === "approve" && detail.request.reviewKind === "candidate";
   const expectedConfirmation = activeAction === "approve"
     ? detail.request.approveConfirmation
     : activeAction === "reject"
@@ -56,7 +57,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
       action: activeAction,
       confirmation,
       rationale,
-      ...(activeAction === "approve" ? { disposition } : {}),
+      ...(candidateApproval ? { disposition } : {}),
       ...(activeAction === "revoke" && storedDecision ? { original_approval_decision_id: storedDecision.id } : {})
     };
     const fingerprint = JSON.stringify(intent);
@@ -128,7 +129,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
           <button type="button" disabled={refreshRequired} aria-pressed={action === "approve"} onClick={() => { setAction("approve"); setConfirmation(""); }}>Approve</button>
           <button type="button" disabled={refreshRequired} aria-pressed={action === "reject"} onClick={() => { setAction("reject"); setConfirmation(""); }}>Reject permanently</button>
         </div>}
-        {activeAction === "approve" && <fieldset className="registry-choice-grid">
+        {candidateApproval && <fieldset className="registry-choice-grid">
           <legend>Approval disposition</legend>
           {DISPOSITIONS.map((item) => <button key={item} type="button" disabled={refreshRequired} aria-pressed={disposition === item} onClick={() => setDisposition(item)}>{item}</button>)}
         </fieldset>}
@@ -139,7 +140,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
         <p className="registry-confirm-copy" id="review-confirmation-copy"><code>{expectedConfirmation}</code></p>
         {error && <div className="registry-decision-error" role="alert" tabIndex={-1}>{error}</div>}
         {refreshRequired && <button className="registry-refresh" type="button" onClick={() => globalThis.location.reload()}>Refresh this request</button>}
-        <button className="registry-submit" type="submit" disabled={!valid}>{submitting ? "Recording exact decision…" : activeAction === "approve" ? `Approve ${disposition}` : activeAction === "reject" ? "Reject this version" : "Revoke approval"}</button>
+        <button className="registry-submit" type="submit" disabled={!valid}>{submitting ? "Recording exact decision…" : activeAction === "approve" ? candidateApproval ? `Approve ${disposition}` : "Approve this version" : activeAction === "reject" ? "Reject this version" : "Revoke approval"}</button>
       </form>}
       <p className="registry-safety-line"><strong>Append-only.</strong> Reject is permanent. Approval is revocable only before a later phase consumes it.</p>
     </aside>

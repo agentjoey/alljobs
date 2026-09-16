@@ -249,6 +249,10 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
     const approved = await seedReviewCandidate(pool, fixture, "screens-approved");
     await openReview(page, approved);
     const approvedDecision = await approve(page, approved);
+    await openReview(page, approved);
+    await expect(page.getByRole("button", { name: /Revoke approval/i })).toBeVisible();
+    await expect(page.getByText(`REVOKE CANDIDATE ${approved.candidateId.slice(5, 13)}`)).toBeVisible();
+    await expect(page.getByLabel(/Rationale \(required\)/i)).toBeVisible();
     await shot(page, "approved-unconsumed", 1440);
     await shot(page, "approved-unconsumed", 390);
     await new PostgresReviewStore(pool).consumeDecision(approvedDecision, `bld_${createHash("sha256").update("screens-consumer").digest("hex").slice(0, 32)}`);

@@ -89,7 +89,16 @@ export function reviewQueue(): ReviewQueueDto {
       waitingAgeHours: 30,
       waitingAgeBand: "aging"
     }],
-    nextCursor: null
+    nextCursor: null,
+    appliedFilters: {
+      reviewKind: null,
+      state: null,
+      valueBand: null,
+      riskBand: null,
+      waitingAgeBand: null,
+      cursor: null
+    },
+    pageSize: 25
   };
 }
 

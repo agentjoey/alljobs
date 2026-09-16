@@ -18,7 +18,10 @@ const reviewQueueInputSchema = z.object({
   cursor: reviewRequestIdSchema.nullable().default(null),
   reviewKind: z.enum(["candidate", "build", "implementation", "release", "update"]).nullable().default(null),
   state: z.enum(["WAITING_FOR_REVIEW", "APPROVED", "REJECTED", "REVOKED", "SUPERSEDED"])
-    .nullable().default(null)
+    .nullable().default(null),
+  valueBand: z.enum(["high", "medium", "low", "unknown"]).nullable().default(null),
+  riskBand: z.enum(["high", "medium", "low", "unknown"]).nullable().default(null),
+  waitingAgeBand: z.enum(["fresh", "aging", "overdue"]).nullable().default(null)
 }).strict();
 
 export type ReviewQueueInput = z.input<typeof reviewQueueInputSchema>;
@@ -314,12 +317,33 @@ export function createRegistryQueries(pool: Pool) {
             ON packet.record_id = proposed.from_node_id AND packet.version = proposed.from_version
           WHERE ($1::text IS NULL OR q.state = $1)
             AND ($2::text IS NULL OR q.review_kind = $2)
-            AND ($3::text IS NULL OR (q.created_at, q.request_id) > (
-              SELECT created_at, request_id FROM caphub.review_requests WHERE request_id = $3
+            AND ($3::text IS NULL OR CASE $3
+              WHEN 'high' THEN NULLIF(packet.payload #>> '{dimensions,capability_value,score}', '')::int >= 4
+              WHEN 'medium' THEN NULLIF(packet.payload #>> '{dimensions,capability_value,score}', '')::int BETWEEN 2 AND 3
+              WHEN 'low' THEN NULLIF(packet.payload #>> '{dimensions,capability_value,score}', '')::int BETWEEN 0 AND 1
+              WHEN 'unknown' THEN packet.payload #>> '{dimensions,capability_value,score}' IS NULL
+              ELSE FALSE END)
+            AND ($4::text IS NULL OR CASE $4
+              WHEN 'high' THEN NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int >= 4
+              WHEN 'medium' THEN NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int BETWEEN 2 AND 3
+              WHEN 'low' THEN NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int BETWEEN 0 AND 1
+              WHEN 'unknown' THEN packet.payload #>> '{dimensions,security_risk,score}' IS NULL
+              ELSE FALSE END)
+            AND ($5::text IS NULL OR CASE $5
+              WHEN 'fresh' THEN CURRENT_TIMESTAMP - q.created_at <= INTERVAL '24 hours'
+              WHEN 'aging' THEN CURRENT_TIMESTAMP - q.created_at > INTERVAL '24 hours'
+                AND CURRENT_TIMESTAMP - q.created_at <= INTERVAL '7 days'
+              WHEN 'overdue' THEN CURRENT_TIMESTAMP - q.created_at > INTERVAL '7 days'
+              ELSE FALSE END)
+            AND ($6::text IS NULL OR (q.created_at, q.request_id) > (
+              SELECT created_at, request_id FROM caphub.review_requests WHERE request_id = $6
             ))
-          ORDER BY q.created_at, q.request_id
-          LIMIT $4
-        `, [parsed.data.state, parsed.data.reviewKind, parsed.data.cursor, parsed.data.limit]);
+          ORDER BY q.created_at,
+            NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int DESC NULLS LAST,
+            q.request_id
+          LIMIT $7
+        `, [parsed.data.state, parsed.data.reviewKind, parsed.data.valueBand,
+          parsed.data.riskBand, parsed.data.waitingAgeBand, parsed.data.cursor, parsed.data.limit]);
         const items = result.rows.map((row) => {
           const packet = packetDto(row.packet_payload);
           const waitingAgeHours = Number(row.waiting_age_hours ?? 0);
@@ -341,7 +365,16 @@ export function createRegistryQueries(pool: Pool) {
         return {
           kind: "ready" as const,
           items,
-          nextCursor: items.length === parsed.data.limit ? items.at(-1)!.request.id : null
+          nextCursor: items.length === parsed.data.limit ? items.at(-1)!.request.id : null,
+          appliedFilters: {
+            reviewKind: parsed.data.reviewKind,
+            state: parsed.data.state,
+            valueBand: parsed.data.valueBand,
+            riskBand: parsed.data.riskBand,
+            waitingAgeBand: parsed.data.waitingAgeBand,
+            cursor: parsed.data.cursor
+          },
+          pageSize: parsed.data.limit
         };
       } catch (error) {
         if (error instanceof RegistryReadError) throw error;

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ReviewCenter } from "./review-center";
 import { reviewDetail, reviewQueue } from "./test-fixtures";
@@ -31,24 +31,27 @@ describe("Review Center state matrix", () => {
   });
 
   it("filters by kind, state, value, risk, and waiting age while naming every selection", () => {
-    render(<ReviewCenter initialView={{ state: "ready", queue: reviewQueue(), detail: reviewDetail() }} />);
+    const queue = reviewQueue();
+    queue.nextCursor = `rev_${"9".repeat(32)}`;
+    render(<ReviewCenter initialView={{ state: "ready", queue, detail: reviewDetail() }} />);
     expect(screen.getByLabelText(/Kind/i)).toHaveValue("all");
     expect(screen.getByLabelText(/State/i)).toHaveValue("all");
     expect(screen.getByLabelText(/^Value$/i)).toHaveValue("all");
     expect(screen.getByLabelText(/^Risk$/i)).toHaveValue("all");
     expect(screen.getByLabelText(/Waiting age/i)).toHaveValue("all");
-    fireEvent.change(screen.getByLabelText(/^Risk$/i), { target: { value: "high" } });
-    expect(screen.getByText(/No reviews match these filters/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Risk$/i)).toHaveValue("high");
+    expect(screen.getByRole("button", { name: /Apply filters/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Next 25 reviews/i })).toHaveAttribute("href", expect.stringContaining("cursor=rev_"));
   });
 
   it("distinguishes global empty from filtered empty", () => {
     const empty = reviewQueue();
     empty.items = [];
-    const { rerender } = render(<ReviewCenter initialView={{ state: "ready", queue: empty, detail: { kind: "not_found" } }} />);
+    const { unmount } = render(<ReviewCenter initialView={{ state: "ready", queue: empty, detail: { kind: "not_found" } }} />);
     expect(screen.getByText(/No review requests exist/i)).toBeInTheDocument();
-    rerender(<ReviewCenter initialView={{ state: "ready", queue: reviewQueue(), detail: reviewDetail() }} />);
-    fireEvent.change(screen.getByLabelText(/Kind/i), { target: { value: "release" } });
+    unmount();
+    empty.appliedFilters.reviewKind = "release";
+    render(<ReviewCenter initialView={{ state: "ready", queue: empty, detail: { kind: "not_found" } }} />);
     expect(screen.getByText(/No reviews match these filters/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Kind/i)).toHaveValue("release");
   });
 });

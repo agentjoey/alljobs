@@ -108,6 +108,21 @@ describe("Registry read DTOs", () => {
     });
   });
 
+  it("applies value, risk, waiting-age, kind, and state before the 25-row page limit", async () => {
+    const pool = poolWith([]);
+    const result = await createRegistryQueries(pool).getReviewQueue({
+      reviewKind: "build",
+      state: "APPROVED",
+      valueBand: "high",
+      riskBand: "medium",
+      waitingAgeBand: "aging"
+    });
+    expect(result.items).toEqual([]);
+    expect(vi.mocked(pool.query).mock.calls[0]?.[1]).toEqual([
+      "APPROVED", "build", "high", "medium", "aging", null, 25
+    ]);
+  });
+
   it("projects an explicit serializable review dossier with a first-version Diff", async () => {
     const pool = poolWith([queueRow()], []);
     const result = await createRegistryQueries(pool).getReviewDetail(REQUEST_ID);
