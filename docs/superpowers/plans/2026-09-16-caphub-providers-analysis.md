@@ -171,7 +171,7 @@ git commit -m "feat(caphub): bound P2 analysis configuration"
 - Consumes: `CaptureId`, `ObjectRef`, and strict Zod conventions from P1.
 - Produces: `PreprocessResult`, `ExtractionResult`, `ResearchDossier`, `CapabilityAssessment`, `CriticReview`, `ReviewPacket`, `AnalysisJob`, `StageArtifact`, and `ModelCallAuditEvent`.
 
-- [ ] **Step 1: Write failing schema tests for every stage**
+- [x] **Step 1: Write failing schema tests for every stage**
 
 Create one valid fixture per schema and explicit rejection tests for unknown keys, missing evidence citations, unsupported schema versions, out-of-range 0–5 dimensions, confirmed identities without A/B evidence, preprocessing images without sharpness/black-border/OCR-usability results, region labels outside `platform_ui | subtitle | comment | body | unknown`, and packets that omit claims, alternatives, platform previews, or unresolved questions.
 
@@ -187,13 +187,13 @@ expect(() => capabilityAssessmentSchema.parse({
 })).toThrow();
 ```
 
-- [ ] **Step 2: Run schema tests and verify RED**
+- [x] **Step 2: Run schema tests and verify RED**
 
 Run: `npm test -- lib/caphub/analysis/schemas.test.ts lib/caphub/analysis/digest.test.ts`
 
 Expected: FAIL with missing schema/digest modules.
 
-- [ ] **Step 3: Implement strict schemas and canonical digests**
+- [x] **Step 3: Implement strict schemas and canonical digests**
 
 Use discriminated unions for identity and terminal job states:
 
@@ -212,18 +212,20 @@ export const contentRegionKindSchema = z.enum([
 
 Canonical JSON must sort object keys recursively before hashing so identical stage inputs produce identical SHA-256 digests.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `npm test -- lib/caphub/analysis/schemas.test.ts lib/caphub/analysis/digest.test.ts`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/caphub/analysis/schemas.ts lib/caphub/analysis/types.ts lib/caphub/analysis/schemas.test.ts lib/caphub/analysis/digest.ts lib/caphub/analysis/digest.test.ts
 git commit -m "feat(caphub): define P2 analysis contracts"
 ```
+
+**Evidence (2026-09-16):** commit `de76318`; RED failed because schema and digest modules were absent; GREEN passed 2 focused files / 14 tests; `npm run typecheck` and focused ESLint passed with 0 errors. The contracts cover strict versioned stages, A/B-backed confirmed identity, ambiguity, cited dimensions/alternatives/findings, review-only packets, discriminated job/audit states, content-addressed stage artifacts, and recursively canonical SHA-256 input digests.
 
 ### Task 3: Implement deterministic media preprocessing
 
