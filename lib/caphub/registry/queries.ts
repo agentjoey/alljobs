@@ -335,8 +335,23 @@ export function createRegistryQueries(pool: Pool) {
                 AND CURRENT_TIMESTAMP - q.created_at <= INTERVAL '7 days'
               WHEN 'overdue' THEN CURRENT_TIMESTAMP - q.created_at > INTERVAL '7 days'
               ELSE FALSE END)
-            AND ($6::text IS NULL OR (q.created_at, q.request_id) > (
-              SELECT created_at, request_id FROM caphub.review_requests WHERE request_id = $6
+            AND ($6::text IS NULL OR (
+              q.created_at,
+              -COALESCE(NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int, -1),
+              q.request_id
+            ) > (
+              SELECT cursor_q.created_at,
+                -COALESCE(NULLIF(cursor_packet.payload #>> '{dimensions,security_risk,score}', '')::int, -1),
+                cursor_q.request_id
+              FROM caphub.review_requests cursor_q
+              LEFT JOIN caphub.registry_lineage cursor_proposed
+                ON cursor_proposed.to_node_id = cursor_q.subject_id
+               AND cursor_proposed.to_version = cursor_q.subject_version
+               AND cursor_proposed.relationship = 'proposes'
+              LEFT JOIN caphub.registry_versions cursor_packet
+                ON cursor_packet.record_id = cursor_proposed.from_node_id
+               AND cursor_packet.version = cursor_proposed.from_version
+              WHERE cursor_q.request_id = $6
             ))
           ORDER BY q.created_at,
             NULLIF(packet.payload #>> '{dimensions,security_risk,score}', '')::int DESC NULLS LAST,
