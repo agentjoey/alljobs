@@ -716,7 +716,7 @@ git commit -m "feat(caphub): persist resumable analysis jobs"
 - Consumes: Capture store/object store, disabled analysis config, provider factories, workflow stores, and abort signal.
 - Produces: `createAnalysisService(dependencies).start(captureId)` and one disabled-by-default local runner command.
 
-- [ ] **Step 1: Write failing application and BDD tests**
+- [x] **Step 1: Write failing application and BDD tests**
 
 Drive the real Capture record/object → preprocessor → fixture providers → persisted stages → ReviewPacket path. Include hostile OCR text asking for Shell/Git/file writes, invalid-first/valid-correction output, identity ambiguity, conditional critic execution, crash/resume, duplicate start, disabled configuration, direct API structured-output transport, provider process attempts to read protected locations or write outside the temporary root, nested execution, direct egress denial, proxy target rejection, and source-fetch DNS rebinding/peer mismatch.
 
@@ -730,17 +730,17 @@ expect(securityProbe.directEgress).toBe(0);
 expect(await service.start(capture.id)).toEqual(await service.start(capture.id));
 ```
 
-- [ ] **Step 2: Run the integrated behavior tests and verify RED**
+- [x] **Step 2: Run the integrated behavior tests and verify RED**
 
 Run: `npm test -- lib/caphub/service/analyze.test.ts lib/caphub/service/analyze.behavior.test.ts scripts/caphub-analyze.test.ts`
 
 Expected: FAIL because the application service and runner do not exist.
 
-- [ ] **Step 3: Implement the disabled-by-default service and runner**
+- [x] **Step 3: Implement the disabled-by-default service and runner**
 
 The service rejects when `caphub.enabled` or `caphub.analysis.enabled` is false, constructs only server-side dependencies, and returns job/packet identifiers rather than raw provider output. The script accepts one validated Capture ID and never accepts arbitrary paths, prompts, provider URLs, or secret values.
 
-- [ ] **Step 4: Verify GREEN with focused and full gates**
+- [x] **Step 4: Verify GREEN with focused and full gates**
 
 Run: `npm test -- lib/caphub/service/analyze.test.ts lib/caphub/service/analyze.behavior.test.ts scripts/caphub-analyze.test.ts`
 
@@ -754,17 +754,17 @@ Run: `npm run build`
 
 Expected: no failing tests, no type errors, no lint errors, and a successful production build. Existing lint warnings must be recorded separately and may not increase due to P2 files.
 
-- [ ] **Step 5: Run the focused independent P2-C review and verification**
+- [x] **Step 5: Run the focused independent P2-C review and verification**
 
 The independent reviewer inspects only P2 files plus directly modified P1/config files and verifies the checklist in `.agent/caphub/p2-threat-model.md`. One review pass is required; any fix receives one focused re-review of the changed finding scope, not another global review.
 
 Expected findings threshold: zero blocker/high findings; all medium findings resolved or explicitly accepted by the Human Owner.
 
-- [ ] **Step 6: Record evidence and update planning state**
+- [x] **Step 6: Record evidence and update planning state**
 
 `.agent/caphub/p2-verification.md` must record exact commit, test counts, typecheck/lint/build results, security BDD cases, sandbox evidence, review verdict, verification verdict, and the fact that no extra real provider request or production enablement occurred. Update the roadmap, handoff, and Linear `AGE-251` with the same commit-bound evidence.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/caphub/service/analyze.ts lib/caphub/service/analyze.test.ts lib/caphub/service/analyze.behavior.test.ts scripts/caphub-analyze.ts scripts/caphub-analyze.test.ts package.json docs/caphub-foundation.md .agent/caphub/p2-threat-model.md .agent/caphub/p2-verification.md .agent/frontend-design/caphub-foundation/handoff.md docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md
@@ -773,13 +773,15 @@ git commit -m "feat(caphub): complete P2 analysis pipeline"
 
 ## Plan self-review checklist
 
-- [ ] Every P2 roadmap deliverable maps to Tasks 2–10.
-- [ ] MiniMax, direct-HTTP Kimi API-key mode, and sandboxed Kimi local-login mode have fixture-driven provider boundary tests; no test silently calls a real provider.
-- [ ] OCR, sharpness, black-border, OCR usability, content regions, barcode, dedupe, privacy suggestions, claims, evidence, identity ambiguity, overlap/gaps, alternatives, dimensions, platform previews, critic triggers, and ReviewPacket are each asserted by a named test.
-- [ ] No task grants a model Shell, Git, filesystem mutation, install, deploy, publish, code-build, or delegation capability.
-- [ ] Provider attempts are bounded to one initial request plus one schema correction, with transport retries disabled.
-- [ ] Source fetches pin vetted public addresses into the actual TLS connection and reject rebinding/peer mismatch on every redirect.
-- [ ] The local-login sandbox denies protected reads, outside writes, nested execution, and direct egress; only a fixed-target loopback proxy is reachable.
-- [ ] Interrupted provider calls cannot be invisibly repeated.
-- [ ] P2 has no approval UI, Registry release, Obsidian projection, Builder, deployment, or production enablement.
-- [ ] Exact-file staging preserves Human-owned `AGENTS.md` and unrelated work.
+- [x] Every P2 roadmap deliverable maps to Tasks 2–10.
+- [x] MiniMax, direct-HTTP Kimi API-key mode, and sandboxed Kimi local-login mode have fixture-driven provider boundary tests; no test silently calls a real provider.
+- [x] OCR, sharpness, black-border, OCR usability, content regions, barcode, dedupe, privacy suggestions, claims, evidence, identity ambiguity, overlap/gaps, alternatives, dimensions, platform previews, critic triggers, and ReviewPacket are each asserted by a named test.
+- [x] No task grants a model Shell, Git, filesystem mutation, install, deploy, publish, code-build, or delegation capability.
+- [x] Provider attempts are bounded to one initial request plus one schema correction, with transport retries disabled.
+- [x] Source fetches pin vetted public addresses into the actual TLS connection and reject rebinding/peer mismatch on every redirect.
+- [x] The local-login sandbox denies protected reads, outside writes, nested execution, and direct egress; only a fixed-target loopback proxy is reachable.
+- [x] Interrupted provider calls cannot be invisibly repeated.
+- [x] P2 has no approval UI, Registry release, Obsidian projection, Builder, deployment, or production enablement.
+- [x] Exact-file staging preserves Human-owned `AGENTS.md` and unrelated work.
+
+**Evidence (2026-09-16):** initial integration committed as `8e85cff`, route error classification as `4cea8aa`, focused verification fixes as `87e4360`, CLI server-mode startup as `c733c8e`, and deterministic deadline testing as `b705d52`. RED tests reproduced non-cancelling OCR deadlines, forged research Claim IDs, the inert/plain-`tsx` command entrypoint, and disconnected BDD evidence. GREEN passed 8 focused files / 26 tests plus the CLI package regression, including real macOS Seatbelt, proxy-target denial, fixed Kimi API transport, and pinned-source peer mismatch. Final phase gate passed 105 files / 1033 tests, typecheck, focused lint, full lint with 66 pre-existing warnings and zero errors, and a webpack production build. Turbopack could not bind its sandbox-only CSS worker port; the source-equivalent webpack production build completed successfully. No real provider/source request or production action occurred.

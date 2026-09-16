@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–9 已完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
+- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–10 实现与 fixture 验证已完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 live structured output 未通过
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -154,6 +154,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 **2026-09-16 P2 Task 9 evidence：**可恢复 analysis filesystem/state machine 已在 `373bb9a` 完成。严格 job/artifact path、0700/0600、atomic job replacement、immutable content-addressed artifact、deterministic append-only audit、固定阶段顺序、critic skip、每个 artifact 边界后的 restart 与同 job 并发串行化均由真实临时文件系统覆盖；发现 unmatched start 或 terminal-without-artifact 时固定进入 `HUMAN_REVIEW_REQUIRED`，不重复 provider 调用。RED→GREEN 加 P1 storage regression 为 5 files / 33 tests；typecheck 与 focused lint PASS；未使用生产状态或真实 provider。
 
+**2026-09-16 P2 Task 10 evidence：**Capture-to-ReviewPacket 服务与 disabled-by-default local runner 由 `8e85cff`、`4cea8aa`、`87e4360`、`c733c8e` 和 `b705d52` 完成。服务固定执行 preprocess → extraction → research → assessment → critic? → review_packet，命令只接受一个 Capture ID，并以显式 server-only 条件加载固定 Control Host composition。修复轮补齐 OCR deadline abort/worker termination、ResearchDossier Claim 闭包、真实 Kimi API transport/source-policy BDD、真实 Seatbelt/proxy/peer evidence 与 CLI package 入口。最终门禁为 105 files / 1033 tests、typecheck PASS、lint 0 errors / 66 pre-existing warnings、webpack production build PASS；Turbopack 仅因执行沙箱不允许 CSS worker 绑定临时端口而失败。未发生真实 provider/source 请求、配置启用、服务重启、部署、push、merge、tag 或 release。P2-A 的 live structured-output compatibility 仍未证明，继续作为生产启用前的显式边界。
+
 **产物**
 
 - `MiniMaxProvider`、`KimiProvider` ports 与 capability probe。
@@ -164,9 +166,9 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 **人工门禁**
 
-- Gate P2-A：真实 provider request 需单独授权；fixture tests 不构成真实调用授权。
-- Gate P2-B：Human 批准 source/tool allowlist 与费用/并发预算。
-- Gate P2-C：独立权限验证证明 MiniMax 和 Kimi Research 无写入/Shell/Git/deploy 能力。
+- Gate P2-A：**PARTIAL**。限定 probe 证明 endpoint/auth/model，但 live direct-HTTP structured output 未证明；任何后续真实 provider request 仍需单独授权。
+- Gate P2-B：**IMPLEMENTATION BOUNDS ACCEPTED**。standing authorization 覆盖 threat-model 中的 fixture-only source/tool allowlist 与预算；live source origin、费用和生产流量仍未授权。
+- Gate P2-C：**PASS（2026-09-16）**。聚焦独立 Review/Verification 证明 MiniMax/Kimi Research 无写入、Shell、Git 或 deploy 能力；全部 medium finding 已修复并通过单次 scoped re-review。
 
 **验收条件**
 

@@ -1,6 +1,6 @@
 # Caphub P2 Worker Threat Model
 
-**Status:** Focused independent design review PASS; implementation verification pending P2-C
+**Status:** Focused independent design review PASS; focused P2-C Review and Verification PASS
 **Scope:** P2 deterministic preprocessing, MiniMax extraction/critic, Kimi research/assessment, host-side evidence access, durable workflow, and ReviewPacket composition
 **Out of scope:** approval UI, Registry release, Builder, Obsidian, deployment, publication, production enablement
 
@@ -93,19 +93,19 @@ These bounds are safe for fixture-only implementation under the standing develop
 
 ## P2-C independent verification checklist
 
-- [ ] MiniMax adapter registers no tools and cannot reach file/Shell/Git/deploy code.
-- [ ] Kimi agent file has `tools: []`; tool-call protocol events fail closed.
-- [ ] API-key mode is a direct server-side structured-output HTTP adapter and local-login mode is the only CLI adapter; both share one request/result contract.
-- [ ] Kimi child environment contains no unrelated credential variables.
-- [ ] Local OAuth/config projection rejects symlinks, unsafe ownership/modes, unknown fields, hooks, plugins, MCP, tools, services, custom headers, and alternate endpoints.
-- [ ] Real Seatbelt probes deny reads of repository/Git/default-Kimi/SSH/keychain/unrelated-user paths, writes outside the ephemeral root, and nested process execution after the approved Kimi runtime starts.
-- [ ] Real Seatbelt probes deny direct non-loopback egress; the loopback proxy rejects every target outside the fixed Kimi/Auth set.
-- [ ] Host source policy blocks unapproved origins, private addresses, DNS rebinding, peer mismatch, and redirect escapes while binding the vetted address to the actual TLS connection.
-- [ ] One schema correction is the only permitted second provider call.
-- [ ] Audit contains metadata/digests only, without reasoning, raw prompts, raw responses, or secrets.
-- [ ] Crash/resume does not duplicate artifacts or audit events and does not repeat an interrupted provider call.
-- [ ] ReviewPacket cannot approve, release, install, build, deploy, or publish.
-- [ ] No real provider call, production enablement, service restart, deployment, push, merge, tag, or release occurs during fixture verification.
+- [x] MiniMax adapter registers no tools and cannot reach file/Shell/Git/deploy code.
+- [x] Kimi agent file has `tools: []`; tool-call protocol events fail closed.
+- [x] API-key mode is a direct server-side structured-output HTTP adapter and local-login mode is the only CLI adapter; both share one request/result contract.
+- [x] Kimi child environment contains no unrelated credential variables.
+- [x] Local OAuth/config projection rejects symlinks, unsafe ownership/modes, unknown fields, hooks, plugins, MCP, tools, services, custom headers, and alternate endpoints.
+- [x] Real Seatbelt probes deny reads of repository/Git/default-Kimi/SSH/keychain/unrelated-user paths, writes outside the ephemeral root, and nested process execution after the approved Kimi runtime starts.
+- [x] Real Seatbelt probes deny direct non-loopback egress; the loopback proxy rejects every target outside the fixed Kimi/Auth set.
+- [x] Host source policy blocks unapproved origins, private addresses, DNS rebinding, peer mismatch, and redirect escapes while binding the vetted address to the actual TLS connection.
+- [x] One schema correction is the only permitted second provider call.
+- [x] Audit contains metadata/digests only, without reasoning, raw prompts, raw responses, or secrets.
+- [x] Crash/resume does not duplicate artifacts or audit events and does not repeat an interrupted provider call.
+- [x] ReviewPacket cannot approve, release, install, build, deploy, or publish.
+- [x] No real provider call, production enablement, service restart, deployment, push, merge, tag, or release occurs during fixture verification.
 
 ## Residual risks
 
@@ -114,3 +114,4 @@ These bounds are safe for fixture-only implementation under the standing develop
 - The 2026-09-16 read-only production dependency audit reported a direct critical advisory on existing `next@16.3.0` plus transitive findings through existing `shadcn`, `gray-matter`, and ESLint chains. None resolved through the five new Task 3 direct media/OCR dependencies. This is not authorization for an unplanned framework upgrade, but applicable runtime findings must be remediated and re-audited before any Caphub production enablement.
 - Live search remains disabled until an exact provider and approved source policy are configured and separately verified.
 - Successful P2-A probes prove provider compatibility only; they do not authorize production traffic or future provider requests.
+- Same-job serialization and filesystem writer coordination are process-local. The current deployment contract permits exactly one active Control Host writer; multi-process execution remains unsupported until a cross-process lock receives a separate design/security review.

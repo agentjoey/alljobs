@@ -1,13 +1,16 @@
 # Caphub P1 Foundation — Custody and Operations
 
-Caphub P1 is a disabled-by-default Web Capture intake. It accepts one supported
-image, stores immutable local evidence and strict metadata, records one audit
-event, and returns a `received` receipt with `human_review_required: true`.
-It does not interpret the image or advance it into a capability workflow.
+Caphub P1 is a disabled-by-default Web Capture intake. P2 adds a separately
+disabled analysis service that can turn one immutable Capture into a durable,
+review-only `ReviewPacket` through bounded preprocessing, provider analysis,
+approved-source research, assessment, optional critique, and a resumable
+filesystem workflow. Neither phase approves, installs, builds, publishes,
+deploys, or releases a capability.
 
-This guide describes the implemented P1 adapter and its operational boundary.
-The broader Caphub design remains future architecture unless a later plan and
-Human Gate approve it.
+This guide describes the implemented P1/P2 adapters and their operational
+boundary. P2 remains safe-off in production; code and fixture verification do
+not authorize provider traffic, configuration enablement, restart, deployment,
+or release.
 
 ## Configuration and request boundary
 
@@ -18,7 +21,12 @@ The optional Control Host `caphub` block is strict:
   "caphub": {
     "enabled": false,
     "allowedOrigins": ["https://alljobs.agentjoey.ai"],
-    "maxUploadBytes": 10485760
+    "maxUploadBytes": 10485760,
+    "analysis": {
+      "enabled": false,
+      "kimiMode": "api_key",
+      "sourceAllowedOrigins": []
+    }
   }
 }
 ```
@@ -30,6 +38,12 @@ The optional Control Host `caphub` block is strict:
 - `allowedOrigins` contains at most eight exact HTTPS origins. Paths, queries,
   credentials, fragments, public HTTP origins, and arbitrary filesystem roots
   are rejected.
+- `analysis.enabled` independently defaults to `false`; outer Caphub and
+  analysis must both be enabled before the service reads a Capture. Provider
+  endpoints/models are fixed, secrets are environment-variable references,
+  concurrency is one, and configured limits can only tighten compiled bounds.
+- Analysis source access remains disabled when `sourceAllowedOrigins` is empty.
+  Enabling analysis does not silently enable search or arbitrary URL fetch.
 - The browser POST requires an exact allowed `Origin`, `multipart/form-data`,
   and a decimal `Content-Length`. The request length is rejected before body
   parsing when it exceeds the configured image limit plus the fixed 32 KiB
@@ -69,10 +83,16 @@ resolved, must end in `/state/caphub`, and must not be a symlink alias.
 ├── records/
 │   ├── captures/
 │   │   └── <capture-id>.json
+│   ├── analysis-jobs/
+│   │   └── <job-id>.json
+│   ├── analysis-artifacts/
+│   │   └── <artifact-id>.json
 │   └── idempotency/
 │       └── <sha256-of-idempotency-key>.json
 ├── events/
-│   └── YYYY-MM.jsonl
+│   ├── YYYY-MM.jsonl
+│   └── model-calls/
+│       └── <job-id>.jsonl
 └── locks/
     └── <sha256-of-idempotency-key>.lock
 ```
@@ -87,7 +107,53 @@ does not materialize it. The current adapters serialize record creation by
 idempotency-index path and audit creation by monthly-event path with in-memory
 promise chains. This is process-local coordination for the single active
 Control Host process, not a cross-process lock. Multiple concurrent Caphub
-writer processes are unsupported.
+writer processes are unsupported. Operators must keep exactly one active
+Control Host writer; a future multi-process deployment requires a separately
+reviewed cross-process lock before enablement.
+
+## P2 analysis workflow
+
+`createAnalysisService(...).start(captureId)` accepts only a validated Capture
+ID and returns job/ReviewPacket artifact identifiers, never raw provider
+output. The fixed stage order is:
+
+```text
+preprocess -> extraction -> research -> assessment -> critic? -> review_packet
+```
+
+Jobs are atomically replaced, artifacts are immutable and content addressed,
+and model-call events have deterministic identifiers. Restarts recover durable
+artifacts without repeating their stages. A provider `started` event without a
+terminal event, or a terminal event without its committed artifact, routes to
+`HUMAN_REVIEW_REQUIRED` instead of repeating a possibly billable call.
+
+The provider boundary allows one initial structured call and at most one
+schema correction; transport retries are zero. MiniMax has no tools. Kimi API
+mode is direct server-side structured output with fixed model `k3-256k`;
+local-login mode is the only CLI path and runs inside the reviewed zero-tool
+Seatbelt and fixed-target loopback-proxy boundary. Research uses exact approved
+HTTPS origins with public-address pinning, TLS peer validation, redirect
+reauthorization, content limits, and an injected search port only.
+
+`npm run caphub:analyze -- <capture-id>` defines the strict local entrypoint.
+Its parser accepts no path, URL, prompt, provider, model, or secret argument.
+It then loads one fixed server-only Control Host composition: secure Capture
+and workflow stores, packaged OCR/barcode readers, fixed MiniMax and Kimi
+providers, and the exact-origin source gateway. The command remains safe-off
+unless both `caphub.enabled` and `caphub.analysis.enabled` are true; disabled
+configuration is rejected before provider secrets are read. API-key mode reads
+only the configured environment-variable names, while local-login mode uses
+the fixed Kimi executable/profile locations and reviewed sandbox boundary.
+
+OCR and whole-stage deadlines propagate an abort signal into the recognizer;
+the packaged Tesseract worker is terminated on abort. Research output is
+accepted only when `claim_checks` contains each extracted Claim exactly once
+and no foreign Claim IDs.
+
+Every `ReviewPacket` preserves immutable sources, OCR, Entities, Claims,
+Evidence, conflicts, alternatives, dimensions, model-contract versions, and
+unresolved questions. Platform previews are deterministic and non-executable;
+`human_review_required` is always true.
 
 ## Filesystem custody
 
@@ -270,10 +336,10 @@ consume approved Registry exports only; it must not read the P1 custody tree as
 an alternate source of truth. PostgreSQL and Obsidian are future
 adapter/integration boundaries, not installed or active P1 runtime features.
 
-## Explicit P1 negative capabilities
+## Explicit P1/P2 negative capabilities
 
-P1 has no Telegram intake, OCR or model analysis, external research, provider
-call, MiniMax or Kimi worker, candidate scoring, approval/review transition,
-publish or install action, code execution, Shell or Git access, capability
-deploy action, runtime routing, Obsidian integration, or Postgres runtime
-feature. A Capture stops at `received` and always requires Human review.
+P1 intake still stops at `received`. P2 adds analysis only; it has no Telegram
+intake, approval transition, publish or install action, Builder, code execution,
+Shell or Git access, capability deployment, runtime routing, Obsidian
+integration, or Postgres runtime feature. A ReviewPacket cannot cause an
+external write or advance itself beyond Human review.
