@@ -7,6 +7,7 @@ import {
   captureReceivedEventId,
   FilesystemCaptureAuditLog
 } from "@/lib/caphub/storage/audit-log";
+import { loadControlHostRegistryRuntime } from "@/lib/caphub/registry/runtime";
 import { createCapturePostRoute } from "./route-factory";
 
 export const runtime = "nodejs";
@@ -49,10 +50,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const root = resolved.caphubStateDir;
+    const registry = config.registry.enabled
+      ? await loadControlHostRegistryRuntime({ resolved })
+      : null;
     const service = createCaptureService({
-      store: new FilesystemCaptureStore(root),
-      objects: new LocalCaptureObjectStore(root),
-      audit: new FilesystemCaptureAuditLog(root),
+      store: registry?.captures ?? new FilesystemCaptureStore(root),
+      objects: registry?.objects ?? new LocalCaptureObjectStore(root),
+      audit: registry?.captureAudit ?? new FilesystemCaptureAuditLog(root),
       clock: () => new Date(),
       idFactory: () => `cap_${randomUUID().replaceAll("-", "")}`,
       eventIdFactory: captureReceivedEventId,

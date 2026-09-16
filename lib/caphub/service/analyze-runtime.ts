@@ -24,6 +24,7 @@ import {
   FilesystemStageArtifactStore
 } from "../workflow/filesystem";
 import { AnalysisServiceError, createAnalysisService, type AnalysisService } from "./analyze";
+import { loadControlHostRegistryRuntime } from "../registry/runtime";
 
 function requiredSecret(
   env: Readonly<Record<string, string | undefined>>,
@@ -88,6 +89,9 @@ export async function loadControlHostAnalysisService(options: {
   const root = resolved.caphubStateDir;
   if (!root) throw new Error("Resolved Caphub state directory is unavailable");
   const env = options.env ?? process.env;
+  const registry = caphub.registry.enabled
+    ? await loadControlHostRegistryRuntime({ resolved, env })
+    : null;
   const miniMax = new MiniMaxProvider({
     apiKey: requiredSecret(env, caphub.analysis.miniMaxSecretEnv)
   });
@@ -96,8 +100,8 @@ export async function loadControlHostAnalysisService(options: {
     secretEnv: caphub.analysis.kimiApiSecretEnv,
     env
   });
-  const captures = new FilesystemCaptureStore(root);
-  const objects = new LocalCaptureObjectStore(root);
+  const captures = registry?.captures ?? new FilesystemCaptureStore(root);
+  const objects = registry?.objects ?? new LocalCaptureObjectStore(root);
 
   return createAnalysisService({
     config: { caphubEnabled: caphub.enabled, analysisEnabled: caphub.analysis.enabled },
@@ -112,9 +116,9 @@ export async function loadControlHostAnalysisService(options: {
     assessmentProvider: kimi,
     criticProvider: miniMax,
     sourceGateway: () => createSourceGateway(caphub.analysis.sourceAllowedOrigins),
-    jobs: new FilesystemAnalysisJobStore(root),
-    artifacts: new FilesystemStageArtifactStore(root),
-    audits: new FilesystemModelCallAuditStore(root),
+    jobs: registry?.jobs ?? new FilesystemAnalysisJobStore(root),
+    artifacts: registry?.artifacts ?? new FilesystemStageArtifactStore(root),
+    audits: registry?.modelAudits ?? new FilesystemModelCallAuditStore(root),
     clock: () => new Date()
   });
 }
