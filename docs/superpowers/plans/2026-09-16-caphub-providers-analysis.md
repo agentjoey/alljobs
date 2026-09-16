@@ -452,7 +452,7 @@ git commit -m "feat(caphub): add bounded MiniMax analysis workers"
 - Consumes: schema-versioned research/assessment input, selected authentication mode, explicit secret value supplied by the server-only factory, validated local OAuth projection, 0700 temporary root, abort signal, and clock.
 - Produces: one `KimiProvider` contract with `research` and `assess`; both modes return identical provider-neutral metadata.
 
-- [ ] **Step 1: Write failing direct-HTTP and fake-process BDD tests**
+- [x] **Step 1: Write failing direct-HTTP and fake-process BDD tests**
 
 For API-key mode, inject a fake HTTPS transport and assert one direct OpenAI-compatible structured-output request uses `Output.object({ schema })`, `maxRetries: 0`, the fixed Kimi Coding `/v1` base, and no CLI process. For local-login mode, drive the real spawn/stream-json boundary by running a copied `fake-kimi.mjs` inside the temporary root through the host's real `/usr/bin/sandbox-exec`. Assert both modes produce the same provider-neutral result shape.
 
@@ -471,13 +471,13 @@ expect(sandboxProbe.deniedReads).toEqual([
 expect(sandboxProbe.directNetworkDenied).toBe(true);
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/providers/kimi.test.ts lib/caphub/providers/kimi-api.test.ts lib/caphub/providers/kimi-local.test.ts lib/caphub/providers/kimi-runner.test.ts lib/caphub/providers/kimi-egress-proxy.test.ts lib/caphub/providers/kimi-local-credentials.test.ts`
 
 Expected: FAIL because Kimi provider modules do not exist.
 
-- [ ] **Step 3: Implement direct API-key structured output**
+- [x] **Step 3: Implement direct API-key structured output**
 
 Use `createOpenAI` with the fixed `https://api.kimi.com/coding/v1` base and `generateText({ output: Output.object({ schema }), maxRetries: 0 })`. The adapter is server-only, accepts an injected transport for tests, registers no tools, enforces input/output/timeout/job budgets, and maps only closed safe error codes.
 
@@ -492,34 +492,36 @@ const result = await generateText({
 });
 ```
 
-- [ ] **Step 4: Implement the zero-tool profile and Seatbelt profile**
+- [x] **Step 4: Implement the zero-tool profile and Seatbelt profile**
 
 The agent file must contain `tools: []`, explicit deny entries for Bash/Shell/Write/Edit/Git/Agent/AgentSwarm, and instructions to return only the requested JSON. Generate a macOS Seatbelt profile that denies by default, permits only the exact Kimi runtime/system library reads plus the ephemeral root, permits writes only inside the exact temporary root, explicitly denies repository/Git/default-Kimi/SSH/keychain/unrelated-user reads, denies nested process execution, denies non-loopback network, and permits only the loopback proxy socket.
 
-- [ ] **Step 5: Implement the local-login egress proxy**
+- [x] **Step 5: Implement the local-login egress proxy**
 
 Bind an ephemeral proxy to `127.0.0.1`. Accept only `CONNECT` targets in the fixed set `api.kimi.com:443` and `auth.kimi.com:443`; resolve each target through the pinned public-address policy, connect only to the vetted address while preserving TLS SNI/certificate hostname checks, validate the connected peer address, enforce byte/time limits, strip proxy headers, and never log authorization headers or bodies. Point the sandboxed CLI at this proxy through an allowlisted proxy environment. The child cannot make a direct external connection.
 
-- [ ] **Step 6: Implement exact local-login credential projection**
+- [x] **Step 6: Implement exact local-login credential projection**
 
 Reject symlinked, non-owner, group/other-writable, oversized, or unknown source files. Parse the default Kimi configuration with a strict projection schema; accept only the fixed managed provider/model base URL plus its OAuth `storage`/`key` reference; copy only the referenced credential material into `0600` files; and generate a fresh temporary config containing no hooks, plugins, MCP servers, skills, tools, search/fetch services, custom headers, or alternate endpoints. Never copy arbitrary configuration text.
 
-- [ ] **Step 7: Implement bounded stream-json parsing**
+- [x] **Step 7: Implement bounded stream-json parsing**
 
 Accept only JSONL events, reject any tool-call event, find exactly one terminal string matching the requested schema, record byte/event counts, and never return thinking, raw stderr, raw prompts, credentials, or session logs.
 
-- [ ] **Step 8: Verify GREEN and sandbox/egress denial behavior**
+- [x] **Step 8: Verify GREEN and sandbox/egress denial behavior**
 
 Run: `npm test -- lib/caphub/providers/kimi.test.ts lib/caphub/providers/kimi-api.test.ts lib/caphub/providers/kimi-local.test.ts lib/caphub/providers/kimi-runner.test.ts lib/caphub/providers/kimi-egress-proxy.test.ts lib/caphub/providers/kimi-local-credentials.test.ts`
 
 Expected: direct API structured-output tests pass; local fixture-process tests prove protected reads, outside writes, nested execution, and direct egress are denied by the real macOS sandbox boundary; the loopback proxy proves fixed-target address pinning and peer validation.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add lib/caphub/providers/kimi.ts lib/caphub/providers/kimi.test.ts lib/caphub/providers/kimi-api.ts lib/caphub/providers/kimi-api.test.ts lib/caphub/providers/kimi-local.ts lib/caphub/providers/kimi-local.test.ts lib/caphub/providers/kimi-runner.ts lib/caphub/providers/kimi-runner.test.ts lib/caphub/providers/kimi-egress-proxy.ts lib/caphub/providers/kimi-egress-proxy.test.ts lib/caphub/providers/kimi-local-credentials.ts lib/caphub/providers/kimi-local-credentials.test.ts lib/caphub/providers/profiles/kimi-research.md lib/caphub/providers/fixtures
 git commit -m "feat(caphub): add sandboxed dual-mode Kimi provider"
 ```
+
+**Evidence (2026-09-16):** commit `f285d3e`; RED failed because all six Kimi provider modules were absent. GREEN passed 6 focused files / 19 tests, `npm run typecheck`, and focused ESLint. No live provider request occurred. API mode fixes `https://api.kimi.com/coding/v1` + `k3-256k`, uses `Output.object`, zero retries, bounded output, no tools, and an explicit server-only key. Local mode uses a copied executable/profile/strict OAuth projection inside one canonical `0700` root, allowlisted environment, Apple `system.sb` runtime policy plus exact executable/root reads and metadata-only traversal, protected-path content denies, write confinement, no process fork, loopback-only networking, a fixed-target CONNECT proxy with public-address/peer validation, bounded JSONL/stdout/stderr/deadline handling, process-group termination, and cleanup. Real `/usr/bin/sandbox-exec` fixtures proved repository/Git/default-Kimi/SSH/keychain/unrelated-file reads, outside writes, nested execution, direct egress, malformed/tool events, output floods, and timeouts fail closed while the loopback proxy remains reachable.
 
 ### Task 7: Resolve approved evidence and construct a ResearchDossier
 

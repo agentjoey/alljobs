@@ -146,6 +146,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 **2026-09-16 P2 Task 5 evidence：**无工具 MiniMax extraction/critic adapter 已在 `2980a7f` 完成。固定官方 endpoint/model 与 server-only key 边界保持不变；图片按 index 生成有序 file parts；prompt/input/schema version 与 strict JSON Schema 入模；hostile source 被转义并封装于单一 untrusted delimiter；`maxRetries: 0`、输出上限、abort signal 与无 tools 字段经 fixture 验证。RED→GREEN 为 4 focused/adjacent files / 12 tests；typecheck 与 focused lint PASS。
 
+**2026-09-16 P2 Task 6 evidence：**双模式 Kimi provider 已在 `f285d3e` 完成，API 模式固定 `https://api.kimi.com/coding/v1` 与 `k3-256k`，local-login 模式具备严格 OAuth 投影、zero-tool agent、真实 macOS Seatbelt、loopback-only fixed-target CONNECT proxy、JSONL/byte/deadline/process-group 边界与清理。真实 fixture 证明保护读取、外写、嵌套执行、直连、malformed/tool、flood/timeout 均 fail closed。RED→GREEN 为 6 focused files / 19 tests；typecheck 与 focused lint PASS；未调用任何真实 provider。
+
 **产物**
 
 - `MiniMaxProvider`、`KimiProvider` ports 与 capability probe。

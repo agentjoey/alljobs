@@ -48,7 +48,7 @@
 
 ## Outer sandbox
 
-The macOS Control Host launches only local-login Kimi through `/usr/bin/sandbox-exec`. The generated profile denies by default, permits only exact Kimi runtime/system-library reads plus the ephemeral root, permits writes only inside the exact ephemeral Kimi Home/cwd, denies repository/Git/default-Kimi/SSH/keychain/unrelated-user reads, denies nested process execution, and denies direct non-loopback network. The child reaches only a host loopback proxy; that proxy accepts the fixed Kimi/Auth HTTPS targets, pins vetted public addresses, validates peers, and never logs authorization headers or bodies. The sandbox profile, zero-tool agent, strict credential projection, and egress proxy are independent controls; failure of any control fails the run closed.
+The macOS Control Host launches only local-login Kimi through `/usr/bin/sandbox-exec`. The generated deny-default profile imports Apple's `system.sb` solely for platform runtime access, adds exact executable/ephemeral-root content reads plus metadata-only path traversal, permits writes only inside the exact ephemeral Kimi Home/cwd, denies repository/Git/default-Kimi/SSH/keychain/unrelated-user content reads, leaves process fork denied, and denies direct non-loopback network. The child reaches only a host loopback proxy; that proxy accepts the fixed Kimi/Auth HTTPS targets, pins vetted public addresses, validates peers, and never logs authorization headers or bodies. The sandbox profile, zero-tool agent, strict credential projection, and egress proxy are independent controls; failure of any control fails the run closed.
 
 Hooks are not a security boundary because Kimi hooks fail open on hook error. P2 does not rely on hooks for tool or URL enforcement.
 
