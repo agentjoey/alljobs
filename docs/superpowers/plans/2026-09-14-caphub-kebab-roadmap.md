@@ -144,6 +144,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 **2026-09-16 P2 Task 4 evidence：**provider-neutral structured execution 与 redacted audit 已在 `776c126` 完成。每阶段只允许一次初始调用和最多一次 schema 纠错；传输失败零重试；纠错输入只含 validation paths 与原始 input digest；deterministic IDs、输入 byte、共享 8-call、256,000-token 上限均由 fixture 边界覆盖。RED→GREEN 为 2 focused files / 17 tests；typecheck 与 focused lint PASS。
 
+**2026-09-16 P2 Task 5 evidence：**无工具 MiniMax extraction/critic adapter 已在 `2980a7f` 完成。固定官方 endpoint/model 与 server-only key 边界保持不变；图片按 index 生成有序 file parts；prompt/input/schema version 与 strict JSON Schema 入模；hostile source 被转义并封装于单一 untrusted delimiter；`maxRetries: 0`、输出上限、abort signal 与无 tools 字段经 fixture 验证。RED→GREEN 为 4 focused/adjacent files / 12 tests；typecheck 与 focused lint PASS。
+
 **产物**
 
 - `MiniMaxProvider`、`KimiProvider` ports 与 capability probe。

@@ -389,17 +389,17 @@ git commit -m "feat(caphub): bound structured provider execution"
 - Consumes: `PreprocessResult`, ordered normalized images, approved evidence, strict output schemas, and existing MiniMax Token Plan transport.
 - Produces: `MiniMaxProvider.extract(...)` and `MiniMaxProvider.critique(...)`; no tools field is ever present.
 
-- [ ] **Step 1: Write failing adapter and prompt-isolation tests**
+- [x] **Step 1: Write failing adapter and prompt-isolation tests**
 
 Inject a fake fetch/model transport and assert: ordered image `file` parts are used; prompt/input/schema versions are included; visible/OCR/inferred/unknown facts are separate; `maxRetries` is `0`; no `tools`, Shell, file, Git, or implementation instruction appears; hostile screenshot text remains inside `<untrusted_source>` data delimiters.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/providers/minimax.test.ts lib/caphub/providers/prompts.test.ts lib/assistant/minimax-token-plan-core.test.ts`
 
 Expected: FAIL because the P2 MiniMax adapter and prompt builders do not exist.
 
-- [ ] **Step 3: Implement the adapter**
+- [x] **Step 3: Implement the adapter**
 
 Reuse the fixed official Token Plan endpoint/model and expose a testable fetch injection in `createMiniMaxTokenPlanModel`. Call AI SDK generation with bounded output, abort signal, and no tools. Parse terminal text with the shared structured runner.
 
@@ -413,7 +413,7 @@ const result = generateText({
 });
 ```
 
-- [ ] **Step 4: Verify GREEN and server-only boundary**
+- [x] **Step 4: Verify GREEN and server-only boundary**
 
 Run: `npm test -- lib/caphub/providers/minimax.test.ts lib/caphub/providers/prompts.test.ts lib/assistant/minimax-token-plan-core.test.ts scripts/verify-deployment-config.test.ts`
 
@@ -421,12 +421,14 @@ Run: `npm run typecheck`
 
 Expected: tests and typecheck pass; secret access remains server-only.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/caphub/providers/minimax.ts lib/caphub/providers/minimax.test.ts lib/caphub/providers/prompts.ts lib/caphub/providers/prompts.test.ts lib/assistant/minimax-token-plan-core.ts lib/assistant/minimax-token-plan-core.test.ts
 git commit -m "feat(caphub): add bounded MiniMax analysis workers"
 ```
+
+**Evidence (2026-09-16):** commit `2980a7f`; RED failed because the Caphub MiniMax adapter/prompt modules and fetch injection did not exist. GREEN passed 4 focused/adjacent files / 12 tests, `npm run typecheck`, and focused ESLint. Extraction uses index-ordered image file parts; extraction/critic prompts carry fixed prompt/input/schema versions and the strict JSON Schema; hostile source text is canonicalized inside one inert delimiter; requests have `maxRetries: 0`, bounded output, an abort signal, and no tools field. The fixed official MiniMax endpoint/model and server-only secret boundary remain unchanged.
 
 ### Task 6: Implement dual-mode Kimi with an outer sandbox
 
