@@ -46,7 +46,7 @@ function needsQuoting(value: string): boolean {
   return false;
 }
 
-function yamlScalar(value: string): string {
+export function yamlScalar(value: string): string {
   if (value.includes("\n")) {
     const body = value.replace(/\n$/, "");
     return `|-\n${body.split("\n").map((line) => `  ${line}`).join("\n")}`;
