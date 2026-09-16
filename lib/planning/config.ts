@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
 import { ASSISTANT_LIMITS } from "../assistant/limits";
+import { CAPHUB_ANALYSIS_LIMITS } from "../caphub/analysis/limits";
 import { monitoringProviderSchema } from "../monitoring/domain/schemas";
 
 const assistantAllowedOriginSchema = z.string().url().refine((value) => {
@@ -37,12 +38,84 @@ export const controlHostAssistantConfigSchema = z.object({
   deep: fixedDeepLimitsSchema.default(ASSISTANT_LIMITS.deep)
 }).strict();
 
+const secretEnvNameSchema = z
+  .string()
+  .max(128)
+  .regex(/^[A-Z][A-Z0-9_]*$/, "Secret references must be valid uppercase environment-variable names");
+
+const exactHttpsOriginSchema = z.string().url().refine((value) => {
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "https:"
+      && origin.origin === value
+      && !origin.username
+      && !origin.password
+      && !origin.hostname.endsWith(".");
+  } catch {
+    return false;
+  }
+}, "Source origins must be exact HTTPS origins without paths, queries, credentials, or trailing-dot hosts.");
+
+const boundedPositiveInteger = (maximum: number) => z.number().int().min(1).max(maximum);
+
+const controlHostCaphubAnalysisLimitsSchema = z.object({
+  concurrency: z.literal(CAPHUB_ANALYSIS_LIMITS.concurrency),
+  maxImages: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxImages),
+  maxAggregateImageBytes: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxAggregateImageBytes),
+  maxAggregatePixels: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxAggregatePixels),
+  maxPixelsPerImage: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxPixelsPerImage),
+  preprocessingTimeoutMs: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.preprocessingTimeoutMs),
+  ocrTimeoutMsPerImage: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.ocrTimeoutMsPerImage),
+  providerTimeoutMs: z.object({
+    minimax: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.minimax),
+    kimi: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi)
+  }).strict(),
+  maxSchemaCorrections: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxSchemaCorrections),
+  maxProviderCallsPerJob: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxProviderCallsPerJob),
+  maxInputBytes: z.object({
+    extraction: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxInputBytes.extraction),
+    research: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxInputBytes.research),
+    assessment: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxInputBytes.assessment),
+    critic: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxInputBytes.critic)
+  }).strict(),
+  maxTotalTokensPerJob: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxTotalTokensPerJob),
+  maxSearchQueries: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxSearchQueries),
+  maxFetchedSources: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxFetchedSources),
+  sourceFetchTimeoutMs: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.sourceFetchTimeoutMs),
+  maxCompressedSourceBytes: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxCompressedSourceBytes),
+  maxDecompressedSourceBytes: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxDecompressedSourceBytes),
+  maxRedirects: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxRedirects),
+  maxOutputTokens: z.object({
+    extraction: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.extraction),
+    research: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.research),
+    assessment: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.assessment),
+    critic: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.critic)
+  }).strict()
+}).strict();
+
+export const controlHostCaphubAnalysisConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  concurrency: z.literal(CAPHUB_ANALYSIS_LIMITS.concurrency).default(CAPHUB_ANALYSIS_LIMITS.concurrency),
+  miniMaxBaseUrl: z.literal("https://api.minimax.io/v1").default("https://api.minimax.io/v1"),
+  miniMaxModel: z.literal("MiniMax-M3").default("MiniMax-M3"),
+  miniMaxSecretEnv: secretEnvNameSchema.default("MINIMAX_API_KEY"),
+  kimiMode: z.enum(["api_key", "local_login"]).default("api_key"),
+  kimiApiBaseUrl: z.literal("https://api.kimi.com/coding/v1").default("https://api.kimi.com/coding/v1"),
+  kimiApiModel: z.literal("k3-256k").default("k3-256k"),
+  kimiApiSecretEnv: secretEnvNameSchema.default("KIMI_CODE_API_KEY"),
+  sourceAllowedOrigins: z.array(exactHttpsOriginSchema).max(32).default([]),
+  limits: controlHostCaphubAnalysisLimitsSchema.default(CAPHUB_ANALYSIS_LIMITS)
+}).strict();
+
+const DEFAULT_CAPHUB_ANALYSIS_CONFIG = controlHostCaphubAnalysisConfigSchema.parse({});
+
 // Caphub is disabled unless explicitly enabled. Its browser origins are exact
 // HTTPS origins and its state root is always derived below ALLJOBS_HOME.
 export const controlHostCaphubConfigSchema = z.object({
   enabled: z.boolean().default(false),
   allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
-  maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760)
+  maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760),
+  analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG)
 }).strict();
 
 const monitoringCredentialRefKeySchema = z

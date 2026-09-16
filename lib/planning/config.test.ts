@@ -11,7 +11,13 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ASSISTANT_LIMITS } from "../assistant/limits";
-import { controlHostAssistantConfigSchema, controlHostConfigSchema, loadControlHostConfig } from "./config";
+import {
+  controlHostAssistantConfigSchema,
+  controlHostCaphubAnalysisConfigSchema,
+  controlHostConfigSchema,
+  loadControlHostConfig
+} from "./config";
+import { CAPHUB_ANALYSIS_LIMITS } from "../caphub/analysis/limits";
 
 describe("control host assistant config", () => {
   it("parses a valid enabled assistant config with fixed provider and model", () => {
@@ -283,6 +289,133 @@ describe("control host Caphub config", () => {
     expect(() => controlHostConfigSchema.parse({
       trustedCodeRoots: ["/workspace"],
       caphub: { enabled: false, stateDir: "/elsewhere" }
+    })).toThrow();
+  });
+});
+
+describe("control host Caphub analysis config", () => {
+  it("defaults an included analysis block to disabled with fixed providers and bounded limits", () => {
+    const parsed = controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub: {} });
+
+    expect(parsed.caphub?.analysis).toEqual({
+      enabled: false,
+      concurrency: 1,
+      miniMaxBaseUrl: "https://api.minimax.io/v1",
+      miniMaxModel: "MiniMax-M3",
+      miniMaxSecretEnv: "MINIMAX_API_KEY",
+      kimiMode: "api_key",
+      kimiApiBaseUrl: "https://api.kimi.com/coding/v1",
+      kimiApiModel: "k3-256k",
+      kimiApiSecretEnv: "KIMI_CODE_API_KEY",
+      sourceAllowedOrigins: [],
+      limits: CAPHUB_ANALYSIS_LIMITS
+    });
+  });
+
+  it("allows only concurrency one and secret environment-variable names", () => {
+    expect(() => controlHostCaphubAnalysisConfigSchema.parse({ concurrency: 2 })).toThrow();
+
+    for (const field of ["miniMaxSecretEnv", "kimiApiSecretEnv"] as const) {
+      for (const value of ["lowercase", "1LEADING", "HAS-DASH", "HAS SPACE", ""]) {
+        expect(() => controlHostCaphubAnalysisConfigSchema.parse({ [field]: value })).toThrow();
+      }
+    }
+
+    const parsed = controlHostCaphubAnalysisConfigSchema.parse({
+      miniMaxSecretEnv: "CAPHUB_MINIMAX_TOKEN",
+      kimiApiSecretEnv: "CAPHUB_KIMI_TOKEN"
+    });
+    expect(parsed.miniMaxSecretEnv).toBe("CAPHUB_MINIMAX_TOKEN");
+    expect(parsed.kimiApiSecretEnv).toBe("CAPHUB_KIMI_TOKEN");
+  });
+
+  it("fixes provider endpoints and models without accepting literal credentials", () => {
+    const mutations = [
+      { miniMaxBaseUrl: "https://example.com/v1" },
+      { miniMaxModel: "MiniMax-M2" },
+      { kimiApiBaseUrl: "https://api.kimi.com/v1" },
+      { kimiApiModel: "kimi-for-coding" },
+      { apiKey: "literal-secret" }
+    ];
+
+    for (const mutation of mutations) {
+      expect(() => controlHostCaphubAnalysisConfigSchema.parse(mutation)).toThrow();
+    }
+  });
+
+  it("accepts only exact HTTPS source origins without credentials or trailing-dot hosts", () => {
+    expect(controlHostCaphubAnalysisConfigSchema.parse({
+      sourceAllowedOrigins: ["https://docs.example.com"]
+    }).sourceAllowedOrigins).toEqual(["https://docs.example.com"]);
+
+    for (const origin of [
+      "http://docs.example.com",
+      "https://docs.example.com/path",
+      "https://docs.example.com?query=yes",
+      "https://user:pass@docs.example.com",
+      "https://docs.example.com."
+    ]) {
+      expect(() => controlHostCaphubAnalysisConfigSchema.parse({
+        sourceAllowedOrigins: [origin]
+      })).toThrow();
+    }
+  });
+
+  it("allows budget reductions but rejects values above the fixed ceilings", () => {
+    const reduced = controlHostCaphubAnalysisConfigSchema.parse({
+      limits: {
+        ...CAPHUB_ANALYSIS_LIMITS,
+        maxImages: 4,
+        providerTimeoutMs: { minimax: 30_000, kimi: 60_000 },
+        maxInputBytes: {
+          extraction: 1_048_576,
+          research: 524_288,
+          assessment: 524_288,
+          critic: 524_288
+        },
+        maxOutputTokens: {
+          extraction: 2_048,
+          research: 4_096,
+          assessment: 3_072,
+          critic: 2_048
+        }
+      }
+    });
+    expect(reduced.limits.maxImages).toBe(4);
+
+    for (const limits of [
+      { ...CAPHUB_ANALYSIS_LIMITS, maxImages: CAPHUB_ANALYSIS_LIMITS.maxImages + 1 },
+      { ...CAPHUB_ANALYSIS_LIMITS, maxTotalTokensPerJob: CAPHUB_ANALYSIS_LIMITS.maxTotalTokensPerJob + 1 },
+      {
+        ...CAPHUB_ANALYSIS_LIMITS,
+        providerTimeoutMs: {
+          ...CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs,
+          kimi: CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi + 1
+        }
+      },
+      {
+        ...CAPHUB_ANALYSIS_LIMITS,
+        maxInputBytes: {
+          ...CAPHUB_ANALYSIS_LIMITS.maxInputBytes,
+          extraction: CAPHUB_ANALYSIS_LIMITS.maxInputBytes.extraction + 1
+        }
+      },
+      {
+        ...CAPHUB_ANALYSIS_LIMITS,
+        maxOutputTokens: {
+          ...CAPHUB_ANALYSIS_LIMITS.maxOutputTokens,
+          research: CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.research + 1
+        }
+      }
+    ]) {
+      expect(() => controlHostCaphubAnalysisConfigSchema.parse({ limits })).toThrow();
+    }
+  });
+
+  it("rejects unknown analysis and nested limit fields", () => {
+    expect(() => controlHostCaphubAnalysisConfigSchema.parse({ systemPrompt: "override" })).toThrow();
+    expect(() => controlHostCaphubAnalysisConfigSchema.parse({
+      limits: { ...CAPHUB_ANALYSIS_LIMITS, unboundedCalls: 999 }
     })).toThrow();
   });
 });
