@@ -39,8 +39,10 @@ export async function POST(request: Request): Promise<Response> {
   let resolved: ReturnType<typeof loadControlHostConfig>;
   try {
     resolved = loadControlHostConfig();
-  } catch {
-    return disabled();
+  } catch (error) {
+    return error instanceof Error && /Control Host state directories/.test(error.message)
+      ? unavailable()
+      : disabled();
   }
   const config = resolved.config.caphub;
   if (config?.enabled !== true || resolved.caphubStateDir === undefined) return disabled();
