@@ -712,17 +712,17 @@ git commit -m "test(caphub): verify P3 review registry flow"
 - Consumes: final P3 implementation commit and exact final-build screenshots.
 - Produces: focused independent Review/Verification, controller gates, Linear evidence, and a local evidence-only closeout commit.
 
-- [ ] **Step 1: Run the focused independent implementation review**
+- [x] **Step 1: Run the focused independent implementation review**
 
 Review only P3 files plus directly modified P1/P2 config/storage/runtime files. Verify SQL injection resistance, role/migration separation, disabled-before-secret behavior, append-only enforcement, transaction/isolation semantics, stale/idempotency/revoke/consume rules, DTO minimization, UI confirmation copy, and zero Release/Build/deploy capability.
 
 Threshold: zero blocker/high findings; resolve every medium or obtain explicit Human acceptance. Each fix gets one scoped re-review.
 
-- [ ] **Step 2: Run the independent P3-C verification**
+- [x] **Step 2: Run the independent P3-C verification**
 
 Verify actual PostgreSQL constraints/triggers, real concurrent decisions, migration checksums, import parity, workflow suspend/resume, real decision route, final-build browser states, accessibility, screenshots, and exact commit boundary. Do not repeat the global review.
 
-- [ ] **Step 3: Run fresh controller gates**
+- [x] **Step 3: Run fresh controller gates**
 
 Run: `npm test`
 
@@ -736,11 +736,11 @@ Run: `npm run test:e2e:caphub-review-registry`
 
 Expected: all tests/typecheck/build/E2E PASS; lint has zero errors and no new P3 warnings. If the default Turbopack build cannot bind its sandbox worker port, record the environment failure separately and retain the successful webpack production build.
 
-- [ ] **Step 4: Record exact evidence and update Linear**
+- [x] **Step 4: Record exact evidence and update Linear**
 
 Record implementation commits, test counts, PostgreSQL version, migration digests, browser state matrix, screenshot hashes, independent verdicts, residual boundaries, and explicit confirmation that no real database/provider/source, production config, restart, deploy, push, merge, tag, or release occurred. Update `AGE-252` only after the local evidence commit exists.
 
-- [ ] **Step 5: Commit the evidence-only closeout**
+- [x] **Step 5: Commit the evidence-only closeout**
 
 ```bash
 git add .agent/caphub/p3-threat-model.md .agent/caphub/p3-verification.md .agent/frontend-design/caphub-review-registry/final-screens .agent/frontend-design/caphub-review-registry/final-verification.md .agent/frontend-design/caphub-foundation/handoff.md docs/caphub-foundation.md docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md docs/superpowers/plans/2026-09-16-caphub-review-registry.md
@@ -749,6 +749,12 @@ git commit -m "docs(caphub): close P3 verification"
 ```
 
 After this commit, stop before Gate P3-D. A production provider, credentials, backup/PITR choice, migration execution, service restart, deployment, traffic switch, push, merge, tag, or release requires fresh explicit Human authorization.
+
+### P3-C completion record — 2026-09-16
+
+Application implementation ends at `750efe3`; `bf734a5` strengthens the keyset proof. The controller phase gate passed 123 files / 1125 tests, typecheck, lint with zero errors and 66 pre-existing warnings, webpack production build, and P3 E2E 5/5. Per the Human-requested bounded-evidence rule, later review fixes reran only their affected tests: 3 files / 20 tests and 2/2 browser scenarios for server filtering, non-Candidate approval, and screenshot proof; then 2 query files / 7 tests against real PostgreSQL plus one exact-HEAD screenshot scenario for the complete keyset cursor. Independent final Review and Verification report zero blocker/high/medium findings. Evidence is frozen in `.agent/caphub/p3-verification.md`, `.agent/caphub/p3-threat-model.md`, and `.agent/frontend-design/caphub-review-registry/final-verification.md`.
+
+Linear `AGE-252` is updated only after the local evidence closeout commit exists. No production database, provider/source, credential, configuration enablement, migration, restart, deployment, traffic switch, push, PR, merge, tag, or release is part of P3-C.
 
 ---
 

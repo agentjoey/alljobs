@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–10 实现与 fixture 验证已完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 live structured output 未通过
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3-C 本地/fixture Review Registry 已通过独立 Review/Verification；停在生产 Gate P3-D
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -206,6 +206,10 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 - Gate P3-B：每类审批的权限、Diff、确认文案、撤销/拒绝语义批准。
 - Gate P3-C：独立 data-integrity/security/UI verification 与 Human walkthrough。
 - Gate P3-D：生产 migration/release 单独批准。
+
+**2026-09-16 P3-C evidence：**P3 disabled-by-default 实现已在 `19b7ce1` 至 `750efe3` 完成，keyset 行为证据在 `bf734a5` 加强。PostgreSQL 17.11 临时 sentinel-owned cluster 验证 checksum migration、least-privilege app role、append-only triggers、不可变版本/lineage、filesystem/PostgreSQL adapter parity、ReviewPacket import、serializable exact-version decision、永久 Reject、unconsumed-only revoke、consumption、stale/concurrent/idempotency recovery，以及 `/reviews`、`/captures/[id]`、`/capabilities/[id]` 的 safe DTO 和最终 build UI。阶段门禁为 123 files / 1125 tests、typecheck PASS、lint 0 errors / 66 pre-existing warnings、webpack build PASS、P3 E2E 5/5；后续局部修复只复跑直接受影响的 3 files / 20 tests、2 条 browser 场景、real-PostgreSQL keyset 2 files / 7 tests 与最终截图 1/1。独立 Review/Verification 最终为 PASS，zero blocker/high/medium。详细证据见 `.agent/caphub/p3-verification.md` 和 `.agent/frontend-design/caphub-review-registry/final-verification.md`。
+
+P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生产 release 通过。没有选择或使用生产 PostgreSQL/provider/secret，没有启用配置、执行生产 migration、重启、部署、切流、push、PR、merge、tag 或 release。P3-D 仍是 hard stop。
 
 **验收条件**
 

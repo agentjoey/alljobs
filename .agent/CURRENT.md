@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-14 by Codex after the Human-approved P0 Backlog management retirement release
+Last Updated:   2026-09-16 by Codex after the Caphub P3-C fixture verification closeout
 
 ## Current decision
 
@@ -59,6 +59,13 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 ## Next safe action
 
 Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
+
+## Caphub development status — 2026-09-16
+
+- P1 Foundation is accepted; P2 fixture analysis is complete while live Kimi structured output remains unproven.
+- P3 Review Center and PostgreSQL Registry implementation/fixture verification is complete at `750efe3` with independent Review and Verification PASS and zero blocker/high/medium findings.
+- P3 is not enabled or released in production. No production database/provider/secret, migration, service restart, deployment, traffic switch, push, merge, tag, or release occurred.
+- Current action is **pause at Gate P3-D**. Fresh Human authorization is required for production PostgreSQL selection, credentials, backup/PITR, migration/release, or any other P3-D action. P4 has not started.
 
 ## P0 Backlog retirement (live)
 

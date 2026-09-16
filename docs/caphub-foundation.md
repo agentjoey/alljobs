@@ -4,13 +4,14 @@ Caphub P1 is a disabled-by-default Web Capture intake. P2 adds a separately
 disabled analysis service that can turn one immutable Capture into a durable,
 review-only `ReviewPacket` through bounded preprocessing, provider analysis,
 approved-source research, assessment, optional critique, and a resumable
-filesystem workflow. Neither phase approves, installs, builds, publishes,
+filesystem workflow. P3 adds a separately disabled PostgreSQL metadata Registry
+and Human Review Center. None of these phases installs, builds, publishes,
 deploys, or releases a capability.
 
-This guide describes the implemented P1/P2 adapters and their operational
-boundary. P2 remains safe-off in production; code and fixture verification do
-not authorize provider traffic, configuration enablement, restart, deployment,
-or release.
+This guide describes the implemented P1/P2/P3 adapters and their operational
+boundary. P2 and P3 remain safe-off in production; code and fixture verification
+do not authorize provider traffic, database provisioning or migration,
+configuration enablement, restart, deployment, or release.
 
 ## Configuration and request boundary
 
@@ -163,6 +164,44 @@ other-writable. Descendant directories are created with `0700` intent and new
 files with `0600` intent. The adapters recheck ownership, type, permissions,
 and non-symlink traversal around reads and writes; a failed check closes the
 operation rather than following an unsafe path.
+
+## P3 PostgreSQL Registry and Human Review
+
+P3 stores versioned metadata, lineage, imports, Human decisions, decision
+consumption, and audit events in PostgreSQL while retaining raw object bytes
+behind the P1 content-addressed object-store port. Runtime loading is fail
+closed: outer Caphub and `caphub.registry.enabled` must both be true, and the
+configured server-only environment variable must contain the connection URL.
+The default Registry configuration remains disabled.
+
+The application pool sets a fixed application name, a bounded connection count,
+a statement timeout, a 30-second idle timeout, and certificate-validated TLS.
+Connection-string TLS overrides are rejected. The only non-TLS exception is the
+sentinel-owned E2E cluster: PostgreSQL 17 runs on a private Unix socket under a
+temporary owned root and is accepted only when its root, sentinel, owner PID,
+socket, role, URL parameters, and object root all match the fixture contract.
+
+Migrations are forward-only, checksum-bound, and serialized by a PostgreSQL
+advisory transaction lock. The migration role and least-privileged `caphub_app`
+role are separate. Immutable versions, lineage, imports, decisions, consumers,
+and audit entries are protected by constraints, privileges, and append-only
+triggers. Do not edit an applied migration or use the application role to run
+migrations.
+
+The Review Center reads explicit safe DTOs only. Its queue filters kind, state,
+value, risk, and waiting age in PostgreSQL before the page limit, and its keyset
+cursor matches the complete oldest-first / higher-risk / request-ID order.
+Decisions bind an exact subject version and digest, expected lock version, actor,
+typed confirmation, and idempotency intent. Reject is permanent; an approval may
+be revoked only before it is consumed. Candidate approval can record one of the
+five reviewed dispositions; other approval kinds carry no Candidate
+disposition.
+
+P3-C verification used only the owned temporary database and loopback final
+build. Production provider selection, credentials, Secret management,
+networking, backup/PITR, migration rehearsal/execution, service restart,
+deployment, and traffic change remain Gate P3-D operations. Keep the Registry
+disabled until that separate Human gate is explicitly approved.
 
 ### Immutable objects
 
@@ -336,10 +375,11 @@ consume approved Registry exports only; it must not read the P1 custody tree as
 an alternate source of truth. PostgreSQL and Obsidian are future
 adapter/integration boundaries, not installed or active P1 runtime features.
 
-## Explicit P1/P2 negative capabilities
+## Explicit P1/P2/P3 negative capabilities
 
-P1 intake still stops at `received`. P2 adds analysis only; it has no Telegram
-intake, approval transition, publish or install action, Builder, code execution,
-Shell or Git access, capability deployment, runtime routing, Obsidian
-integration, or Postgres runtime feature. A ReviewPacket cannot cause an
-external write or advance itself beyond Human review.
+P1 intake still stops at `received`. P2 adds analysis only. P3 may import the
+immutable ReviewPacket and record a Human decision, but it has no Telegram
+intake, publish or install action, Builder, code execution, Shell or Git access,
+capability deployment, runtime routing, Obsidian integration, or production
+database enablement. A ReviewPacket or approval cannot create a BuildProposal,
+Release, implementation handoff, package, deployment, or external write.

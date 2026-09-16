@@ -125,6 +125,38 @@ The controller gate passed 105 files / 1033 tests, typecheck, lint with zero err
 
 The detailed record is `.agent/caphub/p2-verification.md`. P2-A live direct-HTTP structured-output compatibility remains partial and is a production/live-provider boundary, not a fixture implementation claim. The supported filesystem model remains one active Control Host writer. Continue only with disabled-by-default P3 planning/implementation; do not enable live Caphub, make another provider probe, deploy, publish, push, merge, tag, release, or mutate production state without the corresponding explicit gate.
 
+## P3 implementation checkpoint — Tasks 1–11 / Gate P3-C
+
+The disabled-by-default Review Registry implementation is complete through
+`750efe3`. The chain is `19b7ce1`, `9812cc7`, `abc879a`, `28eb312`, `9716dc0`,
+`b22f420`, `eb4f283`, `c59203d`, `d81d0dc`, `9c60b80`, `48cb666`, `03f0166`,
+`9cd3614`, `523eb62`, `750efe3`, and the keyset-proof commit `bf734a5`.
+
+The single phase-wide controller pass completed 123 files / 1125 tests,
+typecheck, lint with zero errors and 66 pre-existing warnings, webpack build,
+and P3 browser E2E 5/5. Review fixes then received only scoped re-review and
+directly affected tests. The final server-filter/disposition batch passed 3
+files / 20 tests and 2/2 affected browser scenarios. The keyset follow-up used
+a real equal-timestamp PostgreSQL RED→GREEN regression; its two query files / 7
+tests, typecheck, targeted lint, production build, and exact-HEAD screenshot
+scenario passed.
+
+Independent Review and Verification finish with zero blocker/high/medium
+findings. Final screenshots cover waiting, approved-unconsumed,
+approved-consumed, revoked, superseded, same-request stale, Capture lineage,
+and Candidate-only Capability at 1440px and true 390px. Exact hashes and the
+full boundary are in `.agent/caphub/p3-verification.md` and
+`.agent/frontend-design/caphub-review-registry/final-verification.md`.
+
+No production database/provider/source or secret was used. Caphub Registry was
+not enabled, production migrations were not run, services were not restarted,
+and no deploy, traffic switch, push, PR, merge, tag, or release occurred. The
+Human-owned `AGENTS.md` remains untouched and unstaged.
+
 ## Next safe action
 
-P2-C focused Review and Verification passed and Linear `AGE-251` is **Done** with the final evidence attached. Commit this evidence-only closeout without `AGENTS.md`, then begin a separate detailed P3 plan from the approved roadmap. P3 work must remain disabled by default and fixture/local-only; obtaining a production PostgreSQL account or credentials, enabling configuration, migrating production data, restarting services, deploying, pushing, merging, tagging, or releasing remains a hard stop.
+Pause at Gate P3-D. Production PostgreSQL/provider selection, credentials,
+Secret management, backup/PITR, migration rehearsal/execution, configuration
+enablement, service restart, deployment, traffic switch, push, PR, merge, tag,
+or release requires fresh explicit Human authorization. Do not begin P4 in this
+session because the Human Owner requested a status pause after P3.
