@@ -14,6 +14,7 @@
     "test:e2e:r2": "playwright test --config playwright.r2.config.ts",
     "test:e2e:caphub": "playwright test --config playwright.caphub-foundation.config.ts",
     "assistant:smoke": "tsx scripts/assistant-smoke.ts",
+    "caphub:analyze": "tsx scripts/caphub-analyze.ts",
     "planning:refresh": "tsx scripts/planning-refresh.ts",
     "monitoring:refresh": "tsx scripts/monitoring-refresh.ts --once",
     "planning:skill:validate": "node scripts/validate-planning-skill.mjs",
