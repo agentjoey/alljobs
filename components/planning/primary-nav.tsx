@@ -30,6 +30,9 @@ export function PrimaryNav() {
       <Link href="/caphub" aria-current={isCurrent("/caphub") ? "page" : undefined}>
         Caphub
       </Link>
+      <Link href="/reviews" aria-current={isCurrent("/reviews") ? "page" : undefined}>
+        Reviews
+      </Link>
       <Link href="/register" aria-current={isCurrent("/register") ? "page" : undefined}>
         Register
       </Link>

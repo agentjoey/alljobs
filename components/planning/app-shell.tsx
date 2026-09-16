@@ -24,6 +24,7 @@ function custodyForPath(pathname: string): SourceStatusProps["custody"] {
   if (pathname.startsWith("/tasks")) return "NATIVE: CONTROL-HOST";
   if (pathname.startsWith("/monitoring")) return "EXTERNAL: CACHED PROJECTION";
   if (pathname.startsWith("/caphub")) return "NATIVE: LOCAL CAPTURE";
+  if (pathname.startsWith("/reviews") || pathname.startsWith("/captures") || pathname.startsWith("/capabilities")) return "NATIVE: CAPHUB REGISTRY";
   if (pathname.startsWith("/register")) return "NATIVE: CONTROL-HOST";
   if (pathname.startsWith("/archived")) return "MIXED: WORKBENCH";
   return "MIXED: WORKBENCH";
