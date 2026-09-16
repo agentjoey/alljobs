@@ -658,7 +658,7 @@ git commit -m "feat(caphub): compose review-only capability packets"
 - Consumes: secure Caphub root, analysis schemas, stage functions, deterministic IDs/digests, and audit/artifact/job ports.
 - Produces: `runAnalysisJob(jobId, signal)` that resumes the first incomplete stage and never repeats a completed artifact/audit event.
 
-- [ ] **Step 1: Write failing storage and crash-boundary tests**
+- [x] **Step 1: Write failing storage and crash-boundary tests**
 
 Cover traversal/symlink rejection, `0600` files and `0700` directories, atomic job replacement, immutable artifact conflict detection, deterministic audit IDs, restart after each completed stage, concurrent same-job serialization, and an in-flight call without a terminal audit routing to `HUMAN_REVIEW_REQUIRED` without another provider call.
 
@@ -668,32 +668,34 @@ expect(resumed.status).toBe("human_review_required");
 expect(resumed.reason).toBe("INTERRUPTED_PROVIDER_CALL");
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/workflow/filesystem.test.ts lib/caphub/workflow/runner.test.ts lib/caphub/storage/paths.test.ts`
 
 Expected: FAIL because workflow storage and new paths do not exist.
 
-- [ ] **Step 3: Implement secure job/artifact/audit paths and stores**
+- [x] **Step 3: Implement secure job/artifact/audit paths and stores**
 
 Add strict `job_<32 hex>` and `art_<64 hex>` identifiers. Store jobs under `records/analysis-jobs`, immutable stage artifacts under `records/analysis-artifacts`, and append-only audit events under `events/model-calls`. Reuse P1 secure directory/file-handle checks; never accept configurable absolute subpaths.
 
-- [ ] **Step 4: Implement the deterministic state machine**
+- [x] **Step 4: Implement the deterministic state machine**
 
 Use the fixed stage order `preprocess → extraction → research → assessment → critic? → review_packet`. Before invoking a provider, persist a deterministic `started` audit event; after a validated result, persist the immutable artifact and terminal audit, then advance the job pointer atomically.
 
-- [ ] **Step 5: Verify GREEN and adjacent storage regression**
+- [x] **Step 5: Verify GREEN and adjacent storage regression**
 
 Run: `npm test -- lib/caphub/workflow/filesystem.test.ts lib/caphub/workflow/runner.test.ts lib/caphub/storage/paths.test.ts lib/caphub/storage/filesystem.test.ts lib/caphub/storage/audit-log.test.ts`
 
 Expected: all focused and adjacent P1 storage tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/caphub/workflow/filesystem.ts lib/caphub/workflow/filesystem.test.ts lib/caphub/workflow/runner.ts lib/caphub/workflow/runner.test.ts lib/caphub/storage/paths.ts lib/caphub/storage/paths.test.ts
 git commit -m "feat(caphub): persist resumable analysis jobs"
 ```
+
+**Evidence (2026-09-16):** committed as `373bb9a`; RED failed on missing workflow stores/runner and analysis paths, then GREEN plus adjacent P1 storage regression passed 5 files / 33 tests. Typecheck and focused ESLint passed. Real temporary filesystem scenarios cover strict identifiers, traversal/symlink rejection, exact 0700/0600 modes, atomic job replacement, immutable artifact conflict detection, deterministic/idempotent model-call audits, fixed stage order, critic skip, recovery after every artifact boundary, concurrent same-job serialization, and fail-safe Human review without another provider call when either an unmatched start or a terminal audit exists without a committed artifact. No live provider or production state was used.
 
 ### Task 10: Integrate Capture-to-ReviewPacket service and prove P2-C
 
