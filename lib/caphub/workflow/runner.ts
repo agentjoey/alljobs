@@ -4,11 +4,7 @@ import type {
   ModelCallAuditEvent,
   StageArtifact
 } from "../analysis/types";
-import {
-  FilesystemAnalysisJobStore,
-  FilesystemModelCallAuditStore,
-  FilesystemStageArtifactStore
-} from "./filesystem";
+import type { AnalysisJobStore, ReadableModelCallAuditStore, StageArtifactStore } from "./contracts";
 
 const STAGE_ORDER = [
   "preprocess",
@@ -39,9 +35,9 @@ export interface AnalysisStageHandler {
 }
 
 export interface AnalysisWorkflowRunnerOptions {
-  jobs: FilesystemAnalysisJobStore;
-  artifacts: FilesystemStageArtifactStore;
-  audits: FilesystemModelCallAuditStore;
+  jobs: AnalysisJobStore;
+  artifacts: StageArtifactStore;
+  audits: ReadableModelCallAuditStore;
   handlers: AnalysisStageHandler[];
   clock: () => string;
   afterArtifactPersisted?(artifact: StageArtifact): Promise<void>;
@@ -78,9 +74,9 @@ async function serializeJob<T>(jobId: string, operation: () => Promise<T>): Prom
 }
 
 export class AnalysisWorkflowRunner {
-  private readonly jobs: FilesystemAnalysisJobStore;
-  private readonly artifacts: FilesystemStageArtifactStore;
-  private readonly audits: FilesystemModelCallAuditStore;
+  private readonly jobs: AnalysisJobStore;
+  private readonly artifacts: StageArtifactStore;
+  private readonly audits: ReadableModelCallAuditStore;
   private readonly handlers: Map<AnalysisStage, AnalysisStageHandler>;
   private readonly clock: () => string;
   private readonly afterArtifactPersisted: (artifact: StageArtifact) => Promise<void>;
@@ -134,7 +130,11 @@ export class AnalysisWorkflowRunner {
     const initialJob = await this.jobs.get(jobId);
     if (!initialJob) throw new Error("analysis job does not exist");
     let job: AnalysisJob = initialJob;
-    if (job.status === "completed" || job.status === "failed" || job.status === "HUMAN_REVIEW_REQUIRED") {
+    if (job.status === "completed"
+      || job.status === "WAITING_FOR_REVIEW"
+      || job.status === "reviewed"
+      || job.status === "failed"
+      || job.status === "HUMAN_REVIEW_REQUIRED") {
       return job;
     }
 

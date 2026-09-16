@@ -358,6 +358,10 @@ const analysisJobBaseShape = {
   updated_at: timestampSchema
 };
 
+const reviewRequestReferenceSchema = z.string().regex(/^rev_[a-f0-9]{32}$/);
+const reviewDecisionReferenceSchema = z.string().regex(/^dec_[a-f0-9]{32}$/);
+const approvedCandidateDispositionSchema = z.enum(["adopt", "adapt", "build", "learn", "watch"]);
+
 export const analysisJobSchema = z.discriminatedUnion("status", [
   z.object({ ...analysisJobBaseShape, status: z.literal("queued") }).strict(),
   z.object({
@@ -371,6 +375,28 @@ export const analysisJobSchema = z.discriminatedUnion("status", [
     status: z.literal("completed"),
     review_packet_artifact_id: stageArtifactIdSchema,
     completed_at: timestampSchema
+  }).strict(),
+  z.object({
+    ...analysisJobBaseShape,
+    status: z.literal("WAITING_FOR_REVIEW"),
+    review_packet_artifact_id: stageArtifactIdSchema,
+    review_request_id: reviewRequestReferenceSchema,
+    waiting_at: timestampSchema
+  }).strict(),
+  z.object({
+    ...analysisJobBaseShape,
+    status: z.literal("reviewed"),
+    review_packet_artifact_id: stageArtifactIdSchema,
+    review_request_id: reviewRequestReferenceSchema,
+    review_decision_id: reviewDecisionReferenceSchema,
+    decision: z.discriminatedUnion("outcome", [
+      z.object({
+        outcome: z.literal("approve"),
+        disposition: approvedCandidateDispositionSchema
+      }).strict(),
+      z.object({ outcome: z.literal("reject") }).strict()
+    ]),
+    reviewed_at: timestampSchema
   }).strict(),
   z.object({
     ...analysisJobBaseShape,

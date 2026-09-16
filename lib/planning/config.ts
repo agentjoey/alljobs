@@ -109,13 +109,24 @@ export const controlHostCaphubAnalysisConfigSchema = z.object({
 
 const DEFAULT_CAPHUB_ANALYSIS_CONFIG = controlHostCaphubAnalysisConfigSchema.parse({});
 
+export const controlHostCaphubRegistryConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  databaseUrlEnv: secretEnvNameSchema.default("CAPHUB_DATABASE_URL"),
+  sslMode: z.literal("require").default("require"),
+  maxConnections: z.number().int().min(1).max(16).default(4),
+  statementTimeoutMs: z.number().int().min(100).max(30_000).default(5_000)
+}).strict();
+
+const DEFAULT_CAPHUB_REGISTRY_CONFIG = controlHostCaphubRegistryConfigSchema.parse({});
+
 // Caphub is disabled unless explicitly enabled. Its browser origins are exact
 // HTTPS origins and its state root is always derived below ALLJOBS_HOME.
 export const controlHostCaphubConfigSchema = z.object({
   enabled: z.boolean().default(false),
   allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
   maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760),
-  analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG)
+  analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG),
+  registry: controlHostCaphubRegistryConfigSchema.default(DEFAULT_CAPHUB_REGISTRY_CONFIG)
 }).strict();
 
 const monitoringCredentialRefKeySchema = z

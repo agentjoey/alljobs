@@ -14,6 +14,7 @@ import { ASSISTANT_LIMITS } from "../assistant/limits";
 import {
   controlHostAssistantConfigSchema,
   controlHostCaphubAnalysisConfigSchema,
+  controlHostCaphubRegistryConfigSchema,
   controlHostConfigSchema,
   loadControlHostConfig
 } from "./config";
@@ -417,6 +418,52 @@ describe("control host Caphub analysis config", () => {
     expect(() => controlHostCaphubAnalysisConfigSchema.parse({
       limits: { ...CAPHUB_ANALYSIS_LIMITS, unboundedCalls: 999 }
     })).toThrow();
+  });
+});
+
+describe("control host Caphub Registry config", () => {
+  it("defaults the optional Registry block to disabled and secret-by-reference", () => {
+    expect(controlHostCaphubRegistryConfigSchema.parse({})).toEqual({
+      enabled: false,
+      databaseUrlEnv: "CAPHUB_DATABASE_URL",
+      sslMode: "require",
+      maxConnections: 4,
+      statementTimeoutMs: 5_000
+    });
+
+    const parsed = controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub: {} });
+    expect(parsed.caphub?.registry).toEqual({
+      enabled: false,
+      databaseUrlEnv: "CAPHUB_DATABASE_URL",
+      sslMode: "require",
+      maxConnections: 4,
+      statementTimeoutMs: 5_000
+    });
+  });
+
+  it("accepts only bounded Registry settings and uppercase environment-variable references", () => {
+    expect(controlHostCaphubRegistryConfigSchema.parse({
+      databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
+      maxConnections: 1,
+      statementTimeoutMs: 100
+    })).toMatchObject({
+      databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
+      maxConnections: 1,
+      statementTimeoutMs: 100
+    });
+
+    for (const mutation of [
+      { databaseUrlEnv: "literal-postgres-url" },
+      { databaseUrl: "postgres://user:secret@example.test/db" },
+      { sslMode: "disable" },
+      { maxConnections: 0 },
+      { maxConnections: 17 },
+      { statementTimeoutMs: 99 },
+      { statementTimeoutMs: 30_001 },
+      { provider: "managed-postgres" }
+    ]) {
+      expect(() => controlHostCaphubRegistryConfigSchema.parse(mutation)).toThrow();
+    }
   });
 });
 

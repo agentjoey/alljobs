@@ -16,6 +16,7 @@ import {
 import type {
   AnalysisJob,
   AnalysisStage,
+  ModelCallAuditEvent,
   StageArtifact
 } from "../analysis/types";
 import { captureIdSchema, captureRecordSchema } from "../domain/schemas";
@@ -27,12 +28,13 @@ import { runStructuredStage } from "../providers/structured-stage";
 import { buildResearchDossier, ResearchDossierError } from "../research/research";
 import type { ResearchSourceGateway } from "../research/source-gateway";
 import type { CaptureStore } from "../storage/contracts";
-import type { JobModelBudget, StructuredStageHumanReviewReason } from "../workflow/contracts";
-import {
-  FilesystemAnalysisJobStore,
-  FilesystemModelCallAuditStore,
-  FilesystemStageArtifactStore
-} from "../workflow/filesystem";
+import type {
+  AnalysisJobStore,
+  JobModelBudget,
+  ReadableModelCallAuditStore,
+  StageArtifactStore,
+  StructuredStageHumanReviewReason
+} from "../workflow/contracts";
 import { AnalysisWorkflowRunner, type AnalysisStageContext, type AnalysisStageHandler } from "../workflow/runner";
 
 export type AnalysisServiceErrorCode =
@@ -68,9 +70,9 @@ export interface AnalysisServiceDependencies {
   assessmentProvider: StructuredProvider;
   criticProvider: StructuredProvider;
   sourceGateway: () => ResearchSourceGateway;
-  jobs: FilesystemAnalysisJobStore;
-  artifacts: FilesystemStageArtifactStore;
-  audits: FilesystemModelCallAuditStore;
+  jobs: AnalysisJobStore;
+  artifacts: StageArtifactStore;
+  audits: ReadableModelCallAuditStore;
   clock: () => Date;
   registrySnapshot?: unknown;
   manualCritic?: boolean;
@@ -107,11 +109,15 @@ function resultFor(job: AnalysisJob): AnalysisServiceResult {
   return {
     jobId: job.id,
     status: job.status,
-    reviewPacketArtifactId: job.status === "completed" ? job.review_packet_artifact_id : null
+    reviewPacketArtifactId: job.status === "completed"
+      || job.status === "WAITING_FOR_REVIEW"
+      || job.status === "reviewed"
+      ? job.review_packet_artifact_id
+      : null
   };
 }
 
-function reconstructBudget(events: Awaited<ReturnType<FilesystemModelCallAuditStore["list"]>>): JobModelBudget {
+function reconstructBudget(events: ModelCallAuditEvent[]): JobModelBudget {
   return {
     providerCalls: events.filter((event) => event.type === "started").length,
     totalTokens: events.reduce((total, event) => event.type === "succeeded"
@@ -190,7 +196,11 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
         };
         await dependencies.jobs.put(job);
       }
-      if (job.status === "completed" || job.status === "failed" || job.status === "HUMAN_REVIEW_REQUIRED") {
+      if (job.status === "completed"
+        || job.status === "WAITING_FOR_REVIEW"
+        || job.status === "reviewed"
+        || job.status === "failed"
+        || job.status === "HUMAN_REVIEW_REQUIRED") {
         return resultFor(job);
       }
 

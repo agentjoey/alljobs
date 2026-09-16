@@ -37,7 +37,12 @@ import {
   resolveCaphubRoot
 } from "../storage/paths";
 import { deterministicModelCallIds } from "./audit";
-import type { ModelCallAuditStore } from "./contracts";
+import type {
+  AnalysisJobStore,
+  CreateStageArtifactInput,
+  ReadableModelCallAuditStore,
+  StageArtifactStore
+} from "./contracts";
 
 const FILE_MODE = 0o600;
 const DIRECTORY_MODE = 0o700;
@@ -236,7 +241,7 @@ function decodeJson(bytes: Buffer, label: string): unknown {
   }
 }
 
-export class FilesystemAnalysisJobStore {
+export class FilesystemAnalysisJobStore implements AnalysisJobStore {
   private readonly root: string;
   private readonly operations: AnalysisJobFileOperations;
 
@@ -259,16 +264,7 @@ export class FilesystemAnalysisJobStore {
   }
 }
 
-export interface CreateStageArtifactInput {
-  jobId: string;
-  captureId: string;
-  stage: AnalysisStage;
-  inputDigest: string;
-  payload: unknown;
-  createdAt: string;
-}
-
-export class FilesystemStageArtifactStore {
+export class FilesystemStageArtifactStore implements StageArtifactStore {
   private readonly root: string;
 
   constructor(root: string) {
@@ -385,7 +381,7 @@ function assertDeterministicAuditId(event: ModelCallAuditEvent): void {
   }
 }
 
-export class FilesystemModelCallAuditStore implements ModelCallAuditStore {
+export class FilesystemModelCallAuditStore implements ReadableModelCallAuditStore {
   private readonly root: string;
 
   constructor(root: string) {

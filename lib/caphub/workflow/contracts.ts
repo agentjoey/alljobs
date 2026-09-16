@@ -1,8 +1,38 @@
-import type { ModelCallAuditEvent } from "../analysis/types";
+import type {
+  AnalysisJob,
+  AnalysisStage,
+  ModelCallAuditEvent,
+  StageArtifact
+} from "../analysis/types";
 import type { StructuredProviderStage } from "../providers/contracts";
 
 export interface ModelCallAuditStore {
   append(event: ModelCallAuditEvent): Promise<void>;
+}
+
+export interface ReadableModelCallAuditStore extends ModelCallAuditStore {
+  list(jobId: string): Promise<ModelCallAuditEvent[]>;
+}
+
+export interface AnalysisJobStore {
+  get(id: string): Promise<AnalysisJob | null>;
+  put(job: AnalysisJob): Promise<void>;
+}
+
+export interface CreateStageArtifactInput {
+  jobId: string;
+  captureId: string;
+  stage: AnalysisStage;
+  inputDigest: string;
+  payload: unknown;
+  createdAt: string;
+}
+
+export interface StageArtifactStore {
+  get(id: string): Promise<StageArtifact | null>;
+  findByJobStage(jobId: string, stage: AnalysisStage): Promise<StageArtifact | null>;
+  create(input: CreateStageArtifactInput): Promise<StageArtifact>;
+  readPayload(id: string): Promise<unknown | null>;
 }
 
 export interface JobModelBudget {

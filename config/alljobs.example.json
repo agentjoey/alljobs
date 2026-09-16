@@ -27,6 +27,13 @@
       "kimiApiModel": "k3-256k",
       "kimiApiSecretEnv": "KIMI_CODE_API_KEY",
       "sourceAllowedOrigins": []
+    },
+    "registry": {
+      "enabled": false,
+      "databaseUrlEnv": "CAPHUB_DATABASE_URL",
+      "sslMode": "require",
+      "maxConnections": 4,
+      "statementTimeoutMs": 5000
     }
   },
   "monitoring": {

@@ -394,11 +394,42 @@ describe("P2 workflow record schemas", () => {
     }).status).toBe("completed");
     expect(analysisJobSchema.parse({
       ...jobBase,
+      status: "WAITING_FOR_REVIEW",
+      review_packet_artifact_id: ARTIFACT_ID,
+      review_request_id: `rev_${"1".repeat(32)}`,
+      waiting_at: NOW
+    }).status).toBe("WAITING_FOR_REVIEW");
+    expect(analysisJobSchema.parse({
+      ...jobBase,
+      status: "reviewed",
+      review_packet_artifact_id: ARTIFACT_ID,
+      review_request_id: `rev_${"1".repeat(32)}`,
+      review_decision_id: `dec_${"2".repeat(32)}`,
+      decision: { outcome: "approve", disposition: "build" },
+      reviewed_at: NOW
+    }).status).toBe("reviewed");
+    expect(analysisJobSchema.parse({
+      ...jobBase,
       status: "HUMAN_REVIEW_REQUIRED",
       reason: "Provider response remained invalid.",
       stopped_at: NOW
     }).status).toBe("HUMAN_REVIEW_REQUIRED");
     expect(() => analysisJobSchema.parse({ ...jobBase, status: "completed" })).toThrow();
+    expect(() => analysisJobSchema.parse({
+      ...jobBase,
+      status: "WAITING_FOR_REVIEW",
+      review_packet_artifact_id: ARTIFACT_ID,
+      waiting_at: NOW
+    })).toThrow();
+    expect(() => analysisJobSchema.parse({
+      ...jobBase,
+      status: "reviewed",
+      review_packet_artifact_id: ARTIFACT_ID,
+      review_request_id: `rev_${"1".repeat(32)}`,
+      review_decision_id: `dec_${"2".repeat(32)}`,
+      decision: { outcome: "reject", disposition: "build" },
+      reviewed_at: NOW
+    })).toThrow();
     expect(() => analysisJobSchema.parse({
       ...jobBase,
       status: "HUMAN_REVIEW_REQUIRED",

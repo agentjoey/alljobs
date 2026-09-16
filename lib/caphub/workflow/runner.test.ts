@@ -69,6 +69,39 @@ async function setup(value = root()) {
 }
 
 describe("resumable analysis workflow", () => {
+  it("treats imported waiting and reviewed jobs as terminal workflow states", async () => {
+    const stores = await setup();
+    const artifactId = `art_${"d".repeat(64)}`;
+    const requestId = `rev_${"e".repeat(32)}`;
+    const decisionId = `dec_${"f".repeat(32)}`;
+    const waiting: AnalysisJob = {
+      ...queued(),
+      completed_artifact_ids: [artifactId],
+      status: "WAITING_FOR_REVIEW",
+      review_packet_artifact_id: artifactId,
+      review_request_id: requestId,
+      waiting_at: NOW
+    };
+    await stores.jobs.put(waiting);
+    const calls: AnalysisStage[] = [];
+    const runner = new AnalysisWorkflowRunner({ ...stores, handlers: handlers(calls), clock: () => NOW });
+    await expect(runner.runAnalysisJob(JOB_ID, new AbortController().signal)).resolves.toEqual(waiting);
+
+    const reviewed: AnalysisJob = {
+      ...queued(),
+      completed_artifact_ids: [artifactId],
+      status: "reviewed",
+      review_packet_artifact_id: artifactId,
+      review_request_id: requestId,
+      review_decision_id: decisionId,
+      decision: { outcome: "approve", disposition: "build" },
+      reviewed_at: NOW
+    };
+    await stores.jobs.put(reviewed);
+    await expect(runner.runAnalysisJob(JOB_ID, new AbortController().signal)).resolves.toEqual(reviewed);
+    expect(calls).toEqual([]);
+  });
+
   it("runs the fixed order, skips an unneeded critic, and never repeats completed stages", async () => {
     const stores = await setup();
     const calls: AnalysisStage[] = [];
