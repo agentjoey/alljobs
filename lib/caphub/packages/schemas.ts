@@ -175,7 +175,7 @@ export const deploymentPlanSchema = z.object({
     digest: sha256DigestSchema
   }).strict(),
   adapter: z.object({
-    name: deploymentTargetSchema.exclude(["obsidian"]),
+    name: z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/, "adapter name must be a bounded safe identifier"),
     version: semverSchema,
     digest: sha256DigestSchema
   }).strict(),

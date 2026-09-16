@@ -15,6 +15,7 @@ export interface AdapterContract {
   destination: (pkg: CapabilityPackage) => string;
   supported_kinds: CapabilityPackage["kind"][];
   allowed_permissions: readonly string[];
+  allowed_licenses: readonly string[];
   allow_dependencies: boolean;
   max_description_bytes: number;
   max_triggers: number;
@@ -57,6 +58,9 @@ export function runAdapterContract(
 
   if (!contract.supported_kinds.includes(pkg.kind)) {
     return unsupported(`${contract.name} adapter cannot represent kind "${pkg.kind}" safely`);
+  }
+  if (!contract.allowed_licenses.includes(pkg.license.spdx_id)) {
+    return unsupported(`${contract.name} adapter cannot represent license "${pkg.license.spdx_id}" safely`);
   }
   if (!contract.allow_dependencies && pkg.dependencies.length > 0) {
     return unsupported(`${contract.name} adapter does not resolve dependencies in P4 previews`);

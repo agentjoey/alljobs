@@ -38,6 +38,8 @@ export interface ReviewStore {
   getRequest(requestId: string): Promise<ReviewRequest | null>;
   getDecision(decisionId: string): Promise<ReviewDecision | null>;
   listDecisions(requestId: string): Promise<ReviewDecision[]>;
+  listDecisionsForSubject(subjectId: string): Promise<ReviewDecision[]>;
+  getConsumption(decisionId: string): Promise<{ consumer_id: string } | null>;
   decide(input: ReviewDecisionInput): Promise<ReviewDecisionResult>;
   revoke(input: ReviewDecisionInput): Promise<ReviewDecisionResult>;
   consumeDecision(decisionId: string, consumerId: string): Promise<void>;

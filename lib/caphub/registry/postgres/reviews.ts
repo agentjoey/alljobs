@@ -314,6 +314,35 @@ export class PostgresReviewStore implements ReviewStore {
     }
   }
 
+  async listDecisionsForSubject(subjectId: string): Promise<ReviewDecision[]> {
+    try {
+      const result = await this.pool.query<ReviewDecisionRow>(`
+        SELECT d.* FROM caphub.review_decisions d
+        JOIN caphub.review_requests r ON r.request_id = d.request_id
+        WHERE r.subject_id = $1
+        ORDER BY d.recorded_at, d.decision_id
+      `, [subjectId]);
+      return result.rows.map(decisionFromRow);
+    } catch (error) {
+      throw mapReviewError(error);
+    }
+  }
+
+  async getConsumption(decisionId: string): Promise<{ consumer_id: string } | null> {
+    if (!reviewDecisionIdSchema.safeParse(decisionId).success) {
+      throw new ReviewStoreError("INVALID_REVIEW_DECISION");
+    }
+    try {
+      const result = await this.pool.query<{ consumer_id: string }>(
+        "SELECT consumer_id FROM caphub.decision_consumers WHERE decision_id = $1",
+        [decisionId]
+      );
+      return result.rows[0] ?? null;
+    } catch (error) {
+      throw mapReviewError(error);
+    }
+  }
+
   decide(input: ReviewDecisionInput): Promise<ReviewDecisionResult> {
     return this.writeDecision(input, false);
   }

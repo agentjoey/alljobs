@@ -132,6 +132,7 @@ describe("adapter contract suite", () => {
       destination: (pkg: CapabilityPackage) => `~/.hermes/skills/custom/${pkg.slug}/SKILL.md`,
       supported_kinds: ["skill"],
       allowed_permissions: ["read_file"],
+      allowed_licenses: ["MIT"],
       allow_dependencies: false,
       max_description_bytes: 4096,
       max_triggers: 16,

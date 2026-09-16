@@ -11,6 +11,7 @@ const codexContract: AdapterContract = {
   destination: (pkg: CapabilityPackage) => `$CODEX_HOME/skills/${pkg.slug}/SKILL.md`,
   supported_kinds: ["skill", "reference"],
   allowed_permissions: ["clipboard_read", "network", "read_file", "read_media"],
+  allowed_licenses: ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC-BY-4.0", "CC0-1.0", "ISC", "MIT", "MPL-2.0", "Unlicense", "WTFPL"],
   allow_dependencies: false,
   max_description_bytes: 4096,
   max_triggers: 16,
