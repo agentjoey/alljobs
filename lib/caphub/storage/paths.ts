@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { lstatSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { captureIdSchema, idempotencyKeySchema } from "../domain/schemas";
+import { analysisJobIdSchema, stageArtifactIdSchema } from "../analysis/schemas";
 
 const SHA256_DIGEST_PATTERN = /^[a-f0-9]{64}$/;
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -120,6 +121,22 @@ function assertMonth(value: string): string {
   return value;
 }
 
+function assertAnalysisJobId(value: string): string {
+  const parsed = analysisJobIdSchema.safeParse(value);
+  if (!parsed.success || value.includes("/") || value.includes("\\")) {
+    throw new CaphubPathError(`invalid analysis job ID: ${JSON.stringify(value)}`);
+  }
+  return parsed.data;
+}
+
+function assertStageArtifactId(value: string): string {
+  const parsed = stageArtifactIdSchema.safeParse(value);
+  if (!parsed.success || value.includes("/") || value.includes("\\")) {
+    throw new CaphubPathError(`invalid stage artifact ID: ${JSON.stringify(value)}`);
+  }
+  return parsed.data;
+}
+
 function hashIdempotencyKey(value: string): string {
   return createHash("sha256").update(assertIdempotencyKey(value), "utf8").digest("hex");
 }
@@ -143,4 +160,16 @@ export function eventsPath(root: string, month: string): string {
 
 export function idempotencyLockPath(root: string, idempotencyKey: string): string {
   return joinUnder(root, "locks", `${hashIdempotencyKey(idempotencyKey)}.lock`);
+}
+
+export function analysisJobRecordPath(root: string, jobId: string): string {
+  return joinUnder(root, "records", "analysis-jobs", `${assertAnalysisJobId(jobId)}.json`);
+}
+
+export function analysisArtifactRecordPath(root: string, artifactId: string): string {
+  return joinUnder(root, "records", "analysis-artifacts", `${assertStageArtifactId(artifactId)}.json`);
+}
+
+export function modelCallEventsPath(root: string, jobId: string): string {
+  return joinUnder(root, "events", "model-calls", `${assertAnalysisJobId(jobId)}.jsonl`);
 }

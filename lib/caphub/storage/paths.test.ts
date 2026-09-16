@@ -10,13 +10,16 @@ import {
   writeFileSync
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, dirname, join, sep } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  analysisArtifactRecordPath,
+  analysisJobRecordPath,
   captureRecordPath,
   eventsPath,
   idempotencyLockPath,
   idempotencyRecordPath,
+  modelCallEventsPath,
   objectPath,
   resolveCaphubRoot
 } from "./paths";
@@ -27,6 +30,8 @@ const CAPTURE_ID = `cap_${"b".repeat(32)}`;
 const DIGEST = "a".repeat(64);
 const IDEMPOTENCY_KEY = "capture.request-20260915:abc";
 const IDEMPOTENCY_HASH = "d1e7205c2bc82cc40961d3330d9d3689d0cc3280f31a83026d5e4fa8873d76da";
+const JOB_ID = `job_${"c".repeat(32)}`;
+const ARTIFACT_ID = `art_${"d".repeat(64)}`;
 
 interface OwnedFixture {
   root: string;
@@ -154,6 +159,15 @@ describe("Caphub descendant paths", () => {
     expect(idempotencyLockPath(root, IDEMPOTENCY_KEY)).toBe(
       join(root, "locks", `${IDEMPOTENCY_HASH}.lock`)
     );
+    expect(analysisJobRecordPath(root, JOB_ID)).toBe(
+      join(root, "records", "analysis-jobs", `${JOB_ID}.json`)
+    );
+    expect(analysisArtifactRecordPath(root, ARTIFACT_ID)).toBe(
+      join(root, "records", "analysis-artifacts", `${ARTIFACT_ID}.json`)
+    );
+    expect(modelCallEventsPath(root, JOB_ID)).toBe(
+      join(root, "events", "model-calls", `${JOB_ID}.jsonl`)
+    );
   });
 
   it("rejects malformed Capture IDs and digests", () => {
@@ -176,6 +190,19 @@ describe("Caphub descendant paths", () => {
       `../${"a".repeat(64)}`
     ]) {
       expect(() => objectPath(root, digest), digest).toThrow();
+    }
+  });
+
+  it("rejects traversal and malformed analysis job/artifact identifiers", () => {
+    const fixture = createOwnedFixture();
+    const root = createCaphubRoot(fixture.root);
+
+    for (const jobId of ["job_short", `job_${"C".repeat(32)}`, `../${JOB_ID}`, `${JOB_ID}/child`]) {
+      expect(() => analysisJobRecordPath(root, jobId), jobId).toThrow();
+      expect(() => modelCallEventsPath(root, jobId), jobId).toThrow();
+    }
+    for (const artifactId of ["art_short", `art_${"D".repeat(64)}`, `../${ARTIFACT_ID}`, `${ARTIFACT_ID}/child`]) {
+      expect(() => analysisArtifactRecordPath(root, artifactId), artifactId).toThrow();
     }
   });
 
