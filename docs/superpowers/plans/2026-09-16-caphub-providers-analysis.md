@@ -106,7 +106,7 @@ Model-visible tools are empty. Host-side source access is disabled unless an exa
 - Consumes: existing `controlHostCaphubConfigSchema` and disabled-by-default Caphub configuration.
 - Produces: `CAPHUB_ANALYSIS_LIMITS`, `controlHostCaphubAnalysisConfigSchema`, and resolved secret *names* only.
 
-- [ ] **Step 1: Write failing configuration and limits tests**
+- [x] **Step 1: Write failing configuration and limits tests**
 
 Add tests that assert: analysis defaults to disabled; concurrency is exactly `1`; MiniMax/Kimi secret references are uppercase environment-variable names; provider URLs are fixed HTTPS URLs without credentials; source origins are exact HTTPS origins; bounds cannot exceed the constants above; and unknown fields are rejected.
 
@@ -120,13 +120,13 @@ expect(() => controlHostCaphubConfigSchema.parse({
 })).toThrow();
 ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run: `npm test -- lib/planning/config.test.ts lib/caphub/analysis/limits.test.ts`
 
 Expected: FAIL because `analysis` and `CAPHUB_ANALYSIS_LIMITS` do not exist.
 
-- [ ] **Step 3: Implement the strict disabled configuration**
+- [x] **Step 3: Implement the strict disabled configuration**
 
 Use literal provider/model defaults and secret environment-variable names, never values:
 
@@ -141,7 +141,7 @@ export const controlHostCaphubAnalysisConfigSchema = z.object({
 }).strict();
 ```
 
-- [ ] **Step 4: Verify GREEN and static checks**
+- [x] **Step 4: Verify GREEN and static checks**
 
 Run: `npm test -- lib/planning/config.test.ts lib/caphub/analysis/limits.test.ts`
 
@@ -149,12 +149,14 @@ Run: `npm run typecheck`
 
 Expected: all focused tests pass and TypeScript exits `0`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/planning/config.ts lib/planning/config.test.ts config/alljobs.example.json lib/caphub/analysis/limits.ts lib/caphub/analysis/limits.test.ts
 git commit -m "feat(caphub): bound P2 analysis configuration"
 ```
+
+**Evidence (2026-09-16):** commit `e6fe123c163e8d227017dca6e71e4cec7534d559`; RED failed because the limits module and analysis schema were absent; GREEN passed 2 focused files / 37 tests; `npm run typecheck` passed; focused ESLint reported 0 errors and one pre-existing `no-explicit-any` warning in `lib/planning/config.ts`.
 
 ### Task 2: Define versioned analysis and workflow schemas
 

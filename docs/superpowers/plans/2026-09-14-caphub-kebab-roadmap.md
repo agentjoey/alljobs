@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
+- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Task 1 配置/预算边界完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -135,6 +135,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 - 独立 threat model 批准 Worker profiles 与外层 sandbox。
 
 **2026-09-16 P2-A evidence：**Human 单独授权限定真实 provider probe。MiniMax M3 synthetic-image + strict JSON probe PASS；Kimi local-login/K3-256K no-tool `stream-json` probe PASS；Human 随后提供 `https://api.kimi.com/coding` 并授权一次 API probe，现有 `KIMI_CODE_API_KEY` 通过文档化 `/v1` 路径完成 Kimi Code CLI in-memory API-key/no-tool `stream-json` probe，PASS。Focused plan review confirmed that this did not prove spec §9.3 canonical server-side direct-HTTP JSON Schema mode。Human 再次授权唯一一次 direct-HTTP probe，并指定 Caphub API model 为 `k3-256k`；请求一次到达 `/coding/v1/chat/completions`，返回 `HTTP 200`，但以 `AI_NoOutputGeneratedError` 结束，未产生 schema-valid final object，且未重试。因此 endpoint/auth/model acceptance PASS，structured-output compatibility FAIL / NOT PROVEN，P2-A 保持 PARTIAL。详细 probe 证据见 `.agent/caphub/p2-provider-probes.md`；详细实施计划和 focused review 见 `docs/superpowers/plans/2026-09-16-caphub-providers-analysis.md`、`.agent/caphub/p2-plan-review.md`。
+
+**2026-09-16 P2 Task 1 evidence：**配置与预算边界已在 `e6fe123c163e8d227017dca6e71e4cec7534d559` 完成；analysis 默认关闭、并发固定为 1、provider endpoint/model 固定、secret 仅保存环境变量名、source origin 精确限制、预算只能向下收紧。RED→GREEN 为 2 focused files / 37 tests；typecheck PASS；focused lint 0 errors。
 
 **产物**
 
