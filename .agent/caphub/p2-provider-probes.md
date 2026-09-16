@@ -54,7 +54,7 @@ This proves the current credential/endpoint accepts image input and produces out
 
 This proves the local-login path can return a schema-valid no-tool result from an isolated temporary profile. It does not yet prove the complete future Research Profile sandbox or web source allowlist; those remain plan tasks and P2-C evidence.
 
-## Kimi API-key mode
+## Kimi API-key CLI compatibility
 
 **CLI/provider:** Kimi Code CLI `0.42.0`, in-memory `kimi` provider, `kimi-for-coding`.
 **Request:** one non-interactive `stream-json` prompt through the same explicit no-tools agent.
@@ -72,13 +72,14 @@ This proves the local-login path can return a schema-valid no-tool result from a
 }
 ```
 
-This proves the existing `KIMI_CODE_API_KEY` is accepted at the Human-supplied Kimi Coding endpoint and can return a schema-valid no-tool result from an isolated temporary profile. The key value and raw response were not logged. This single probe does not authorize additional provider requests or production use.
+This proves the existing `KIMI_CODE_API_KEY` is accepted by a Kimi Code CLI in-memory API-key provider at the Human-supplied Kimi Coding endpoint and can return a schema-valid no-tool result from an isolated temporary profile. The key value and raw response were not logged. It does not prove the canonical server-side direct-HTTP JSON Schema Structured Output adapter required by spec §9.3. This single probe does not authorize an additional direct-HTTP probe, other provider requests, or production use.
 
 ## Gate disposition
 
 - MiniMax image + strict JSON compatibility: PASS.
 - Kimi local-login no-tool compatibility: PASS.
-- Kimi API-key no-tool compatibility: PASS.
-- P2-A provider compatibility preflight: PASS. The detailed P2 implementation plan may proceed while preserving separate authorization for any additional real provider request.
+- Kimi API-key credential/endpoint compatibility through Kimi Code CLI: PASS.
+- Canonical direct-HTTP Kimi API-key JSON Schema compatibility: NOT RUN / NOT PROVEN.
+- P2-A provider compatibility preflight: PARTIAL. The implementation plan may be drafted and fixture implementation may proceed, but the canonical API-key path cannot be marked live-compatible or close P2-A until one separately authorized direct-HTTP structured-output probe passes.
 
 No production configuration, Caphub enablement, service restart, deployment, publication, push, merge, tag, release, or data deletion occurred. Only the temporary credential/session copy created for this probe was removed after verification.
