@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CaptureRecord } from "../domain/types";
+import { defineCaptureStoreContract } from "../registry/contract-suite";
 import { idempotencyRecordPath } from "./paths";
 import { FilesystemCaptureStore } from "./filesystem";
 
@@ -218,4 +219,12 @@ describe("FilesystemCaptureStore", () => {
       /symlink/i
     );
   });
+});
+
+defineCaptureStoreContract("filesystem", () => {
+  const fixture = createOwnedFixture();
+  return {
+    store: new FilesystemCaptureStore(createCaphubRoot(fixture)),
+    record
+  };
 });

@@ -323,11 +323,12 @@ CREATE TABLE caphub.decision_consumers (
 );
 
 CREATE TABLE caphub.audit_events (
-  event_id text PRIMARY KEY CHECK (event_id ~ '^rae_[0-9a-f]{32}$'),
+  event_id text PRIMARY KEY CHECK (event_id ~ '^(rae|evt|mce)_[0-9a-f]{32}$'),
   event_type text NOT NULL CHECK (event_type IN (
+    'capture.received', 'model.started', 'model.succeeded', 'model.failed',
     'registry.imported', 'review.requested', 'review.decided', 'review.revoked', 'review.consumed'
   )),
-  actor text NOT NULL CHECK (actor IN ('system:caphub', 'human:owner')),
+  actor text NOT NULL CHECK (actor IN ('web:user', 'system:caphub', 'human:owner')),
   subject_id text NOT NULL,
   subject_version integer NOT NULL CHECK (subject_version > 0),
   decision_id text,

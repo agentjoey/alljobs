@@ -22,7 +22,7 @@ export const registryMigrationManifest: readonly RegistryMigration[] = Object.fr
   loadMigration(
     "001_registry",
     "001_registry.sql",
-    "796a199848d7c2b9e88a201bd4ec362b11627ad63872681e34376e3429e66d19"
+    "d48b33929743342b2fcfe11726a45653e06c0cc39a84949dcbf1ae9ec80e5fa8"
   ),
   loadMigration(
     "002_read_models",
