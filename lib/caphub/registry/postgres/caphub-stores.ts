@@ -196,23 +196,23 @@ export class PostgresAnalysisJobStore implements AnalysisJobStore {
   }
 }
 
-const artifactPayloadSchema = z.object({
+export const registryArtifactPayloadSchema = z.object({
   schema_version: z.literal(1),
   artifact: stageArtifactSchema,
   payload: registryJsonValueSchema
 }).strict();
-type ArtifactPayload = z.infer<typeof artifactPayloadSchema>;
+type ArtifactPayload = z.infer<typeof registryArtifactPayloadSchema>;
 
 export class PostgresStageArtifactStore implements StageArtifactStore {
   private readonly records: PostgresRegistryRecordStore;
 
   constructor(private readonly pool: Pool) {
-    this.records = new PostgresRegistryRecordStore(pool, { analysis_artifact: artifactPayloadSchema });
+    this.records = new PostgresRegistryRecordStore(pool, { analysis_artifact: registryArtifactPayloadSchema });
   }
 
   async get(id: string): Promise<StageArtifact | null> {
     const current = await this.records.getCurrent(id);
-    return current ? artifactPayloadSchema.parse(current.payload).artifact : null;
+    return current ? registryArtifactPayloadSchema.parse(current.payload).artifact : null;
   }
 
   async create(input: CreateStageArtifactInput): Promise<StageArtifact> {
@@ -250,7 +250,7 @@ export class PostgresStageArtifactStore implements StageArtifactStore {
 
   async readPayload(id: string): Promise<unknown | null> {
     const current = await this.records.getCurrent(id);
-    return current ? artifactPayloadSchema.parse(current.payload).payload : null;
+    return current ? registryArtifactPayloadSchema.parse(current.payload).payload : null;
   }
 
   async findByJobStage(jobId: string, stage: AnalysisStage): Promise<StageArtifact | null> {
@@ -266,7 +266,7 @@ export class PostgresStageArtifactStore implements StageArtifactStore {
       LIMIT 2
     `, [jobId, stage]);
     if (result.rows.length > 1) throw new PostgresCaphubStoreError("WORKFLOW_RECORD_CONFLICT");
-    return result.rows[0] ? artifactPayloadSchema.parse(result.rows[0].payload).artifact : null;
+    return result.rows[0] ? registryArtifactPayloadSchema.parse(result.rows[0].payload).artifact : null;
   }
 }
 
