@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { z } from "zod";
@@ -117,6 +117,44 @@ export function resolveControlHostHome(customHome?: string): string {
   return resolve(homedir(), ".alljobs");
 }
 
+const CONTROL_HOST_DIRECTORY_MODE = 0o700;
+const UNSAFE_DIRECTORY_WRITE_BITS = 0o022;
+
+function assertOwnedDirectory(path: string): string {
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error("Control Host state directories must be real directories, not symlinks");
+  }
+  if (typeof process.getuid !== "function" || stat.uid !== process.getuid()) {
+    throw new Error("Control Host state directories must be owned by the current uid");
+  }
+  if ((stat.mode & UNSAFE_DIRECTORY_WRITE_BITS) !== 0) {
+    throw new Error("Control Host state directories must not be group or other writable");
+  }
+  return realpathSync(path);
+}
+
+function ensureOwnedDirectChildDirectory(parent: string, child: string): void {
+  const realParent = assertOwnedDirectory(parent);
+  try {
+    mkdirSync(child, { mode: CONTROL_HOST_DIRECTORY_MODE });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+
+  if (dirname(assertOwnedDirectory(child)) !== realParent) {
+    throw new Error("Control Host state directories must remain direct children of their resolved parent");
+  }
+}
+
+function ensureCaphubStateDirectory(homeDir: string, stateDir: string, caphubStateDir: string): void {
+  ensureOwnedDirectChildDirectory(homeDir, stateDir);
+  ensureOwnedDirectChildDirectory(stateDir, caphubStateDir);
+  // Recheck the parent after creating the child so a substituted state path
+  // fails closed before the resolved paths are returned to a route.
+  ensureOwnedDirectChildDirectory(homeDir, stateDir);
+}
+
 export function loadControlHostConfig(customHome?: string): ControlHostResolvedPaths {
   const homeDir = resolveControlHostHome(customHome);
   const configPath = resolve(homeDir, "config.json");
@@ -155,7 +193,7 @@ export function loadControlHostConfig(customHome?: string): ControlHostResolvedP
   if (!existsSync(mirrorsDir)) mkdirSync(mirrorsDir, { recursive: true });
   if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
   if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
-  if (!existsSync(caphubStateDir)) mkdirSync(caphubStateDir, { recursive: true });
+  ensureCaphubStateDirectory(homeDir, stateDir, caphubStateDir);
   if (!existsSync(monitoringStateDir)) mkdirSync(monitoringStateDir, { recursive: true });
 
   return {

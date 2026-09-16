@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -324,6 +332,26 @@ describe("control host Caphub resolved paths", () => {
       expect(existsSync(caphubStateDir)).toBe(true);
     } finally {
       rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a symlinked state directory without creating Caphub state outside the Control Host home", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "alljobs-caphub-config-symlink-"));
+    const home = join(fixture, "home");
+    const outside = join(fixture, "outside");
+    mkdirSync(home, { mode: 0o700 });
+    mkdirSync(outside, { mode: 0o700 });
+    writeFileSync(join(home, "config.json"), JSON.stringify({
+      trustedCodeRoots: ["/workspace"],
+      caphub: { enabled: false }
+    }));
+    symlinkSync(outside, join(home, "state"));
+
+    try {
+      expect(() => loadControlHostConfig(home)).toThrow();
+      expect(existsSync(join(outside, "caphub"))).toBe(false);
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
     }
   });
 });
