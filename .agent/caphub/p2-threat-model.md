@@ -111,5 +111,6 @@ These bounds are safe for fixture-only implementation under the standing develop
 
 - `sandbox-exec` is macOS-specific; P2 targets the current macOS Control Host. Another host requires a separately reviewed sandbox implementation.
 - OCR and barcode libraries parse hostile media. Byte/pixel/time limits reduce risk but do not replace dependency updates and future sandboxing of native/WASM decoders.
+- The 2026-09-16 read-only production dependency audit reported a direct critical advisory on existing `next@16.3.0` plus transitive findings through existing `shadcn`, `gray-matter`, and ESLint chains. None resolved through the five new Task 3 direct media/OCR dependencies. This is not authorization for an unplanned framework upgrade, but applicable runtime findings must be remediated and re-audited before any Caphub production enablement.
 - Live search remains disabled until an exact provider and approved source policy are configured and separately verified.
 - Successful P2-A probes prove provider compatibility only; they do not authorize production traffic or future provider requests.

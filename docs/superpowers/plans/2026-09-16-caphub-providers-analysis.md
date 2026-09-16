@@ -244,7 +244,7 @@ git commit -m "feat(caphub): define P2 analysis contracts"
 - Consumes: ordered immutable object bytes and `CAPHUB_ANALYSIS_LIMITS`.
 - Produces: `preprocessCapture(input): Promise<PreprocessResult>` with original/normalized digests, dimensions, sharpness, black-border ratio, OCR usability, geometric/semantic region candidates, OCR blocks, barcode payloads, extracted indicators, perceptual hashes, duplicate groups, and privacy suggestions.
 
-- [ ] **Step 1: Write failing image and text characterization tests**
+- [x] **Step 1: Write failing image and text characterization tests**
 
 Tests must prove EXIF orientation normalization, per-image and aggregate pixel-limit rejection before OCR, preprocessing/OCR deadlines, deterministic sharpness and black-border measurements, OCR-usability classification, deterministic OCR block ordering, geometric region grouping plus conservative `platform_ui`/`subtitle`/`comment`/`body`/`unknown` labels, QR extraction, exact SHA-256 duplicate detection, perceptual near-duplicate grouping, URL/repository/package/command extraction, and privacy suggestions that never alter source bytes.
 
@@ -263,13 +263,13 @@ expect(result.indicators.urls).toContain("https://example.com/tool");
 expect(result.privacy_suggestions[0].action).toBe("human_redaction_review");
 ```
 
-- [ ] **Step 2: Run focused preprocessing tests and verify RED**
+- [x] **Step 2: Run focused preprocessing tests and verify RED**
 
 Run: `npm test -- lib/caphub/preprocess/image.test.ts lib/caphub/preprocess/text.test.ts lib/caphub/preprocess/preprocessor.test.ts`
 
 Expected: FAIL because preprocessing modules do not exist.
 
-- [ ] **Step 3: Install deterministic media dependencies**
+- [x] **Step 3: Install deterministic media dependencies**
 
 Run:
 
@@ -279,7 +279,7 @@ npm install sharp tesseract.js @tesseract.js-data/eng @tesseract.js-data/chi_sim
 
 Expected: `package.json` and `package-lock.json` add exactly these direct runtime dependencies. OCR language data resolves from installed package paths; runtime downloads are forbidden.
 
-- [ ] **Step 4: Implement bounded image normalization and extraction**
+- [x] **Step 4: Implement bounded image normalization and extraction**
 
 Use `sharp` for metadata/orientation/grayscale statistics and normalized PNG output, `tesseract.js` with packaged English/Simplified-Chinese language data and one worker at a time, and `@zxing/library` for QR/barcodes. OCR blocks sort by `(page, y, x, text)`; commands are evidence strings only and are never executed. `fixtures.ts` generates small deterministic images in memory so no opaque binary fixtures enter Git.
 
@@ -290,22 +290,24 @@ export interface ImagePreprocessorDependencies {
 }
 ```
 
-- [ ] **Step 5: Implement capture-level aggregation**
+- [x] **Step 5: Implement capture-level aggregation**
 
 Reject more than 8 images, more than 40 MiB aggregate input, more than 80 million aggregate pixels, or work exceeding the fixed preprocessing/OCR deadlines; preserve user order, derive exact/perceptual duplicate groups, and return only schema-valid deterministic output.
 
-- [ ] **Step 6: Verify GREEN and regression scope**
+- [x] **Step 6: Verify GREEN and regression scope**
 
 Run: `npm test -- lib/caphub/preprocess/image.test.ts lib/caphub/preprocess/text.test.ts lib/caphub/preprocess/preprocessor.test.ts lib/caphub/domain/schemas.test.ts lib/caphub/storage/local-objects.test.ts`
 
 Expected: focused P2 and adjacent P1 tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add package.json package-lock.json lib/caphub/preprocess
 git commit -m "feat(caphub): add deterministic capture preprocessing"
 ```
+
+**Evidence (2026-09-16):** commit `79d6dbf`; RED failed across all 3 preprocessing suites because the modules were absent; GREEN passed 5 focused/adjacent files / 26 tests. Real boundaries exercised `sharp`, generated-fixture ZXing QR decoding, and English/Simplified-Chinese Tesseract workers using installed language packages with no runtime download. `npm run typecheck` and focused ESLint passed. A read-only production audit found no advisory chain through the five new direct dependencies, but found pre-existing advisories through `next@16.3.0`, `shadcn`, `gray-matter`, and ESLint; production enablement remains blocked until the applicable runtime findings are separately remediated and verified.
 
 ### Task 4: Add provider-neutral structured execution and redacted audit
 

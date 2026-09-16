@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–2 配置/预算与版本化契约完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
+- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–3 配置/契约/确定性预处理完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -139,6 +139,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 **2026-09-16 P2 Task 1 evidence：**配置与预算边界已在 `e6fe123c163e8d227017dca6e71e4cec7534d559` 完成；analysis 默认关闭、并发固定为 1、provider endpoint/model 固定、secret 仅保存环境变量名、source origin 精确限制、预算只能向下收紧。RED→GREEN 为 2 focused files / 37 tests；typecheck PASS；focused lint 0 errors。
 
 **2026-09-16 P2 Task 2 evidence：**版本化 analysis/workflow schemas 与 canonical digest 已在 `de76318` 完成。覆盖所有阶段、A/B 身份证据、歧义状态、0–5 独立维度、引用完整性、review-only packet、terminal job/audit unions 与 content-addressed artifact。RED→GREEN 为 2 focused files / 14 tests；typecheck 与 focused lint PASS。
+
+**2026-09-16 P2 Task 3 evidence：**确定性预处理已在 `79d6dbf` 完成；覆盖 EXIF、质量/OCR 可用性、区域、真实 ZXing QR、英/简中本地 Tesseract、指标/命令证据、byte/pixel/deadline 限额、exact/perceptual dedupe 与 review-only 隐私建议。RED→GREEN 回归为 5 files / 26 tests；typecheck 与 focused lint PASS。只读 production audit 同时发现既有 Next/shadcn/gray-matter/ESLint 依赖链 advisories；新加的 5 个 direct media/OCR dependencies 不在 advisory chain 中，生产启用前仍须单独处理适用的既有 runtime finding。
 
 **产物**
 
