@@ -158,18 +158,18 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
     expect(count.rows[0]?.count).toBe("1");
   });
 
-  test("fails stale and concurrent tabs closed while preserving rationale", async ({ browser }) => {
+  test("returns the concurrent winner receipt and forces stale requests to refresh", async ({ browser }) => {
     const concurrent = await seedReviewCandidate(pool, fixture, "concurrent-tabs");
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const first = await context.newPage();
     const second = await context.newPage();
     await Promise.all([openReview(first, concurrent), openReview(second, concurrent)]);
-    await approve(first, concurrent);
+    const winnerDecisionId = await approve(first, concurrent);
     await second.getByLabel(/Rationale/i).fill("Preserve concurrent rationale");
     await second.getByLabel(/Typed confirmation/i).fill(concurrent.approveConfirmation);
     await second.getByRole("button", { name: "Approve build" }).click();
-    await expect(second.locator(".registry-decision-error")).toContainText(/changed before the decision/i);
-    await expect(second.getByLabel(/Rationale/i)).toHaveValue("Preserve concurrent rationale");
+    await expect(second.getByRole("heading", { name: "Decision recorded" })).toBeFocused();
+    await expect(second.locator(".registry-decision-receipt")).toContainText(winnerDecisionId);
     await context.close();
 
     const stale = await seedReviewCandidate(pool, fixture, "same-request-stale");
@@ -181,6 +181,8 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
     await stalePage.getByRole("button", { name: "Approve build" }).click();
     await expect(stalePage.locator(".registry-decision-error")).toContainText(/changed before the decision/i);
     await expect(stalePage.getByLabel(/Rationale/i)).toHaveValue("Preserve stale rationale");
+    await expect(stalePage.getByRole("button", { name: /Refresh this request/i })).toBeVisible();
+    await expect(stalePage.getByRole("button", { name: "Approve build" })).toBeDisabled();
     await stalePage.close();
   });
 
@@ -226,6 +228,16 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
     expect(controls.filter(({ height }) => height < 40)).toEqual([]);
     const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
     expect(accessibility.violations).toEqual([]);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
+    const decisionJump = page.getByRole("link", { name: "Decision" });
+    await expect(decisionJump).toBeVisible();
+    await decisionJump.focus();
+    await expect(decisionJump).toBeFocused();
+    await decisionJump.press("Enter");
+    await expect(page).toHaveURL(/#decision$/);
+    await expect(page.locator("#decision")).toBeVisible();
+    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
   });
 
   test("captures the approved P3 state matrix from this production build", async ({ page }) => {
@@ -283,6 +295,10 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
       throw error;
     }
     await openReview(page, superseded);
+    const latestLink = page.getByRole("link", { name: /Open latest request/i });
+    await latestLink.focus();
+    await expect(latestLink).toBeFocused();
+    expect((await latestLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await shot(page, "superseded", 1440);
     await shot(page, "superseded", 390);
 

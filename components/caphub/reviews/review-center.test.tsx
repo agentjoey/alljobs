@@ -22,7 +22,24 @@ describe("Review Center state matrix", () => {
     expect(screen.getByRole("heading", { name: "Decision ledger" })).toBeInTheDocument();
     expect([...container.querySelectorAll("#docket, #evidence, #diff, #decision")].map((node) => node.id)).toEqual(["docket", "evidence", "diff", "decision"]);
     expect(screen.getByLabelText("Full subject SHA-256 digest")).toHaveTextContent("3".repeat(64));
+    expect(screen.getByText(/Value 4\/5 · Risk 3\/5/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/confirmed/i)).not.toHaveLength(0);
+    expect(screen.getByRole("heading", { name: /Value, risk, and identity/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Alternatives and capability overlap/i })).toBeInTheDocument();
+    expect(screen.getByText(/Manual review/i)).toBeInTheDocument();
     expect(container.innerHTML).not.toContain("dangerouslySetInnerHTML");
+  });
+
+  it("filters by kind, state, value, risk, and waiting age while naming every selection", () => {
+    render(<ReviewCenter initialView={{ state: "ready", queue: reviewQueue(), detail: reviewDetail() }} />);
+    expect(screen.getByLabelText(/Kind/i)).toHaveValue("all");
+    expect(screen.getByLabelText(/State/i)).toHaveValue("all");
+    expect(screen.getByLabelText(/^Value$/i)).toHaveValue("all");
+    expect(screen.getByLabelText(/^Risk$/i)).toHaveValue("all");
+    expect(screen.getByLabelText(/Waiting age/i)).toHaveValue("all");
+    fireEvent.change(screen.getByLabelText(/^Risk$/i), { target: { value: "high" } });
+    expect(screen.getByText(/No reviews match these filters/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Risk$/i)).toHaveValue("high");
   });
 
   it("distinguishes global empty from filtered empty", () => {

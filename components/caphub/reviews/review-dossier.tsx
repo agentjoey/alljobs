@@ -46,6 +46,23 @@ export function ReviewDossier({ detail }: { detail: FoundReview }) {
         ))}
       </section>
 
+      <section className="registry-section" aria-labelledby="dimensions-title">
+        <h3 id="dimensions-title">Value, risk, and identity</h3>
+        <dl className="registry-dimensions">
+          <dt>Capability value</dt><dd><strong>{detail.packet.dimensions.capabilityValue.score ?? "—"}/5</strong> {detail.packet.dimensions.capabilityValue.reason}<code>{detail.packet.dimensions.capabilityValue.evidenceIds.join(" · ") || "No citations"}</code></dd>
+          <dt>Security risk</dt><dd><strong>{detail.packet.dimensions.securityRisk.score ?? "—"}/5</strong> {detail.packet.dimensions.securityRisk.reason}<code>{detail.packet.dimensions.securityRisk.evidenceIds.join(" · ") || "No citations"}</code></dd>
+          <dt>Identity</dt><dd><strong>{detail.packet.identity.status.replaceAll("_", " ")}</strong> {detail.packet.identity.entityId ?? detail.packet.identity.reason}<code>{detail.packet.identity.evidenceIds.join(" · ") || "No confirmed identity citation"}</code></dd>
+        </dl>
+      </section>
+
+      <section className="registry-section" aria-labelledby="alternatives-title">
+        <h3 id="alternatives-title">Alternatives and capability overlap</h3>
+        {detail.packet.alternatives.length ? <ol>{detail.packet.alternatives.map((alternative) => <li key={`${alternative.rank}:${alternative.name}`}><strong>{alternative.name}</strong> — {alternative.reason} <code>{alternative.evidenceIds.join(" · ")}</code></li>)}</ol> : <p>No ranked alternatives were imported.</p>}
+        <p><strong>Overlaps:</strong> {detail.candidate.overlappingCapabilities.join(" · ") || "No resident capability overlap recorded."}</p>
+        <p><strong>Complements:</strong> {detail.candidate.complements.join(" · ") || "None recorded."}</p>
+        <p><strong>Conflicts:</strong> {detail.candidate.conflictsWith.join(" · ") || "None recorded."}</p>
+      </section>
+
       <section className="registry-section" aria-labelledby="conflicts-title">
         <h3 id="conflicts-title">Conflicts and unresolved questions</h3>
         {detail.packet.conflicts.map((conflict, index) => <p key={index}>{conflict.summary}</p>)}

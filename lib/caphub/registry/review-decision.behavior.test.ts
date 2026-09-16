@@ -115,11 +115,10 @@ describe.sequential("real review decision boundary", () => {
       service.decide(REQUEST_ID, { ...input, idempotency_key: "review.behavior-concurrent-left" }),
       service.decide(REQUEST_ID, { ...input, idempotency_key: "review.behavior-concurrent-right" })
     ]);
-    const winner = [left, right].find((result) => result.status === "fulfilled");
-    expect(winner?.status).toBe("fulfilled");
-    expect([left, right].filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    if (winner?.status !== "fulfilled") throw new Error("missing decision winner");
-    expect(winner.value.job).toMatchObject({ status: "reviewed", review_decision_id: `dec_${"9".repeat(32)}` });
+    expect([left, right].filter((result) => result.status === "fulfilled")).toHaveLength(2);
+    if (left.status !== "fulfilled" || right.status !== "fulfilled") throw new Error("missing concurrent receipt");
+    expect(left.value.result.decision.id).toBe(right.value.result.decision.id);
+    expect(left.value.job).toMatchObject({ status: "reviewed", review_decision_id: `dec_${"9".repeat(32)}` });
 
     const decisions = await postgres.pool.query<{ count: string }>("SELECT count(*) FROM caphub.review_decisions");
     const audits = await postgres.pool.query<{ count: string }>(

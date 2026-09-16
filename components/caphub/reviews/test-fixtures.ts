@@ -29,6 +29,7 @@ export function reviewDetail(overrides: Record<string, unknown> = {}): Extract<R
     },
     packet: {
       packetId: `rvp_${"4".repeat(32)}`,
+      ocr: [{ imageIndex: 0, text: "Browser Use Safety Layer" }],
       screenshots: [{ order: 0, digest: "5".repeat(64), bytes: 42 }],
       evidence: [{
         id: `ev_${"6".repeat(32)}`, tier: "A", sourceUrl: "https://docs.example.com/tool",
@@ -40,7 +41,20 @@ export function reviewDetail(overrides: Record<string, unknown> = {}): Extract<R
         confidence: 0.8, evidenceIds: [`ev_${"6".repeat(32)}`]
       }],
       entities: [{ name: "Example", aliases: [] }],
+      identity: {
+        status: "confirmed" as const,
+        entityId: "ent_example",
+        evidenceIds: [`ev_${"6".repeat(32)}`],
+        reason: null,
+        candidates: []
+      },
       conflicts: [{ summary: "Enforcement remains unproved.", evidenceIds: [`ev_${"6".repeat(32)}`] }],
+      alternatives: [{ rank: 1, name: "Manual review", reason: "Lower privilege", evidenceIds: [`ev_${"6".repeat(32)}`] }],
+      dimensions: {
+        capabilityValue: { score: 4, reason: "Useful for bounded browser work", evidenceIds: [`ev_${"6".repeat(32)}`] },
+        securityRisk: { score: 3, reason: "Requires strict host enforcement", evidenceIds: [`ev_${"6".repeat(32)}`] },
+        evidenceConfidence: { score: 3, reason: "One primary source", evidenceIds: [`ev_${"6".repeat(32)}`] }
+      },
       unresolvedQuestions: ["Can blocked writes be proven?"], evidenceConfidence: 3,
       recommendedDisposition: "build", critic: { verdict: "revise", unresolvedQuestions: ["Need blocked-write evidence."] },
       createdAt: "2026-09-16T13:00:00.000Z"
@@ -66,7 +80,14 @@ export function reviewQueue(): ReviewQueueDto {
       },
       candidate: detail.candidate,
       evidenceConfidence: 3,
-      unresolvedCount: 1
+      unresolvedCount: 1,
+      recommendedDisposition: "build",
+      identityStatus: "confirmed",
+      valueScore: 4,
+      riskScore: 3,
+      waitingSince: detail.request.createdAt,
+      waitingAgeHours: 30,
+      waitingAgeBand: "aging"
     }],
     nextCursor: null
   };
@@ -80,13 +101,30 @@ export const captureDetail = {
     createdAt: "2026-09-16T13:00:00.000Z"
   },
   job: { id: `job_${"b".repeat(32)}`, status: "completed", completedArtifactIds: [] },
+  analysisState: "complete",
   packet: reviewDetail().packet,
+  packetVersion: 1,
+  packetDigest: "d".repeat(64),
+  registryImport: {
+    id: `imp_${"e".repeat(32)}`,
+    importedAt: "2026-09-16T13:00:00.000Z",
+    reviewRequestId: REQUEST_ID,
+    reviewState: "WAITING_FOR_REVIEW"
+  },
+  decisions: [],
   modelCalls: [{ eventId: `mce_${"c".repeat(32)}`, stage: "research", provider: "kimi", model: "k3-256k", type: "succeeded", occurredAt: "2026-09-16T13:00:00.000Z" }]
 } as CaptureDetailDto;
 
 export const capabilityDetail = {
   kind: "found", candidateId: SUBJECT_ID, candidate: reviewDetail().candidate,
   request: reviewQueue().items[0].request, packet: reviewDetail().packet,
+  currentVersion: 1,
+  versions: [{ version: 1, digest: DIGEST, createdAt: "2026-09-16T13:00:00.000Z" }],
+  lineage: [{
+    fromId: reviewDetail().packet.packetId, fromKind: "review_packet", fromVersion: 1,
+    relationship: "proposes", toId: SUBJECT_ID, toKind: "candidate", toVersion: 1
+  }],
+  decisions: [], staleVersion: false,
   future: { experienceCards: [], buildProposals: [], releases: [], deployments: [] },
   decision: null, authority: null
 } as CapabilityDetailDto;

@@ -147,6 +147,8 @@ function registryPoolOptions(
     connectionString: databaseUrl,
     max: registry.maxConnections,
     statement_timeout: registry.statementTimeoutMs,
+    application_name: "alljobs-caphub-registry",
+    idleTimeoutMillis: 30_000,
     ssl: fixtureSocket ? false : { rejectUnauthorized: true }
   };
 }

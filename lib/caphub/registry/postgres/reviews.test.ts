@@ -103,7 +103,7 @@ describe.sequential("PostgresReviewStore", () => {
     await expect(reviews.listDecisions(review.id)).resolves.toHaveLength(1);
   });
 
-  it("allows one winner for concurrent terminal decisions", async () => {
+  it("returns the winner receipt for concurrent terminal decisions", async () => {
     const reviews = store();
     const review = request();
     await reviews.createRequest(review);
@@ -111,9 +111,30 @@ describe.sequential("PostgresReviewStore", () => {
       reviews.decide(decisionInput(review, { idempotency_key: `review.concurrent-${review.id.slice(-8)}-left` })),
       reviews.decide(decisionInput(review, { idempotency_key: `review.concurrent-${review.id.slice(-8)}-right` }))
     ]);
-    expect([left, right].filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect([left, right].filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect([left, right].filter((result) => result.status === "fulfilled")).toHaveLength(2);
+    if (left.status !== "fulfilled" || right.status !== "fulfilled") throw new Error("missing concurrent receipt");
+    expect(left.value.decision.id).toBe(right.value.decision.id);
     await expect(reviews.listDecisions(review.id)).resolves.toHaveLength(1);
+  });
+
+  it("atomically supersedes older waiting requests for a newer subject version", async () => {
+    const reviews = store();
+    const first = request();
+    await reviews.createRequest(first);
+    const second = request({
+      subject_id: first.subject_id,
+      subject_version: 2,
+      subject_digest: "e".repeat(64),
+      approve_confirmation: first.approve_confirmation,
+      reject_confirmation: first.reject_confirmation
+    });
+    await expect(reviews.createRequest(second)).resolves.toBe("created");
+    await expect(reviews.getRequest(first.id)).resolves.toMatchObject({
+      state: "SUPERSEDED",
+      lock_version: 2,
+      superseded_by_request_id: second.id
+    });
+    await expect(reviews.getRequest(second.id)).resolves.toMatchObject({ state: "WAITING_FOR_REVIEW" });
   });
 
   it("fails stale digest and lock attempts without writing a decision or audit", async () => {
@@ -143,7 +164,7 @@ describe.sequential("PostgresReviewStore", () => {
     expect(rejected.decision).toMatchObject({ action: "reject", actor: "human:owner" });
     await expect(reviews.decide(decisionInput(review, {
       idempotency_key: `review.after-reject-${review.id.slice(-8)}`
-    }))).rejects.toMatchObject({ code: "STALE_REVIEW" });
+    }))).resolves.toMatchObject({ decision: { id: rejected.decision.id, action: "reject" } });
     await expect(reviews.getRequest(review.id)).resolves.toMatchObject({ state: "REJECTED", lock_version: 2 });
   });
 

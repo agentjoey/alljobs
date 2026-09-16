@@ -222,6 +222,19 @@ export class PostgresReviewStore implements ReviewStore {
         if (prior.rows[0] && prior.rows[0].state !== "REVOKED") {
           throw new ReviewStoreError("REVIEW_ALREADY_TERMINAL");
         }
+        const newer = await client.query<{ request_id: string }>(`
+          SELECT request_id FROM caphub.review_requests
+          WHERE subject_id = $1 AND subject_version > $2
+          ORDER BY subject_version DESC, created_at DESC, request_id DESC
+          LIMIT 1 FOR UPDATE
+        `, [request.subject_id, request.subject_version]);
+        if (newer.rows[0]) throw new ReviewStoreError("STALE_REVIEW");
+        await client.query(`
+          SELECT request_id FROM caphub.review_requests
+          WHERE subject_id = $1 AND subject_version < $2 AND state = 'WAITING_FOR_REVIEW'
+          ORDER BY subject_version, created_at, request_id
+          FOR UPDATE
+        `, [request.subject_id, request.subject_version]);
         await client.query(`
           INSERT INTO caphub.review_requests
             (request_id, review_kind, subject_kind, subject_id, subject_version, subject_digest,
@@ -232,6 +245,12 @@ export class PostgresReviewStore implements ReviewStore {
           request.subject_version, request.subject_digest, request.lock_version, request.state,
           request.approve_confirmation, request.reject_confirmation, request.superseded_by_request_id,
           request.created_at, request.updated_at]);
+        await client.query(`
+          UPDATE caphub.review_requests
+          SET state = 'SUPERSEDED', superseded_by_request_id = $3,
+              lock_version = lock_version + 1, updated_at = $4
+          WHERE subject_id = $1 AND subject_version < $2 AND state = 'WAITING_FOR_REVIEW'
+        `, [request.subject_id, request.subject_version, request.id, request.created_at]);
         await insertAudit(client, {
           id: auditId(`${request.id}\0review.requested`),
           type: "review.requested",
@@ -314,6 +333,29 @@ export class PostgresReviewStore implements ReviewStore {
     return this.resultFor(client, decision);
   }
 
+  private async terminalReceipt(
+    client: Pick<PoolClient, "query">,
+    input: ReviewDecisionInput
+  ): Promise<ReviewDecisionResult | null> {
+    const requestResult = await client.query<ReviewRequestRow>(
+      "SELECT * FROM caphub.review_requests WHERE request_id = $1",
+      [input.request_id]
+    );
+    const row = requestResult.rows[0];
+    if (!row || row.subject_digest !== input.expected_subject_digest
+      || row.lock_version !== input.expected_lock_version + 1
+      || row.state === "WAITING_FOR_REVIEW") return null;
+    const decisionResult = await client.query<ReviewDecisionRow>(`
+      SELECT * FROM caphub.review_decisions
+      WHERE request_id = $1
+      ORDER BY recorded_at DESC, decision_id DESC
+      LIMIT 1
+    `, [input.request_id]);
+    return decisionResult.rows[0]
+      ? this.resultFor(client as PoolClient, decisionFromRow(decisionResult.rows[0]))
+      : null;
+  }
+
   private async writeDecision(raw: ReviewDecisionInput, requireRevoke: boolean): Promise<ReviewDecisionResult> {
     const parsed = reviewDecisionInputSchema.safeParse(raw);
     if (!parsed.success || (requireRevoke ? parsed.data.action !== "revoke" : parsed.data.action === "revoke")) {
@@ -331,10 +373,19 @@ export class PostgresReviewStore implements ReviewStore {
         );
         if (!requestResult.rows[0]) throw new ReviewStoreError("INVALID_REVIEW_DECISION");
         const request = requestFromRow(requestResult.rows[0]);
-        if (request.lock_version !== input.expected_lock_version
-          || request.subject_digest !== input.expected_subject_digest) {
+        if (request.subject_digest !== input.expected_subject_digest) {
           throw new ReviewStoreError("STALE_REVIEW");
         }
+
+        const expectedOpenState = input.action === "revoke" ? "APPROVED" : "WAITING_FOR_REVIEW";
+        if (request.state !== expectedOpenState) {
+          const winner = await this.terminalReceipt(client, input);
+          if (winner) return winner;
+          throw new ReviewStoreError(
+            request.lock_version === input.expected_lock_version ? "REVIEW_ALREADY_TERMINAL" : "STALE_REVIEW"
+          );
+        }
+        if (request.lock_version !== input.expected_lock_version) throw new ReviewStoreError("STALE_REVIEW");
 
         const expectedConfirmation = confirmationFor(request, input.action);
         if (input.confirmation !== expectedConfirmation) {
@@ -360,8 +411,6 @@ export class PostgresReviewStore implements ReviewStore {
           if (consumed.rows[0]) {
             throw new ReviewStoreError("DECISION_ALREADY_CONSUMED", consumed.rows[0].consumer_id);
           }
-        } else if (request.state !== "WAITING_FOR_REVIEW") {
-          throw new ReviewStoreError("REVIEW_ALREADY_TERMINAL");
         }
 
         const recordedAt = this.clock();
@@ -417,6 +466,15 @@ export class PostgresReviewStore implements ReviewStore {
         return this.resultFor(client, decision);
       });
     } catch (error) {
+      if (error && typeof error === "object" && "code" in error
+        && (String(error.code) === "40001" || String(error.code) === "40P01")) {
+        try {
+          const winner = await this.terminalReceipt(this.pool, input);
+          if (winner) return winner;
+        } catch {
+          // Preserve the original bounded concurrency failure.
+        }
+      }
       throw mapReviewError(error);
     }
   }

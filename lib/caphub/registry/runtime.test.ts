@@ -106,6 +106,10 @@ describe.sequential("Control Host Registry runtime", () => {
       poolFactory: (value) => { options = value; return postgres.pool; }
     });
     expect(runtime.pool).toBe(postgres.pool);
-    expect(options).toMatchObject({ ssl: false });
+    expect(options).toMatchObject({
+      ssl: false,
+      application_name: "alljobs-caphub-registry",
+      idleTimeoutMillis: 30_000
+    });
   });
 });

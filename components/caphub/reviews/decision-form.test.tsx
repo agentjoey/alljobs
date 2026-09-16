@@ -25,6 +25,43 @@ describe("DecisionForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /Approve build/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/changed before the decision/i);
     expect(screen.getByLabelText(/Rationale/i)).toHaveValue("Keep this text");
+    expect(screen.getByRole("button", { name: /Refresh this request/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Approve build/i })).toBeDisabled();
+  });
+
+  it("preserves input and requires refresh after an idempotency conflict", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: "IDEMPOTENCY_CONFLICT" } }), { status: 409, headers: { "content-type": "application/json" } })));
+    render(<DecisionForm detail={reviewDetail()} />);
+    fireEvent.change(screen.getByLabelText(/Rationale/i), { target: { value: "Keep idempotent rationale" } });
+    fireEvent.change(screen.getByLabelText(/Typed confirmation/i), { target: { value: "APPROVE CANDIDATE 22222222" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve build/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/refresh is required/i);
+    expect(screen.getByLabelText(/Rationale/i)).toHaveValue("Keep idempotent rationale");
+    expect(screen.getByRole("button", { name: /Approve build/i })).toBeDisabled();
+  });
+
+  it("locks controls while submitting and reuses one intent key after a lost response", async () => {
+    let resolveFirst: ((value: Response) => void) | undefined;
+    const fetch = vi.fn()
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { resolveFirst = resolve; }))
+      .mockRejectedValueOnce(new Error("lost response"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        decision: { id: `dec_${"d".repeat(32)}`, action: "approve" },
+        consequence: "No release or build was created."
+      }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    render(<DecisionForm detail={reviewDetail()} />);
+    fireEvent.change(screen.getByLabelText(/Typed confirmation/i), { target: { value: "APPROVE CANDIDATE 22222222" } });
+    fireEvent.click(screen.getByRole("button", { name: /Approve build/i }));
+    expect(screen.getByRole("button", { name: /Recording exact decision/i })).toBeDisabled();
+    resolveFirst?.(new Response(JSON.stringify({ error: { code: "INTERNAL_ERROR" } }), { status: 500, headers: { "content-type": "application/json" } }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: /Approve build/i }));
+    await screen.findByText(/REVIEW_WRITE_UNAVAILABLE/i);
+    fireEvent.click(screen.getByRole("button", { name: /Approve build/i }));
+    await screen.findByRole("heading", { name: "Decision recorded" });
+    const bodies = fetch.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
+    expect(new Set(bodies.map((body) => body.idempotency_key)).size).toBe(1);
   });
 
   it("moves focus to a receipt and announces the no-action consequence", async () => {
@@ -52,7 +89,8 @@ describe("DecisionForm", () => {
     expect(screen.queryByRole("button", { name: /Revoke approval/i })).not.toBeInTheDocument();
 
     rerender(<DecisionForm detail={reviewDetail({ request: { ...reviewDetail().request, state: "SUPERSEDED", supersededByRequestId: `rev_${"a".repeat(32)}` } })} />);
-    expect(screen.getByText(/superseded/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /This request was superseded/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open latest request/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Decision ledger" })).toBeInTheDocument();
   });
 });

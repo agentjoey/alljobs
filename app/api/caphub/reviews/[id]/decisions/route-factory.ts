@@ -20,15 +20,18 @@ export interface ReviewDecisionRouteDependencies {
   allowedOrigins: readonly string[];
 }
 
-function safeError(status: number, code: string, message: string): Response {
-  return Response.json({ error: { code, message } }, { status, headers: SAFE_HEADERS });
+function safeError(status: number, code: string, message: string, details: Record<string, string> = {}): Response {
+  return Response.json({ error: { code, message, ...details } }, { status, headers: SAFE_HEADERS });
 }
 
 function mappedError(error: unknown): Response {
   if (error instanceof ReviewStoreError) {
     const status = error.code === "INVALID_REVIEW_DECISION" ? 400
       : error.code === "REGISTRY_UNAVAILABLE" ? 503 : 409;
-    return safeError(status, error.code, error.message);
+    return safeError(status, error.code, error.message,
+      error.code === "DECISION_ALREADY_CONSUMED" && error.consumedBy
+        ? { consumedBy: error.consumedBy }
+        : {});
   }
   if (error instanceof ReviewServiceError) {
     return safeError(error.code === "REVIEW_JOB_NOT_FOUND" ? 404 : 409, error.code, error.message);

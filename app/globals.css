@@ -130,7 +130,7 @@
 .registry-queue-count strong, .registry-queue-count span { display: block; }
 .registry-queue-count strong { font-size: 28px; line-height: 1; }
 .registry-queue-count span { color: var(--ink-faint); font: 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.registry-filters { display: flex; gap: 8px; padding: 12px 0; overflow-x: auto; }
+.registry-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px 0; }
 .registry-filters label { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 12px; font-weight: 700; }
 .registry-filters select { min-height: 44px; padding: 8px 30px 8px 10px; color: var(--ink); background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: var(--radius-sm); font: inherit; }
 .registry-jumpbar { display: none; }
@@ -162,6 +162,11 @@
 .registry-section h2, .registry-section h3 { margin: 0 0 10px; font-size: 14px; }
 .registry-section p, .registry-section li { font-size: 12.5px; }
 .registry-section ul { padding-left: 19px; }
+.registry-section code { overflow-wrap: anywhere; font: 10px var(--font-mono); }
+.registry-dimensions { display: grid; grid-template-columns: minmax(110px, auto) minmax(0, 1fr); gap: 10px 14px; margin: 0; }
+.registry-dimensions dt { color: var(--ink-faint); font: 10px var(--font-mono); text-transform: uppercase; }
+.registry-dimensions dd { margin: 0; font-size: 12.5px; }
+.registry-dimensions dd strong, .registry-dimensions dd code { display: block; margin-bottom: 3px; }
 .registry-evidence-list { margin: 0; padding: 0 !important; list-style: none; }
 .registry-evidence-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px 0; }
 .registry-evidence-list li + li { border-top: 1px solid var(--hairline); }
@@ -195,7 +200,8 @@
 .registry-decision textarea { min-height: 96px; resize: vertical; }
 .registry-confirm-copy { margin-top: 6px; color: #c8c1b2; font-size: 11px; overflow-wrap: anywhere; }
 .registry-decision-error { margin-top: 12px; padding: 10px; color: #ffd6d6; border: 1px solid #d77878; font-size: 12px; }
-.registry-submit { width: calc(100% - 36px); min-height: 46px; margin-top: 14px; padding: 10px; color: var(--ink); background: var(--amber); border: 1px solid var(--amber); border-radius: var(--radius-sm); font-weight: 800; }
+.registry-submit, .registry-refresh { width: calc(100% - 36px); min-height: 46px; margin-top: 14px; padding: 10px; color: var(--ink); background: var(--amber); border: 1px solid var(--amber); border-radius: var(--radius-sm); font-weight: 800; }
+.registry-refresh { color: var(--paper); background: transparent; border-color: rgba(241, 238, 230, .5); }
 .registry-submit:disabled { color: #a9a398; background: #34312a; border-color: #5f594e; }
 .registry-decision-receipt { margin: 16px 18px; padding: 14px; color: var(--ink); background: var(--paper-raised); }
 .registry-decision-receipt h3 { margin: 0; font-size: 16px; }
@@ -203,6 +209,7 @@
 .registry-decision-receipt dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; margin: 12px 0 0; }
 .registry-decision-receipt dt { color: var(--ink-faint); font: 10px var(--font-mono); text-transform: uppercase; }
 .registry-decision-receipt dd { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.registry-latest-request { display: flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 8px 10px; color: var(--ink); border: 1px solid var(--hairline-strong); font-weight: 700; overflow-wrap: anywhere; }
 .registry-state { padding: 24px; background: var(--paper-raised); border: 1px solid var(--hairline-strong); }
 .registry-state h1, .registry-state h2 { margin-top: 0; }
 .registry-state code { font: 11px var(--font-mono); }
@@ -216,6 +223,9 @@
 .registry-detail-aside ol { padding-left: 20px; }
 .registry-detail-aside li { margin-bottom: 12px; }
 .registry-detail-aside code { display: block; font: 10px var(--font-mono); overflow-wrap: anywhere; }
+.registry-source-check { padding: 10px 0; border-top: 1px solid var(--hairline); }
+.registry-source-check a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 700; }
+.registry-source-check p { margin: 2px 0; color: var(--ink-muted); }
 .registry-future-empty { padding: 12px 0; border-top: 1px solid var(--hairline); }
 .registry-future-empty p { margin: 4px 0 0; color: var(--ink-muted); font-size: 12.5px; }
 

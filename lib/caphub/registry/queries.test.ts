@@ -19,6 +19,7 @@ const candidate = {
 
 const packet = {
   packet_id: `rvp_${"4".repeat(32)}`,
+  ocr: [{ image_index: 0, text: "Visible OCR text" }],
   screenshots: [{ order: 0, object: { digest: "5".repeat(64), bytes: 42, key: "private/object/key" } }],
   evidence: [{
     id: `ev_${"6".repeat(32)}`,
@@ -37,9 +38,15 @@ const packet = {
     evidence_ids: [`ev_${"6".repeat(32)}`]
   }],
   entities: [{ name: "Example", aliases: [] }],
+  identity: { status: "confirmed", entity_id: "ent_example", evidence_ids: [`ev_${"6".repeat(32)}`] },
   conflicts: [],
   unresolved_questions: ["Still unresolved?"],
-  dimensions: { evidence_confidence: { score: 4 } },
+  alternatives: [{ rank: 1, name: "Manual review", reason: "Lower privilege", evidence_ids: [`ev_${"6".repeat(32)}`] }],
+  dimensions: {
+    evidence_confidence: { score: 4, reason: "Bound sources", evidence_ids: [`ev_${"6".repeat(32)}`] },
+    capability_value: { score: 5, reason: "Useful", evidence_ids: [`ev_${"6".repeat(32)}`] },
+    security_risk: { score: 3, reason: "Needs review", evidence_ids: [`ev_${"6".repeat(32)}`] }
+  },
   recommended_disposition: "build",
   critic: null,
   prompt: "must never cross the DTO",
@@ -65,6 +72,7 @@ function queueRow(overrides: Record<string, unknown> = {}) {
     candidate_payload: candidate,
     previous_payload: null,
     packet_payload: packet,
+    waiting_age_hours: 30,
     ...overrides
   };
 }
@@ -87,7 +95,13 @@ describe("Registry read DTOs", () => {
       request: { id: REQUEST_ID, subjectVersion: 1, subjectDigest: DIGEST },
       candidate: { name: candidate.name },
       evidenceConfidence: 4,
-      unresolvedCount: 1
+      unresolvedCount: 1,
+      recommendedDisposition: "build",
+      identityStatus: "confirmed",
+      valueScore: 5,
+      riskScore: 3,
+      waitingAgeHours: 30,
+      waitingAgeBand: "aging"
     });
     await expect(createRegistryQueries(pool).getReviewQueue({ limit: 201 })).rejects.toMatchObject({
       code: "INVALID_QUERY"
@@ -107,6 +121,10 @@ describe("Registry read DTOs", () => {
       candidate: { name: candidate.name },
       packet: {
         evidence: [{ id: `ev_${"6".repeat(32)}` }],
+        ocr: [{ imageIndex: 0, text: "Visible OCR text" }],
+        identity: { status: "confirmed", entityId: "ent_example" },
+        alternatives: [{ rank: 1, name: "Manual review" }],
+        dimensions: { capabilityValue: { score: 5 }, securityRisk: { score: 3 } },
         unresolvedQuestions: ["Still unresolved?"]
       },
       diff: [{ kind: "added", path: "$", summary: "New record" }],
@@ -131,7 +149,7 @@ describe("Registry read DTOs", () => {
     const job = { id: `job_${"c".repeat(32)}`, status: "completed", completed_artifact_ids: [] };
     const pool = poolWith(
       [{ payload: capture }],
-      [{ job_payload: job, packet_payload: packet }],
+      [{ job_payload: job, packet_payload: packet, packet_version: 1, packet_digest: "e".repeat(64) }],
       [{ metadata: {
         event_id: `mce_${"d".repeat(32)}`,
         stage: "research",
@@ -141,13 +159,23 @@ describe("Registry read DTOs", () => {
         occurred_at: NOW,
         prompt: "hidden",
         api_key: "hidden"
-      } }]
+      } }],
+      [{
+        import_id: `imp_${"f".repeat(32)}`,
+        imported_at: NOW,
+        review_request_id: REQUEST_ID,
+        state: "WAITING_FOR_REVIEW"
+      }],
+      []
     );
     const result = await createRegistryQueries(pool).getCaptureDetail(capture.id);
     expect(result).toMatchObject({
       kind: "found",
       capture: { id: capture.id, objectDigest: "b".repeat(64), objectBytes: 42 },
       job: { id: job.id, status: "completed" },
+      analysisState: "complete",
+      packetVersion: 1,
+      registryImport: { reviewRequestId: REQUEST_ID, reviewState: "WAITING_FOR_REVIEW" },
       modelCalls: [{ provider: "kimi", model: "k3-256k" }]
     });
     expect(JSON.stringify(result)).not.toMatch(/private\/object\/key|prompt|api.?key/i);
@@ -174,14 +202,25 @@ describe("Registry read DTOs", () => {
       revokes_decision_id: null,
       recorded_at: NOW
     };
-    const pool = poolWith([queueRow({ state: "APPROVED", lock_version: 2 })], [{
-      decision,
-      consumer_id: `rel_${"1".repeat(32)}`
-    }]);
+    const pool = poolWith(
+      [queueRow({ state: "APPROVED", lock_version: 2, current_version: 1 })],
+      [{ decision, consumer_id: `rel_${"1".repeat(32)}` }],
+      [{ version: 1, payload_digest: DIGEST, created_at: NOW }],
+      [{
+        from_node_id: packet.packet_id, from_kind: "review_packet", from_version: 1,
+        relationship: "proposes", to_node_id: CANDIDATE_ID, to_kind: "candidate", to_version: 1
+      }],
+      [{ decision, consumer_id: `rel_${"1".repeat(32)}` }]
+    );
     const result = await createRegistryQueries(pool).getCapabilityDetail(CANDIDATE_ID);
     expect(result).toMatchObject({
       kind: "found",
       future: { experienceCards: [], buildProposals: [], releases: [], deployments: [] },
+      currentVersion: 1,
+      versions: [{ version: 1, digest: DIGEST }],
+      lineage: [{ relationship: "proposes", toId: CANDIDATE_ID }],
+      decisions: [{ id: decision.decision_id }],
+      staleVersion: false,
       decision: { id: decision.decision_id, action: "approve" },
       authority: { state: "consumed", consumedBy: `rel_${"1".repeat(32)}`, revocable: false }
     });

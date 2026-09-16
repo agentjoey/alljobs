@@ -138,4 +138,21 @@ describe("POST Caphub review decision route", () => {
       error: { code: "STALE_REVIEW", message: "Review state is stale" }
     });
   });
+
+  it("returns only the safe consumer ID for a consumed approval", async () => {
+    const consumerId = `bld_${"8".repeat(32)}`;
+    const decide = vi.fn().mockRejectedValue(new ReviewStoreError("DECISION_ALREADY_CONSUMED", consumerId));
+    const response = await createReviewDecisionPostRoute({ decide, allowedOrigins: [ORIGIN] })(
+      request(),
+      { params: Promise.resolve({ id: REQUEST_ID }) }
+    );
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "DECISION_ALREADY_CONSUMED",
+        message: "Approval decision has already been consumed",
+        consumedBy: consumerId
+      }
+    });
+  });
 });

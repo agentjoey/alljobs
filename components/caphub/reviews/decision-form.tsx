@@ -20,8 +20,10 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
   const [confirmation, setConfirmation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshRequired, setRefreshRequired] = useState(false);
   const [receipt, setReceipt] = useState<null | { id: string; action: string; consequence: string }>(null);
   const receiptRef = useRef<HTMLHeadingElement>(null);
+  const intentRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const storedDecision = detail.decision;
   const revocable = storedDecision?.action === "approve" && detail.authority?.revocable === true;
   const activeAction: DecisionAction = revocable ? "revoke" : action;
@@ -33,7 +35,8 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
   const terminal = detail.request.state !== "WAITING_FOR_REVIEW" && !revocable;
   const valid = confirmation === expectedConfirmation
     && (activeAction === "approve" || rationale.trim().length > 0)
-    && !submitting;
+    && !submitting
+    && !refreshRequired;
 
   useEffect(() => {
     if (receipt) receiptRef.current?.focus();
@@ -47,8 +50,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
     }
     setSubmitting(true);
     setError(null);
-    const body = {
-      idempotency_key: `review.intent-${globalThis.crypto.randomUUID()}`,
+    const intent = {
       expected_lock_version: detail.request.lockVersion,
       expected_subject_digest: detail.request.subjectDigest,
       action: activeAction,
@@ -57,6 +59,11 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
       ...(activeAction === "approve" ? { disposition } : {}),
       ...(activeAction === "revoke" && storedDecision ? { original_approval_decision_id: storedDecision.id } : {})
     };
+    const fingerprint = JSON.stringify(intent);
+    if (intentRef.current?.fingerprint !== fingerprint) {
+      intentRef.current = { fingerprint, key: `review.intent-${globalThis.crypto.randomUUID()}` };
+    }
+    const body = { idempotency_key: intentRef.current.key, ...intent };
     try {
       const response = await fetch(`/api/caphub/reviews/${detail.request.id}/decisions`, {
         method: "POST",
@@ -66,10 +73,13 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
       const payload = await response.json();
       if (!response.ok) {
         const code = String(payload?.error?.code ?? "REVIEW_WRITE_UNAVAILABLE");
+        setRefreshRequired(code === "STALE_REVIEW" || code === "IDEMPOTENCY_CONFLICT");
         setError(code === "STALE_REVIEW"
-          ? "This request changed before the decision. Your rationale is preserved; refresh before retrying."
+          ? "This request changed before the decision. Your rationale is preserved; refresh is required before another attempt."
           : code === "IDEMPOTENCY_CONFLICT"
-            ? "This intent key already binds different input. Your rationale is preserved."
+            ? "This intent key already binds different input. Your rationale is preserved; refresh is required before a new intent."
+            : code === "DECISION_ALREADY_CONSUMED" && payload?.error?.consumedBy
+              ? `This approval was already consumed by ${String(payload.error.consumedBy)} and cannot be revoked.`
             : `Decision was not recorded (${code}). Your rationale is preserved.`);
         return;
       }
@@ -83,9 +93,12 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
 
   if (detail.request.state === "SUPERSEDED") {
     return <aside className="registry-decision" id="decision" aria-labelledby="decision-title">
-      <h2 id="decision-title" tabIndex={-1}>This request was superseded</h2>
-      <p>Its original evidence and Diff remain readable, but decision controls are removed.</p>
-      {detail.request.supersededByRequestId && <Link href={`/reviews?request=${detail.request.supersededByRequestId}`}>Open latest request {detail.request.supersededByRequestId}</Link>}
+      <header><h2 id="decision-title" tabIndex={-1}>Decision ledger</h2><span>Superseded · read only</span></header>
+      <section className="registry-decision-receipt registry-superseded-receipt">
+        <h3>This request was superseded</h3>
+        <p>Its original evidence and Diff remain readable, but decision controls are removed.</p>
+        {detail.request.supersededByRequestId && <Link className="registry-latest-request" href={`/reviews?request=${detail.request.supersededByRequestId}`}>Open latest request {detail.request.supersededByRequestId}</Link>}
+      </section>
     </aside>;
   }
 
@@ -106,24 +119,26 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
           <dt>Action</dt><dd>{receipt?.action ?? storedDecision?.action}</dd>
           <dt>Full digest</dt><dd><code>{detail.request.subjectDigest}</code></dd>
           {detail.authority?.state === "consumed" && <><dt>Consumer</dt><dd><code>{detail.authority.consumedBy}</code></dd></>}
+          {storedDecision?.revokesDecisionId && <><dt>Revokes</dt><dd><code>{storedDecision.revokesDecisionId}</code></dd></>}
         </dl>
       </section>}
 
       {!terminal && !receipt && <form onSubmit={submit} noValidate>
         {!revocable && <div className="registry-action-switch" aria-label="Decision action">
-          <button type="button" aria-pressed={action === "approve"} onClick={() => { setAction("approve"); setConfirmation(""); }}>Approve</button>
-          <button type="button" aria-pressed={action === "reject"} onClick={() => { setAction("reject"); setConfirmation(""); }}>Reject permanently</button>
+          <button type="button" disabled={refreshRequired} aria-pressed={action === "approve"} onClick={() => { setAction("approve"); setConfirmation(""); }}>Approve</button>
+          <button type="button" disabled={refreshRequired} aria-pressed={action === "reject"} onClick={() => { setAction("reject"); setConfirmation(""); }}>Reject permanently</button>
         </div>}
         {activeAction === "approve" && <fieldset className="registry-choice-grid">
           <legend>Approval disposition</legend>
-          {DISPOSITIONS.map((item) => <button key={item} type="button" aria-pressed={disposition === item} onClick={() => setDisposition(item)}>{item}</button>)}
+          {DISPOSITIONS.map((item) => <button key={item} type="button" disabled={refreshRequired} aria-pressed={disposition === item} onClick={() => setDisposition(item)}>{item}</button>)}
         </fieldset>}
         <label className="registry-field" htmlFor="review-rationale">Rationale {activeAction === "approve" ? "(optional)" : "(required)"}</label>
-        <textarea id="review-rationale" value={rationale} maxLength={2000} onChange={(event) => setRationale(event.target.value)} disabled={submitting} />
+        <textarea id="review-rationale" value={rationale} maxLength={2000} onChange={(event) => setRationale(event.target.value)} disabled={submitting || refreshRequired} />
         <label className="registry-field" htmlFor="review-confirmation">Typed confirmation · exact match</label>
-        <input id="review-confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} aria-describedby="review-confirmation-copy" aria-invalid={Boolean(error)} disabled={submitting} />
+        <input id="review-confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} aria-describedby="review-confirmation-copy" aria-invalid={Boolean(error)} disabled={submitting || refreshRequired} />
         <p className="registry-confirm-copy" id="review-confirmation-copy"><code>{expectedConfirmation}</code></p>
         {error && <div className="registry-decision-error" role="alert" tabIndex={-1}>{error}</div>}
+        {refreshRequired && <button className="registry-refresh" type="button" onClick={() => globalThis.location.reload()}>Refresh this request</button>}
         <button className="registry-submit" type="submit" disabled={!valid}>{submitting ? "Recording exact decision…" : activeAction === "approve" ? `Approve ${disposition}` : activeAction === "reject" ? "Reject this version" : "Revoke approval"}</button>
       </form>}
       <p className="registry-safety-line"><strong>Append-only.</strong> Reject is permanent. Approval is revocable only before a later phase consumes it.</p>
