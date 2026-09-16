@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-B 已通过；等待 P1-C Human Owner 最终走查与阶段决策
+- 状态：P1-C 已批准；P1 已验收，进入 P2 详细计划准备
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -102,7 +102,7 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 - Gate P1-A：已通过。Human 批准 API contract、保存路径、保留策略、Web caller 边界、Brief revision 1 与 rendered mockup。
 - Gate P1-B：已通过。独立 Security/Review 验证 traversal、symlink、oversize、invalid URL、idempotency conflict、partial-write/audit recovery 和 redaction；首次审查发现的配置加载前置 symlink 写入已由 `058c381` 修复并通过定向复审。
-- Gate P1-C：等待 Human Owner 对 final build 走查并决定是否接受 P1、进入 P2。P1 不生产发布；本状态记录不授权配置启用、服务重启、部署、push、merge、tag 或 release。
+- Gate P1-C：已通过。Human Owner 于 2026-09-16 明确批准 P1-C，接受 P1 并允许进入 P2 规划。P1 未生产发布；该批准不授权配置启用、服务重启、部署、真实 provider 调用、push、merge、tag 或 release。
 
 **验收条件**
 

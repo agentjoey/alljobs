@@ -9,6 +9,10 @@
 
 The Human Owner explicitly approved Brief revision 1 SHA-256 `e694eae5615074afeb8802f7b55be556fd9d89dded847ac5eb77e147526cc5a8` and mockup SHA-256 `e60e8ab1672b4bcc76eb33a69cdc83c41e61f4344feadc72d3e546ad5f19dc55`, accepted the independent Design Review and Verification PASS results, and authorized entry into P1 Task 1. Linear `AGE-241` was then moved to `Done`, and `AGE-240` was moved to `In Progress`.
 
+## Human Gate P1-C approval — 2026-09-16
+
+After the full Task 10 verification matrix, one independently discovered path-containment fix, focused re-review, and final P1-B PASS, the Human Owner explicitly replied `批准 P1-C`. P1 is accepted and P2 planning may begin. This approval does not enable real Caphub configuration, authorize a production restart/deployment/release, permit a real provider call, or authorize push/merge/tag.
+
 ## Files changed
 
 - Added `.agent/frontend-design/caphub-foundation/brief.md`.
@@ -59,7 +63,7 @@ The standing authorization advanced P1 through the provider-free configuration, 
 | 7 — approved Web Capture inbox | `AGE-248` Done | `625af7a` + `6118f7c` | final focused 62/62; focused re-review Approved |
 | 8 — browser-to-filesystem proof | `AGE-245` Done | `68b9e43` | sentinel guards 3/3; Playwright 5/5; focused review Approved |
 | 9 — operations and adapter docs | `AGE-249` Done | `e751a05` | focused review findings fixed; focused re-review Approved |
-| 10 — P1 verification / P1-B | `AGE-250` In Progress | `058c381` | phase matrix passed; P1-B PASS after one blocking symlink fix |
+| 10 — P1 verification / P1-B/P1-C | `AGE-250` Done | `058c381` | phase matrix passed; P1-B PASS; P1-C approved 2026-09-16 |
 
 Plan-specified phase verification before the P1-B review:
 
@@ -103,12 +107,12 @@ git diff --check                              -> passed
 ## Known open items
 
 - **Human Gate P1-A is complete.** This record preserves the exact approved Brief/mockup hashes; the Brief itself remains byte-for-byte unchanged.
-- The high-level roadmap has been reconciled to the approved multipart screenshot / `received` P1 contract and records P1-A/P1-B as passed with P1-C pending.
+- The high-level roadmap has been reconciled to the approved multipart screenshot / `received` P1 contract and records P1-A/P1-B/P1-C as passed.
 - Impeccable reported `.impeccable/design.json` stale relative to `DESIGN.md`. This is unrelated drift; do not repair it as a side effect. `$impeccable document` may refresh it only if the Human Owner asks.
-- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, `AGE-248`, `AGE-245`, and `AGE-249` are `Done`. Task 10 / P1-C is tracked by `AGE-250` and remains `In Progress`.
+- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, `AGE-248`, `AGE-245`, `AGE-249`, and `AGE-250` are `Done` after explicit P1-C approval.
 - **Task 7 workflow ruling — 2026-09-16:** the Human Owner explicitly removed `/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` as an authority for Caphub development. Its absence is no longer a blocker. Task 7 proceeds from the approved Brief/mockup and development plan with TDD/BDD, independent Review/Verification, final-build browser evidence, screenshots, Linear tracking, and all existing safety/production gates preserved.
 - **Bounded verification ruling — 2026-09-16:** task work uses one independent focused review and related tests; a fix round receives only a focused re-review of the changed findings. Full-suite, production-build, all-state browser, and phase-wide Verification runs belong at plan-specified or batch gates rather than being repeated at every ordinary task boundary.
 
 ## Next safe action
 
-Stop at Human Gate P1-C. The Human Owner must walk through the final build and explicitly accept or reject P1 / entry into P2. Do not enable Caphub, edit real production configuration, update LaunchAgents, restart production services, deploy, publish, push, merge, tag, release, switch traffic, or delete Caphub state before separate explicit authorization.
+Prepare the dedicated P2 provider/analysis implementation plan from the approved spec and roadmap, starting with fixture-only contracts and credential-free probes. Do not enable Caphub, call a real provider, request or store credentials, edit real production configuration, update LaunchAgents, restart production services, deploy, publish, push, merge, tag, release, switch traffic, or delete Caphub state without separate explicit authorization.
