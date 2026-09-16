@@ -606,7 +606,7 @@ git commit -m "feat(caphub): add bounded evidence research"
 - Consumes: `ExtractionResult`, `ResearchDossier`, optional Registry-read snapshot, `KimiProvider`, and `MiniMaxProvider`.
 - Produces: `CapabilityAssessment`, optional `CriticReview`, and deterministic `ReviewPacket`.
 
-- [ ] **Step 1: Write failing decision-table tests**
+- [x] **Step 1: Write failing decision-table tests**
 
 Test all six dispositions, independent 0–5 dimension reasons/citations, extracted Claim preservation, novel/overlap/replaces/complements/conflicts/gaps fields, ranked alternatives with evidence, deterministic platform previews, and critic triggers for `build`, high security risk, high-value resident capability, low confidence, conflicting evidence, and manual request.
 
@@ -615,32 +615,34 @@ expect(shouldRunCritic({ ...assessment, disposition: "build" })).toBe(true);
 expect(shouldRunCritic({ ...assessment, disposition: "learn", security_risk: 1 })).toBe(false);
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/analysis/assessment.test.ts lib/caphub/analysis/review-packet.test.ts`
 
 Expected: FAIL because assessment and packet composers do not exist.
 
-- [ ] **Step 3: Implement deterministic rules around model output**
+- [x] **Step 3: Implement deterministic rules around model output**
 
 The model may propose dimensions and disposition, but host validation enforces evidence citations, preserves independent dimensions, forces ambiguity into unresolved questions, and evaluates critic triggers locally.
 
-- [ ] **Step 4: Implement packet composition**
+- [x] **Step 4: Implement packet composition**
 
 The packet references immutable source object digests and stage artifact IDs; includes original screenshots, OCR, Entities, Claims, Evidence, conflict conclusions, capability candidate, alternatives, independent dimensions, recommended disposition, deterministic non-executable platform previews, model/contract versions, and unresolved questions; and always sets `human_review_required: true`. It must not contain a release, deployment, install command, or executable implementation instruction.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Run: `npm test -- lib/caphub/analysis/assessment.test.ts lib/caphub/analysis/review-packet.test.ts`
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/caphub/analysis/assessment.ts lib/caphub/analysis/assessment.test.ts lib/caphub/analysis/review-packet.ts lib/caphub/analysis/review-packet.test.ts
 git commit -m "feat(caphub): compose review-only capability packets"
 ```
+
+**Evidence (2026-09-16):** committed as `112b066`; RED failed on the two missing analysis modules, then GREEN plus adjacent schema/digest regression passed 4 files / 22 tests. Typecheck and focused ESLint passed. Host validation closes every assessment/critic citation over the dossier evidence set, preserves independent 0–5 dimensions, deterministically ranks alternatives, carries ambiguity into unresolved questions, evaluates all six critic triggers locally, and composes a content-addressed Human-review-only packet with immutable inputs and fixed non-executable web/Telegram/Linear previews. No live provider request occurred.
 
 ### Task 9: Persist resumable jobs without duplicate side effects
 

@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–7 已完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
+- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过；P2 Tasks 1–8 已完成；Kimi `k3-256k` direct-HTTP endpoint/auth 已验证，但 structured output 未通过
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -149,6 +149,8 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 **2026-09-16 P2 Task 6 evidence：**双模式 Kimi provider 已在 `f285d3e` 完成，API 模式固定 `https://api.kimi.com/coding/v1` 与 `k3-256k`，local-login 模式具备严格 OAuth 投影、zero-tool agent、真实 macOS Seatbelt、loopback-only fixed-target CONNECT proxy、JSONL/byte/deadline/process-group 边界与清理。真实 fixture 证明保护读取、外写、嵌套执行、直连、malformed/tool、flood/timeout 均 fail closed。RED→GREEN 为 6 focused files / 19 tests；typecheck 与 focused lint PASS；未调用任何真实 provider。
 
 **2026-09-16 P2 Task 7 evidence：**受限 evidence source gateway 与 `ResearchDossier` 已在 `0a1f22c` 完成。严格 HTTPS origin、public-only DNS、连接地址固定与 peer 校验、逐跳重授权、压缩/解压字节上限、MIME/deadline/计数限制和默认禁用 search 均由 fixture 覆盖；hostile source 只作为不可信 evidence 字符串进入模型输入，host 重新构造 evidence 元数据并强制 A/B 身份引用或 `IDENTITY_AMBIGUOUS`。RED→GREEN 为 3 focused files / 21 tests；typecheck 与 focused lint PASS；未发生真实 source 或 provider 请求。
+
+**2026-09-16 P2 Task 8 evidence：**`CapabilityAssessment`、条件 Critic 与 deterministic `ReviewPacket` 已在 `112b066` 完成。Host 强制 assessment/critic citation 闭合、独立维度、ambiguity unresolved question、确定性 alternatives rank 和六类本地 critic trigger；packet 保留不可变 source/stage 引用、截图/OCR/Entities/Claims/Evidence/conflicts/alternatives/dimensions/model contracts，并固定 `human_review_required: true` 与不可执行多平台预览。RED→GREEN 加相邻回归为 4 files / 22 tests；typecheck 与 focused lint PASS；未调用真实 provider。
 
 **产物**
 
