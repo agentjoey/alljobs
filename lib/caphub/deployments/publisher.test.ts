@@ -20,7 +20,7 @@ const DIGEST = "a".repeat(64);
 
 let fixture: CaphubTestPostgres;
 let counter = 1;
-let created: string[] = [];
+const created: string[] = [];
 
 function nextSeed(): number {
   return counter++;
@@ -311,4 +311,50 @@ describe.sequential("publishToTarget (real PostgreSQL + fixture root)", () => {
     );
     expect(deployments.rows[0]?.count).toBe("3");
   });
+
+
+  it("reconciles a crash between pointer replacement and the completed operation record", async () => {
+    const seed = nextSeed() + 1000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(seed, pkg, "publish", null);
+    const { decisionId } = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const { input } = publishInput(pkg, plan, decisionId, hexId("dep_", seed + 5000));
+    input.root = target;
+    input.hooks = {
+      async afterPointerReplace() {
+        throw new Error("injected crash after pointer replacement");
+      }
+    };
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "PUBLISH_RECOVERY_REQUIRED" });
+    const operation = JSON.parse(await readFile(join(target.root, "operations", `${input.deploymentRecordId}.json`), "utf8"));
+    expect(operation.stage).toBe("realized");
+    expect(await readTargetPointer(target)).not.toBeNull();
+
+    const reconciled = await reconcileDeployment({ ...input, hooks: undefined });
+    expect(reconciled.pointer.deployment_id).toBe(input.deploymentRecordId);
+    const completed = JSON.parse(await readFile(join(target.root, "operations", `${input.deploymentRecordId}.json`), "utf8"));
+    expect(completed.stage).toBe("completed");
+  });
+
+  it("resumes a partially materialized version directory file-by-file", async () => {
+    const seed = nextSeed() + 1000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(seed, pkg, "publish", null);
+    const { decisionId } = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const { input, files } = publishInput(pkg, plan, decisionId, hexId("dep_", seed + 5000));
+    input.root = target;
+    const directory = join(target.root, "versions", plan.release.record_id, String(plan.release.version), plan.preview_manifest_digest);
+    const first = files[0]!;
+    const partialPath = join(directory, first.path);
+    await mkdir(join(partialPath, ".."), { recursive: true, mode: 0o700 });
+    await writeFile(partialPath, first.content, { mode: 0o600 });
+
+    const { pointer } = await publishToTarget(input);
+    expect(pointer.deployment_id).toBe(input.deploymentRecordId);
+    const marker = JSON.parse(await readFile(join(directory, ".caphub-version.json"), "utf8"));
+    expect(marker.manifest_digest).toBe(plan.preview_manifest_digest);
+  });
+
 });

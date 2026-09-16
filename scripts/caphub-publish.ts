@@ -68,10 +68,11 @@ async function loadPublishDeps(): Promise<PublishCliDeps> {
       }
       const plan = deploymentPlanSchema.parse(planRecord.payload);
       const decisions = await reviews.listDecisionsForSubject(planId);
-      const approval = decisions.find((decision) => decision.action === "approve"
+      const matching = decisions.filter((decision) => decision.action === "approve"
         && decision.review_kind === "deployment"
         && decision.subject_version === planRecord.version
         && decision.subject_digest === planRecord.payload_digest);
+      const approval = matching.at(-1) ?? null;
       if (!approval) throw new Error("no approved deployment decision for this exact plan");
       const request = await reviews.getRequest(approval.request_id);
       const expected = request?.approve_confirmation
@@ -97,7 +98,27 @@ async function loadPublishDeps(): Promise<PublishCliDeps> {
         files: rendered.result.files,
         exports: new PostgresExportStore(registry.pool),
         deploymentRecordId: deploymentId,
-        planApprovalDecisionId: approval.id
+        planApprovalDecisionId: approval.id,
+        assertAuthority: async (expected) => {
+          // Spec §9.2 apply-time revalidation: exact release version/digest and
+          // the current adapter source digest must reproduce the plan.
+          if (releaseRecord.version !== expected.release.version
+            || releaseRecord.payload_digest !== expected.release.digest) {
+            throw new Error("STALE_DEPLOYMENT: release record no longer matches the plan");
+          }
+          const decisionsForRelease = await reviews.listDecisionsForSubject(expected.release.record_id);
+          const finalized = [];
+          for (const candidate of decisionsForRelease.filter((d) => d.action === "approve" && d.review_kind === "release")) {
+            const consumed = await reviews.getConsumption(candidate.id);
+            if (consumed?.consumer_id === expected.release.record_id) finalized.push(candidate);
+          }
+          if (finalized.length === 0) {
+            throw new Error("DEPLOYMENT_NOT_APPROVED: release approval is not finalized");
+          }
+          if (rendered.result.source_digest !== expected.adapter.digest) {
+            throw new Error("STALE_DEPLOYMENT: adapter output digest no longer matches the plan");
+          }
+        }
       });
     }
   };

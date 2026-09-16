@@ -10,7 +10,6 @@ import { testCapabilityPackage } from "../../lib/caphub/packages/fixtures";
 import type { CapabilityPackage } from "../../lib/caphub/packages/types";
 import { digestCanonicalJson } from "../../lib/caphub/analysis/digest";
 import { applyRegistryMigrations } from "../../lib/caphub/registry/migrate";
-import { writeTargetSentinel } from "../../lib/caphub/projection/paths";
 import { startCaphubTestPostgres, type CaphubTestPostgres } from "../helpers/caphub-postgres";
 
 const PREFIX = "alljobs-caphub-p4-e2e-";

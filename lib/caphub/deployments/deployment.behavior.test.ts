@@ -11,7 +11,6 @@ import { capabilityPackageSchema } from "../packages/schemas";
 import type { CapabilityPackage, PackageFile } from "../packages/types";
 import type { CaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import { startCaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
-import { confirmationFor } from "../registry/confirmations";
 import { applyRegistryMigrations } from "../registry/migrate";
 import { PostgresExportStore } from "../registry/postgres/exports";
 import { PostgresStageArtifactStore } from "../registry/postgres/caphub-stores";
@@ -20,8 +19,8 @@ import { PostgresReviewStore } from "../registry/postgres/reviews";
 import type { RegistryVersion, ReviewRequest } from "../registry/types";
 import { validateTargetRoot, writeTargetSentinel, type ValidatedTargetRoot } from "../projection/paths";
 import { ReleaseService } from "../releases/service";
-import { FIXTURE_DIGEST, testCandidateVersion, testLicense, testReviewPacket } from "../releases/fixtures";
-import { DeploymentService, type CurrentPointer, type TargetState } from "./plan";
+import { FIXTURE_DIGEST, testCandidateVersion, testReviewPacket } from "../releases/fixtures";
+import { DeploymentService, type TargetState } from "./plan";
 import { publishToTarget, readTargetPointer } from "./publisher";
 
 const NOW = "2026-09-16T09:00:00.000Z";
@@ -29,7 +28,7 @@ const ALIAS = "codex-fixture";
 
 let fixture: CaphubTestPostgres;
 let counter = 1;
-let created: string[] = [];
+const created: string[] = [];
 
 function nextSeed(): number {
   return counter++;

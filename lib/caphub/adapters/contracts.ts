@@ -1,4 +1,4 @@
-import type { CapabilityPackage, PackageFile, P4ErrorCode } from "../packages/types";
+import type { PackageFile, P4ErrorCode } from "../packages/types";
 
 export const ADAPTER_SCHEMA_VERSION = 1;
 

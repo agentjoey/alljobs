@@ -114,8 +114,19 @@ async function writeVersionFiles(
     }
     return "existing";
   }
+  // Resume-safe writes: a crash mid-materialization leaves some files durable.
+  // Existing files are kept only when their bytes reproduce the planned
+  // digest; anything else is a hard conflict. Missing files are written.
   for (const file of files) {
     const targetPath = await resolveSafeDescendant(root, `${directory.slice(root.root.length + 1)}/${file.path}`);
+    const present = await readFile(targetPath).catch(() => null);
+    if (present !== null) {
+      const digest = createHash("sha256").update(present.toString("utf8"), "utf8").digest("hex");
+      if (digest !== file.sha256) {
+        throw new PublishError("PACKAGE_DIGEST_CONFLICT", `file ${file.path} exists with different content`);
+      }
+      continue;
+    }
     await mkdir(dirname(targetPath), { recursive: true, mode: 0o700 });
     const handle = await open(targetPath, "wx", 0o600);
     try {
@@ -147,6 +158,10 @@ export interface PublishInput {
   exports: RegistryExportStore;
   deploymentRecordId: string;
   planApprovalDecisionId: string;
+  /** Apply-time authority revalidation (spec §9.2): the caller proves the
+   * Release approval is finalized for the exact plan release and that the
+   * adapter output still matches the planned adapter digest. */
+  assertAuthority?: (plan: DeploymentPlan) => Promise<void>;
   hooks?: {
     afterVersionFinalization?(): Promise<void>;
     afterRegistryDeployment?(): Promise<void>;
@@ -272,12 +287,24 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
   }
   const releaseLock = await acquireLock(input.root.root);
   try {
-    const priorPointer = await revalidate(input);
+    const resultPointer = pointerFor(input.deploymentRecordId, input.plan);
+    const currentPointer = await readTargetPointer(input.root);
+    const alreadyApplied = currentPointer !== null
+      && currentPointer.deployment_id === resultPointer.deployment_id
+      && currentPointer.release_id === resultPointer.release_id
+      && currentPointer.release_version === resultPointer.release_version
+      && currentPointer.release_digest === resultPointer.release_digest;
 
-    if (input.plan.action === "publish") {
-      await writeVersionFiles(input.root, input.plan, input.files);
+    let priorPointer = currentPointer;
+    if (!alreadyApplied) {
+      priorPointer = await revalidate(input);
+      await input.assertAuthority?.(input.plan);
+
+      if (input.plan.action === "publish") {
+        await writeVersionFiles(input.root, input.plan, input.files);
+      }
+      await input.hooks?.afterVersionFinalization?.();
     }
-    await input.hooks?.afterVersionFinalization?.();
 
     const record = deploymentRecord(input, priorPointer);
     if (!existingOperation || existingOperation.stage === "versioned") {
@@ -320,10 +347,11 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     }
     await input.hooks?.afterRegistryDeployment?.();
 
-    await input.hooks?.beforePointerReplace?.();
-    const pointer = pointerFor(input.deploymentRecordId, input.plan);
-    await writeCurrentPointer(input.root, pointer);
-    await input.hooks?.afterPointerReplace?.();
+    if (!alreadyApplied) {
+      await input.hooks?.beforePointerReplace?.();
+      await writeCurrentPointer(input.root, resultPointer);
+      await input.hooks?.afterPointerReplace?.();
+    }
     await writeOperation(input.root.root, {
       schema_version: 1,
       deployment_id: input.deploymentRecordId,
@@ -334,7 +362,7 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
       manifest_digest: input.plan.preview_manifest_digest,
       created_at: record.created_at
     });
-    return { pointer };
+    return { pointer: resultPointer };
   } catch (error) {
     if (error instanceof PublishError) throw error;
     if (error instanceof ProjectionPathError) {

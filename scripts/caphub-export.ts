@@ -56,41 +56,6 @@ export async function caphubExportMain(
   }
 }
 
-export interface PublishCliDeps {
-  loadRuntime(): ExportRuntime;
-  publishPlan(input: { planId: string; confirmation: string }): Promise<{ pointer: unknown }>;
-}
-
-export async function caphubPublishMain(
-  argv: string[],
-  deps: PublishCliDeps,
-  io: CliIo = consoleIo
-): Promise<number> {
-  try {
-    const flags = parseFlags(argv);
-    rejectForbiddenArgs(flags, ["root", "path", "target-root", "dry-run"]);
-    if (flags.get("dry-run") === true) {
-      throw new Error("--dry-run is not a publish mode; refusing to pretend");
-    }
-    const planId = flags.get("plan");
-    if (typeof planId !== "string" || !/^dpl_[a-f0-9]{32}$/.test(planId)) {
-      throw new Error("missing or invalid --plan <dpl_record-id>");
-    }
-    const confirmation = flags.get("confirm");
-    if (typeof confirmation !== "string" || confirmation.length === 0) {
-      throw new Error("missing --confirm with the exact approved confirmation phrase");
-    }
-
-    const runtime = deps.loadRuntime();
-    runtime.assertEnabled();
-    const result = await deps.publishPlan({ planId, confirmation });
-    io.log(JSON.stringify({ schema_version: 1, published: true, pointer: result.pointer }, null, 2));
-    return 0;
-  } catch (error) {
-    return reportError(io, error);
-  }
-}
-
 async function loadExportCliDeps(): Promise<ExportCliDeps> {
   const { loadControlHostExportContext } = await import("./caphub-cli");
   const { renderCodexPreview } = await import("../lib/caphub/adapters/codex");
@@ -111,7 +76,12 @@ async function loadExportCliDeps(): Promise<ExportCliDeps> {
     } catch {
       pointer = null;
     }
-    if (!pointer) return [];
+    // The pointer file is untrusted target state: validate its shape before it
+    // influences any filesystem path.
+    if (!pointer || !/^rel_[a-f0-9]{32}$/.test(String(pointer.release_id ?? ""))
+      || !Number.isInteger(pointer.release_version) || (pointer.release_version as number) <= 0) {
+      return [];
+    }
     const files: Array<{ path: string; content: string }> = [];
     async function walk(directory: string): Promise<void> {
       for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {

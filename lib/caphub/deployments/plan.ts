@@ -65,7 +65,9 @@ export function derivePlanRecordId(plan: DeploymentPlan): string {
     target: plan.target,
     target_alias: plan.target_alias,
     release: plan.release,
-    adapter: plan.adapter ?? null
+    adapter: plan.adapter ?? null,
+    expected_current_pointer: plan.expected_current_pointer,
+    target_preimage_digest: plan.target_preimage_digest
   }).slice(0, 32)}`;
 }
 
@@ -153,12 +155,21 @@ export class DeploymentService {
     const pkg = capabilityPackageSchema.parse(release.payload);
 
     const decisions = await this.deps.reviews.listDecisionsForSubject(release.record_id);
-    const approval = decisions.find((decision) => decision.action === "approve"
+    const matching = decisions.filter((decision) => decision.action === "approve"
       && decision.review_kind === "release"
       && decision.subject_version === release.version
       && decision.subject_digest === release.payload_digest);
-    const consumption = approval ? await this.deps.reviews.getConsumption(approval.id) : null;
-    if (!approval || consumption?.consumer_id !== release.record_id) {
+    // A revoked-then-reapproved release has several approvals; only the one
+    // consumed by the Release record (finalization) is authoritative.
+    let approval: (typeof matching)[number] | null = null;
+    for (const candidate of matching) {
+      const consumed = await this.deps.reviews.getConsumption(candidate.id);
+      if (consumed?.consumer_id === release.record_id) {
+        approval = candidate;
+        break;
+      }
+    }
+    if (!approval) {
       throw new DeploymentServiceError("DEPLOYMENT_NOT_APPROVED", [
         "deployment planning requires a finalized exact Release approval"
       ]);
@@ -225,6 +236,15 @@ export class DeploymentService {
     });
     if (!composed.ok) {
       throw new DeploymentServiceError(composed.code, composed.diagnostics);
+    }
+
+    // Cross-call idempotency: a retry after a successful first call (e.g., a
+    // client timeout) must return the already-recorded plan even though the
+    // wall-clock created_at differs from the original composition.
+    const existingPlan = await this.deps.records.getCurrent(composed.planRecordId);
+    if (existingPlan && existingPlan.kind === "deployment_plan") {
+      const existing = deploymentPlanSchema.parse(existingPlan.payload);
+      return { status: "existing", plan: existing, planRecord: existingPlan };
     }
 
     const planRecord: RegistryVersion = {

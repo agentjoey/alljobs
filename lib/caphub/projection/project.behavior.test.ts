@@ -21,7 +21,7 @@ const ALIAS = "obsidian-fixture";
 const NOW = "2026-09-16T09:00:00.000Z";
 
 let fixture: CaphubTestPostgres;
-let created: string[] = [];
+const created: string[] = [];
 
 async function freshVault(): Promise<ValidatedTargetRoot> {
   const root = await realpath(await mkdtemp(join(tmpdir(), "caphub-vault-")));

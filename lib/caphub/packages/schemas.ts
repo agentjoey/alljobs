@@ -79,7 +79,7 @@ export const packageLineageRefSchema = z.object({
 }).strict();
 
 export const packageLicenseSchema = z.object({
-  spdx_id: z.string().min(1).max(64),
+  spdx_id: packageTextSchema(64),
   source_url: z.string().url().startsWith("https://").max(500).optional(),
   provenance_confidence: z.enum(["high", "medium", "low"])
 }).strict();
@@ -104,7 +104,7 @@ export const capabilityPackageSchema = z.object({
   triggers: packageListTextSchema(32, 200),
   non_triggers: packageListTextSchema(32, 200),
   instructions: packageTextSchema(100_000),
-  permissions: z.array(z.string().min(1).max(64)).max(32),
+  permissions: z.array(packageTextSchema(64)).max(32),
   dependencies: z.array(packageDependencySchema).max(32),
   compatibility: packageCompatibilitySchema,
   resources: z.array(packageResourceSchema).max(64),

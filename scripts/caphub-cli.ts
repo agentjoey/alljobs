@@ -1,7 +1,3 @@
-import type { CapabilityPackage } from "../lib/caphub/packages/types";
-import type { RegistryVersion } from "../lib/caphub/registry/types";
-import type { ExportRuntime, ExportTargetName } from "../lib/caphub/exports/runtime";
-import type { ProjectionPlan } from "../lib/caphub/projection/planner";
 
 export interface CliIo {
   log(message: string): void;
@@ -55,69 +51,11 @@ export function reportError(io: CliIo, error: unknown): number {
   return 1;
 }
 
-export interface ProjectCliDeps {
-  loadRuntime(): ExportRuntime;
-  loadReleaseSnapshot(recordId: string): Promise<RegistryVersion | null>;
-  planProjection(input: {
-    release: RegistryVersion;
-    pkg: CapabilityPackage;
-  }): Promise<ProjectionPlan>;
-}
-
-export async function caphubProjectMain(
-  argv: string[],
-  deps: ProjectCliDeps,
-  io: CliIo = consoleIo
-): Promise<number> {
-  try {
-    const flags = parseFlags(argv);
-    requireDryRun(flags);
-    rejectForbiddenArgs(flags, ["root", "path", "vault", "target-root"]);
-    const releaseId = flags.get("release");
-    if (typeof releaseId !== "string" || releaseId.length === 0) {
-      throw new Error("missing --release <record-id>");
-    }
-
-    const runtime = deps.loadRuntime();
-    runtime.assertEnabled("obsidian");
-    const release = await deps.loadReleaseSnapshot(releaseId);
-    if (!release) {
-      throw new Error(`release ${releaseId} not found`);
-    }
-    const pkg = release.payload as CapabilityPackage;
-    const plan = await deps.planProjection({ release, pkg });
-    io.log(JSON.stringify({
-      schema_version: 1,
-      release: { record_id: release.record_id, version: release.version, digest: release.payload_digest },
-      counts: {
-        create: plan.entries.filter((entry) => entry.action === "create").length,
-        update: plan.entries.filter((entry) => entry.action === "update").length,
-        conflict: plan.entries.filter((entry) => entry.action === "conflict").length,
-        orphan: plan.entries.filter((entry) => entry.action === "orphan").length
-      },
-      preimage_digest: plan.preimage_digest,
-      postimage_digest: plan.postimage_digest,
-      diff: plan.diff,
-      truncated: plan.truncated,
-      entries: plan.entries.map((entry) => ({
-        path: entry.relative_path,
-        action: entry.action,
-        managed_digest: entry.managed_digest,
-        postimage_digest: entry.postimage_digest
-      }))
-    }, null, 2));
-    return 0;
-  } catch (error) {
-    return reportError(io, error);
-  }
-}
-
-
 // --- Control Host composition (server-side only) -------------------------
 
 export async function loadControlHostExportContext(): Promise<{
-  runtime: ExportRuntime;
-  releaseSnapshot(recordId: string): Promise<RegistryVersion | null>;
+  runtime: import("../lib/caphub/exports/runtime").ExportRuntime;
+  releaseSnapshot(recordId: string): Promise<import("../lib/caphub/registry/types").RegistryVersion | null>;
 }> {
   const { loadControlHostConfig } = await import("../lib/planning/config");
   const { ExportRuntime } = await import("../lib/caphub/exports/runtime");

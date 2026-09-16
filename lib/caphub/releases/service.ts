@@ -124,6 +124,14 @@ export class ReleaseService {
       throw new ReleaseServiceError(composition.code, composition.diagnostics);
     }
 
+    // Cross-call idempotency: a retry after a successful first call returns
+    // the already-recorded Release even though the wall-clock created_at of
+    // the new composition differs from the original.
+    const existingRelease = await this.deps.records.getCurrent(composition.pkg.release_id);
+    if (existingRelease && existingRelease.kind === "release") {
+      return { status: "existing", release: existingRelease };
+    }
+
     const release: RegistryVersion = {
       record_id: composition.pkg.release_id,
       kind: "release",
