@@ -119,6 +119,56 @@ export const controlHostCaphubRegistryConfigSchema = z.object({
 
 const DEFAULT_CAPHUB_REGISTRY_CONFIG = controlHostCaphubRegistryConfigSchema.parse({});
 
+const exportAliasSchema = z.string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9][a-z0-9._-]*$/, "Export target aliases must be lowercase labels");
+
+const exportRootSchema = z.string()
+  .min(1)
+  .max(500)
+  .refine((value) => value.startsWith("/") && !value.endsWith("/") && !value.includes("\\")
+    && !value.includes("~") && !value.includes("$") && !value.includes("*") && !value.includes("?")
+    && !/\s/.test(value), {
+    message: "Export roots must be explicit absolute paths without variables, ~, globs, whitespace, or backslashes"
+  })
+  .refine((value) => value !== "/", {
+    message: "Export roots must not be the filesystem root"
+  });
+
+const exportTargetConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  root: exportRootSchema.optional(),
+  alias: exportAliasSchema.optional()
+}).strict().superRefine((value, context) => {
+  if ((value.root !== undefined) !== (value.alias !== undefined)) {
+    context.addIssue({
+      code: "custom",
+      path: value.root !== undefined ? ["alias"] : ["root"],
+      message: "Export roots and aliases must be supplied together and paired"
+    });
+  }
+});
+
+const DEFAULT_EXPORT_TARGET = exportTargetConfigSchema.parse({});
+
+export const controlHostCaphubExportsConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  obsidian: exportTargetConfigSchema.default({ enabled: false }),
+  packageRepository: exportTargetConfigSchema.default({ enabled: false }),
+  targets: z.object({
+    codex: exportTargetConfigSchema.default({ enabled: false }),
+    claude: exportTargetConfigSchema.default({ enabled: false }),
+    hermes: exportTargetConfigSchema.default({ enabled: false })
+  }).strict().default({
+    codex: DEFAULT_EXPORT_TARGET,
+    claude: DEFAULT_EXPORT_TARGET,
+    hermes: DEFAULT_EXPORT_TARGET
+  })
+}).strict();
+
+const DEFAULT_CAPHUB_EXPORTS_CONFIG = controlHostCaphubExportsConfigSchema.parse({});
+
 // Caphub is disabled unless explicitly enabled. Its browser origins are exact
 // HTTPS origins and its state root is always derived below ALLJOBS_HOME.
 export const controlHostCaphubConfigSchema = z.object({
@@ -126,7 +176,8 @@ export const controlHostCaphubConfigSchema = z.object({
   allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
   maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760),
   analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG),
-  registry: controlHostCaphubRegistryConfigSchema.default(DEFAULT_CAPHUB_REGISTRY_CONFIG)
+  registry: controlHostCaphubRegistryConfigSchema.default(DEFAULT_CAPHUB_REGISTRY_CONFIG),
+  exports: controlHostCaphubExportsConfigSchema.default(DEFAULT_CAPHUB_EXPORTS_CONFIG)
 }).strict();
 
 const monitoringCredentialRefKeySchema = z

@@ -34,6 +34,16 @@
       "sslMode": "require",
       "maxConnections": 4,
       "statementTimeoutMs": 5000
+    },
+    "exports": {
+      "enabled": false,
+      "obsidian": { "enabled": false },
+      "packageRepository": { "enabled": false },
+      "targets": {
+        "codex": { "enabled": false },
+        "claude": { "enabled": false },
+        "hermes": { "enabled": false }
+      }
     }
   },
   "monitoring": {

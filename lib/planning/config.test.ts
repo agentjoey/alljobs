@@ -535,3 +535,78 @@ describe("control host Caphub resolved paths", () => {
     }
   });
 });
+
+describe("Caphub export configuration", () => {
+  function parseCaphub(raw: unknown) {
+    return controlHostConfigSchema.safeParse({
+      trustedCodeRoots: ["/workspace"],
+      ...(raw as Record<string, unknown>)
+    });
+  }
+
+  it("defaults every export switch to false under strict unknown-key rejection", () => {
+    const parsed = parseCaphub({ caphub: { enabled: true, registry: { enabled: true } } });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    const exports = parsed.data.caphub?.exports;
+    expect(exports?.enabled).toBe(false);
+    expect(exports?.obsidian.enabled).toBe(false);
+    expect(exports?.packageRepository.enabled).toBe(false);
+    expect(exports?.targets.codex.enabled).toBe(false);
+    expect(exports?.targets.claude.enabled).toBe(false);
+    expect(exports?.targets.hermes.enabled).toBe(false);
+
+    expect(parseCaphub({ caphub: { exports: { enabled: false, unknown: true } } }).success).toBe(false);
+    expect(parseCaphub({ caphub: { exports: { targets: { codex: { enabled: false, extra: 1 } } } } }).success).toBe(false);
+  });
+
+  it("accepts paired absolute roots with fixed aliases for gated targets", () => {
+    const parsed = parseCaphub({
+      caphub: {
+        enabled: true,
+        registry: { enabled: true },
+        exports: {
+          enabled: true,
+          obsidian: { enabled: true, root: "/private/tmp/caphub-vault-fixture", alias: "obsidian-primary" },
+          targets: {
+            codex: { enabled: true, root: "/private/tmp/caphub-codex-fixture", alias: "codex-primary" },
+            claude: { enabled: false },
+            hermes: { enabled: false }
+          }
+        }
+      }
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects unpaired roots or aliases, broad roots, variables, and glob characters", () => {
+    const base = {
+      caphub: {
+        enabled: true,
+        registry: { enabled: true },
+        exports: { enabled: true }
+      }
+    };
+    expect(parseCaphub({
+      caphub: {
+        ...base.caphub,
+        exports: { enabled: true, targets: { codex: { enabled: true, root: "/private/tmp/x" } } }
+      }
+    }).success).toBe(false);
+    expect(parseCaphub({
+      caphub: {
+        ...base.caphub,
+        exports: { enabled: true, targets: { codex: { enabled: true, alias: "codex-only" } } }
+      }
+    }).success).toBe(false);
+    for (const root of ["/", "~/vault", "$HOME/vault", "/tmp/glob*", "/tmp/what?", "relative/path", "/tmp/back\\slash", "/tmp/with space"]) {
+      const parsed = parseCaphub({
+        caphub: {
+          ...base.caphub,
+          exports: { enabled: true, targets: { codex: { enabled: true, root, alias: "codex-x" } } }
+        }
+      });
+      expect(parsed.success, root).toBe(false);
+    }
+  });
+});
