@@ -1,6 +1,7 @@
 # Caphub P3 Review Center and Registry Design
 
-- **Status:** Approved under the Caphub P1–P6 standing authorization; pre-implementation review pending
+- **Revision:** 2
+- **Status:** Approved under the Caphub P1–P6 standing authorization; focused independent pre-implementation Review PASS
 - **Date:** 2026-09-16
 - **Parent design:** `docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - **Roadmap phase:** P3 — Review Center and PostgreSQL Registry
@@ -55,6 +56,8 @@ Every authoritative domain object uses a stable ID and immutable versions:
 ```ts
 type RegistryRecordKind =
   | "capture"
+  | "analysis_job"
+  | "analysis_artifact"
   | "review_packet"
   | "entity"
   | "claim"
@@ -88,6 +91,9 @@ The first P3 bridge persists the existing P1 Capture, P2 ReviewPacket, Entities,
 
 ```text
 capture -> review_packet       derived_as
+capture -> analysis_job        analyzed_by
+analysis_job -> analysis_artifact produced
+analysis_artifact -> review_packet contributes_to
 review_packet -> evidence      contains
 review_packet -> entity        identifies
 review_packet -> claim         contains
@@ -123,13 +129,19 @@ The transaction performs `SELECT ... FOR UPDATE`, rejects a stale `lock_version`
 
 | Review kind | Approve meaning in P3 | Reject meaning | Confirmation phrase |
 |---|---|---|---|
-| Candidate | Accept exactly one disposition: adopt, adapt, build, learn, watch, or reject | Reject this subject version without selecting a disposition | `APPROVE CANDIDATE <short-id>` / `REJECT CANDIDATE <short-id>` |
+| Candidate | Accept exactly one disposition: adopt, adapt, build, learn, or watch | Reject this subject version without selecting a disposition | `APPROVE CANDIDATE <short-id>` / `REJECT CANDIDATE <short-id>` |
 | Build | Approve the shown scope and permissions for a later P5 handoff | Preserve the proposal but prohibit handoff | `APPROVE BUILD <short-id>` / `REJECT BUILD <short-id>` |
 | Implementation | Accept the shown verified asset for later release review | Preserve the asset and findings; prohibit release | `ACCEPT IMPLEMENTATION <short-id>` / `REJECT IMPLEMENTATION <short-id>` |
 | Release | Authorize a later P4 publication transaction, not publication itself | Preserve the release candidate; prohibit publication | `APPROVE RELEASE <short-id>` / `REJECT RELEASE <short-id>` |
 | Update | Authorize the shown update proposal for a later execution phase | Preserve the proposal and current active version | `APPROVE UPDATE <short-id>` / `REJECT UPDATE <short-id>` |
 
-A reject decision is permanent and cannot be deleted or changed. A corrected subject must use a new immutable version and a new review request. An approval can be revoked only before a downstream consumer records its decision ID; revocation is another append-only decision. Once consumed, revocation returns `DECISION_ALREADY_CONSUMED`; later reversal must be a new lifecycle decision such as suspend, deprecate, or rollback in P4/P6.
+A Candidate reject is only the terminal Reject action; `reject` is not an approval disposition. A reject decision is permanent and cannot be deleted or changed. A corrected subject must use a new immutable version and a new review request.
+
+An approval can be revoked only before a downstream consumer records its decision ID; revocation is another append-only decision linked by `revokes_decision_id`. The exact phrases are `REVOKE CANDIDATE <short-id>`, `REVOKE BUILD <short-id>`, `REVOKE IMPLEMENTATION <short-id>`, `REVOKE RELEASE <short-id>`, and `REVOKE UPDATE <short-id>`. A revoke request must include the original approval decision ID, request ID, expected lock version, expected subject digest, a fresh idempotency key, the exact phrase, and a non-empty rationale. Actor identity remains server-bound.
+
+The server-derived decision view exposes `authority.state` as `unconsumed` or `consumed`, `authority.consumedBy` as a safe downstream identifier or `null`, and `authority.revocable` as a boolean. The revoke transaction locks both the request and original approval, then revalidates the subject snapshot and absence of a `decision_consumers` row. Once consumed, revocation writes nothing and returns `DECISION_ALREADY_CONSUMED` with the safe consumer ID; later reversal must be a new lifecycle decision such as suspend, deprecate, or rollback in P4/P6. A successful revoke permits a new review request for the same subject version. A changed subject instead requires a new immutable version and new request.
+
+Recovery is explicit: same-request lock/digest drift is `STALE_REVIEW` and preserves entered rationale before refresh; a newer subject version makes the old request `SUPERSEDED`, removes its controls, keeps the old Diff readable, and links the latest request; a concurrent terminal write returns the existing receipt; same idempotency key with different canonical intent is `IDEMPOTENCY_CONFLICT`, writes nothing, and requires refresh plus a new intent key.
 
 P3 approval never creates a Release, publishes, installs, starts Kimi Code, writes Git, or deploys. It only records an authority token that a separately gated later phase may consume exactly once.
 
@@ -152,7 +164,7 @@ Approval resumes only the deterministic workflow node associated with that reque
 
 ### 6.1 `/reviews`
 
-The queue is the primary P3 surface. It shows waiting age, review kind, value, risk, evidence confidence, recommended disposition, identity state, unresolved-question count, and exact subject version. Filters cover kind, state, value, risk, and waiting age. The default sort is longest-waiting first, then higher risk.
+The queue is the primary P3 surface. It shows waiting age, review kind, value, risk, evidence confidence, recommended disposition, identity state, unresolved-question count, and exact subject version. Filters cover kind, state, value, risk, and waiting age, and each active filter shows its selected value. The default sort is longest-waiting first, then higher risk. A globally empty queue has no active Waiting filter; a filtered empty queue keeps and names its filters.
 
 Selecting a row opens an evidence-first review workbench without hiding the queue context:
 
@@ -178,11 +190,11 @@ The Capability page renders the current Candidate or later capability record, ve
 | Surface | Required states |
 |---|---|
 | Queue | loading, waiting rows, filtered empty, globally empty, Registry disabled, Registry unavailable, safe read error |
-| Review detail | waiting, decision submitting, approved, rejected, revoked, superseded, stale conflict, idempotency conflict, validation error, server error |
+| Review detail | waiting, decision submitting, approved-unconsumed, approved-consumed, rejected, revoked, superseded, stale same-request conflict, concurrent terminal receipt, idempotency conflict, validation error, server error |
 | Capture | complete lineage, partial analysis, missing/not found, artifact unavailable, Registry disabled |
 | Capability | Candidate-only, approved disposition, future-artifact empty states, not found, stale version warning |
 
-Stale conflicts preserve all entered rationale and force a refresh before another decision. Success moves focus to the immutable decision receipt. Status is always text-first and never color-only. The 390px composition keeps evidence before controls and has no horizontal overflow.
+Stale conflicts preserve all entered rationale and force a refresh before another decision. Superseded is not presented as stale: it has no controls and opens the latest request. Approved-unconsumed shows the exact revoke phrase and rationale requirement; approved-consumed names the safe downstream consumer and explains that revocation is unavailable. Revoked shows both linked decision IDs and the path to a new review request. Success moves focus to the immutable decision receipt. Status is always text-first and never color-only. The 390px composition keeps evidence before controls, gives every interactive target at least 44 CSS pixels, remains usable at 200% browser zoom, and has no horizontal overflow.
 
 ## 7. HTTP and mutation boundary
 
@@ -195,7 +207,7 @@ The decision route requires:
 - `Sec-Fetch-Site: same-origin` when present;
 - JSON content type and bounded content length;
 - strict body schema with no actor, SQL, URL, path, provider, or secret fields;
-- request ID, idempotency key, expected lock version, expected subject digest, action, confirmation text, rationale, and optional Candidate disposition;
+- request ID, idempotency key, expected lock version, expected subject digest, action, confirmation text, rationale, optional Candidate disposition, and original approval decision ID only for revoke;
 - safe typed errors without SQL text, stack, connection details, or subject payload leakage.
 
 All writes occur in the Registry service. UI components never construct SQL or infer workflow authority.

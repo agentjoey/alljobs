@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>Caphub P3 — Review Center mockup</title>
+    <style>
+      :root {
+        --paper: #f1eee6;
+        --paper-raised: #fbf7e6;
+        --paper-recessed: #e8e4da;
+        --ink: #16140e;
+        --ink-muted: #4a463c;
+        --ink-faint: #5e584d;
+        --hairline: rgba(22, 20, 14, 0.16);
+        --hairline-strong: rgba(22, 20, 14, 0.34);
+        --amber: #f3b44a;
+        --amber-soft: #fdf2de;
+        --rust: #8f2e2e;
+        --rust-soft: #fbeaea;
+        --green: #1e683b;
+        --green-soft: #e8f5ee;
+        --sans: "General Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; background: var(--paper); scroll-behavior: smooth; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background-color: var(--paper);
+        background-image: radial-gradient(rgba(22, 20, 14, 0.085) 1px, transparent 1px);
+        background-size: 24px 24px;
+        font-family: var(--sans);
+        line-height: 1.5;
+      }
+      button, input, textarea, select { color: inherit; font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; box-shadow: 0 0 0 5px var(--amber); }
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      .skip-link { position: fixed; top: -60px; left: 16px; z-index: 100; padding: 10px 14px; color: var(--paper); background: var(--ink); text-decoration: none; }
+      .skip-link:focus { top: 12px; }
+
+      .mock-toolbar { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px; padding: 6px 12px; color: #fff; background: #2f2d28; font: 11px var(--mono); letter-spacing: .04em; }
+      .mock-toolbar select { min-height: 44px; padding: 7px 30px 7px 8px; color: var(--ink); background: #fff; border: 1px solid #fff; border-radius: 4px; }
+      .app-header { display: grid; grid-template-columns: auto 1fr minmax(220px, 340px); align-items: center; min-height: 58px; padding: 0 24px; background: var(--paper); border-bottom: 1px solid var(--hairline); }
+      .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-size: 17px; font-weight: 700; letter-spacing: -.02em; text-decoration: none; white-space: nowrap; }
+      .brand svg { width: 22px; height: 22px; }
+      .brand span span { color: var(--ink-muted); font-weight: 400; }
+      .primary-nav { display: flex; align-self: stretch; justify-content: center; min-width: 0; }
+      .primary-nav a { position: relative; display: inline-flex; align-items: center; min-height: 58px; padding: 0 12px; color: var(--ink-muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
+      .primary-nav a[aria-current="page"] { color: var(--ink); font-weight: 700; }
+      .primary-nav a[aria-current="page"]::after { position: absolute; right: 12px; bottom: 0; left: 12px; height: 2px; content: ""; background: var(--amber); }
+      .search { position: relative; }
+      .search input { width: 100%; min-height: 36px; padding: 7px 44px 7px 12px; background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: 5px; font-size: 12.5px; }
+      .search kbd { position: absolute; top: 8px; right: 8px; padding: 1px 5px; color: var(--ink-faint); background: var(--paper-recessed); border: 1px solid var(--hairline); border-radius: 3px; font: 10px var(--mono); }
+      .status-strip { display: flex; flex-wrap: wrap; gap: 9px 18px; min-height: 32px; padding: 7px 24px; background: var(--amber); border-bottom: 1px solid var(--ink); font: 10.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+      .status-strip strong { font-weight: 800; }
+
+      .page { max-width: 1560px; margin: 0 auto; padding: 28px 24px 52px; }
+      .page-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; padding-bottom: 18px; border-bottom: 1px solid var(--hairline-strong); }
+      .page-head h1 { max-width: 780px; margin: 0; font-size: clamp(30px, 3vw, 44px); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+      .page-head p { max-width: 72ch; margin: 8px 0 0; color: var(--ink-muted); font-size: 14px; }
+      .queue-count { align-self: center; min-width: 112px; padding: 10px 12px; background: var(--ink); color: var(--paper); text-align: center; }
+      .queue-count strong { display: block; color: var(--amber); font-size: 24px; line-height: 1; }
+      .queue-count span { display: block; margin-top: 4px; font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+      .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0; }
+      .filter { min-height: 34px; padding: 6px 10px; color: var(--ink-muted); background: transparent; border: 1px solid var(--hairline-strong); border-radius: 4px; font-size: 12px; font-weight: 650; }
+      .filter[data-active="true"] { color: var(--paper); background: var(--ink); }
+      .filter:last-child { margin-left: auto; }
+
+      .folio { display: grid; grid-template-columns: minmax(230px, 3fr) minmax(390px, 5fr) minmax(300px, 4fr); min-height: 670px; background: var(--paper-raised); border: 1px solid var(--hairline-strong); border-radius: 8px; overflow: clip; }
+      .folio > * + * { border-left: 1px solid var(--hairline-strong); }
+      .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 52px; padding: 14px 16px 12px; border-bottom: 1px solid var(--hairline); }
+      .panel-head h2 { margin: 0; font-size: 15.5px; letter-spacing: -.01em; }
+      .panel-head span { color: var(--ink-faint); font: 10.5px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+
+      .docket { min-width: 0; background: var(--paper-recessed); }
+      .docket-list { margin: 0; padding: 0; list-style: none; }
+      .docket-row { width: 100%; min-height: 112px; padding: 13px 14px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--hairline); cursor: pointer; }
+      .docket-row:hover { background: rgba(251, 247, 230, .72); }
+      .docket-row[aria-current="true"] { background: var(--paper-raised); box-shadow: inset 3px 0 0 var(--amber); }
+      .docket-row__top, .docket-row__bottom { display: flex; justify-content: space-between; gap: 10px; }
+      .docket-row__kind { color: var(--ink-faint); font: 10.5px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+      .docket-row__age { color: var(--rust); font-size: 11px; font-weight: 750; }
+      .docket-row strong { display: block; margin: 7px 0 8px; font-size: 13.5px; line-height: 1.26; }
+      .docket-row__bottom { align-items: center; color: var(--ink-muted); font-size: 11px; }
+      .risk { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+      .risk::before { width: 7px; height: 7px; content: ""; background: var(--rust); border-radius: 50%; }
+      .risk--medium::before { background: var(--amber); border: 1px solid var(--ink); }
+      .risk--low::before { background: var(--green); }
+      .changed { display: inline-block; margin-top: 8px; padding: 2px 5px; background: var(--amber-soft); border: 1px solid var(--amber); font: 10.5px var(--mono); text-transform: uppercase; }
+
+      .dossier { min-width: 0; background: var(--paper-raised); }
+      .subject-spine { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 18px; border-bottom: 1px solid var(--hairline-strong); }
+      .subject-spine h2 { margin: 0; font-size: 24px; line-height: 1.08; letter-spacing: -.025em; }
+      .subject-spine p { margin: 7px 0 0; color: var(--ink-muted); font-size: 13px; }
+      .subject-id { align-self: start; padding: 6px 8px; background: var(--ink); color: var(--paper); font: 10px var(--mono); overflow-wrap: anywhere; }
+      .recommendation { margin: 16px 18px 0; padding: 14px 15px; background: var(--amber-soft); border: 1px solid var(--amber); }
+      .recommendation strong { display: block; font-size: 14px; }
+      .recommendation p { margin: 4px 0 0; color: var(--ink-muted); font-size: 12.5px; }
+      .dimension-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 18px 0; border: 1px solid var(--hairline); }
+      .dimension { min-width: 0; padding: 12px; }
+      .dimension + .dimension { border-left: 1px solid var(--hairline); }
+      .dimension span { display: block; color: var(--ink-faint); font: 10.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+      .dimension strong { display: block; margin-top: 3px; font-size: 20px; }
+      .dimension small { color: var(--ink-muted); font-size: 11px; }
+      .section { margin: 18px; padding-top: 17px; border-top: 1px solid var(--hairline); }
+      .section h3 { margin: 0 0 10px; font-size: 14px; }
+      .claim { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid var(--hairline); }
+      .claim:first-of-type { border-top: 0; }
+      .claim-badge { align-self: start; min-width: 74px; padding: 3px 6px; text-align: center; border: 1px solid var(--hairline-strong); font: 10.5px var(--mono); text-transform: uppercase; }
+      .claim-badge[data-state="corroborated"] { color: var(--green); background: var(--green-soft); }
+      .claim-badge[data-state="unverified"] { color: var(--rust); background: var(--rust-soft); }
+      .claim p { margin: 0; font-size: 12.5px; }
+      .claim small { display: block; margin-top: 4px; color: var(--ink-faint); font: 10.5px var(--mono); }
+      .diff-list { margin: 0; padding: 0; list-style: none; }
+      .diff-list li { display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px solid var(--hairline); font-size: 12px; }
+      .diff-list code { color: var(--ink-faint); font: 10.5px var(--mono); }
+
+      .decision { min-width: 0; color: var(--paper); background: var(--ink); }
+      .decision .panel-head { border-color: rgba(241, 238, 230, .22); }
+      .decision .panel-head span { color: #c8c1b2; }
+      .decision-body { padding: 18px; }
+      .version-lock { padding: 12px; color: var(--ink); background: var(--amber); }
+      .version-lock strong { display: block; font-size: 12.5px; }
+      .version-lock code { display: block; margin-top: 4px; font: 10.5px var(--mono); overflow-wrap: anywhere; }
+      .digest-value { display: block; margin-top: 5px; padding: 5px 6px; color: inherit; background: rgba(255, 255, 255, .2); border: 1px solid currentColor; font: 10.5px var(--mono); overflow-wrap: anywhere; user-select: all; }
+      .consequence { margin: 16px 0; color: #ded7c8; font-size: 12.5px; }
+      .consequence strong { color: var(--paper); }
+      .choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 16px; }
+      .choice-grid button { min-height: 44px; padding: 7px; color: var(--paper); background: transparent; border: 1px solid rgba(241, 238, 230, .38); border-radius: 4px; font-size: 12.5px; cursor: pointer; }
+      .choice-grid button[aria-pressed="true"] { color: var(--ink); background: var(--paper); }
+      .field { display: block; margin-top: 13px; }
+      .field span { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; color: var(--paper); font-size: 12px; font-weight: 700; }
+      .field em { color: #bfb7a6; font: normal 10.5px var(--mono); }
+      .field textarea, .field input { width: 100%; min-height: 44px; padding: 10px 11px; color: var(--ink); background: var(--paper-raised); border: 1px solid #d9d1c2; border-radius: 5px; }
+      .field textarea { min-height: 92px; resize: vertical; }
+      .confirm-copy { margin: 7px 0 0; color: #c8c1b2; font: 10.5px var(--mono); overflow-wrap: anywhere; }
+      .decision-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+      .decision-actions button { min-height: 44px; padding: 10px 12px; border-radius: 5px; font-weight: 750; cursor: pointer; }
+      .approve { color: var(--ink); background: var(--amber); border: 1px solid var(--amber); }
+      .reject { color: var(--paper); background: transparent; border: 1px solid var(--rust); }
+      .safety-line { margin: 15px 0 0; padding-top: 12px; color: #bfb7a6; border-top: 1px solid rgba(241, 238, 230, .18); font-size: 11px; }
+      .safety-line strong { color: var(--paper); }
+
+      .notice, .receipt, .empty-state { margin: 18px; padding: 16px; border-radius: 6px; }
+      .notice { color: var(--ink); background: var(--rust-soft); border: 1px solid var(--rust); }
+      .notice h2, .receipt h2, .empty-state h2 { margin: 0; font-size: 16px; }
+      .notice p, .receipt p, .empty-state p { margin: 5px 0 0; font-size: 12.5px; }
+      .notice-link { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; margin-top: 12px; padding: 9px 11px; color: var(--paper); background: var(--ink); border: 1px solid var(--ink); border-radius: 4px; font-size: 12.5px; font-weight: 750; text-decoration: none; }
+      .receipt { color: var(--ink); background: var(--green-soft); border: 1px solid var(--green); }
+      .receipt dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 12px; margin: 14px 0 0; font-size: 11px; }
+      .receipt dt { color: var(--ink-faint); font: 10.5px var(--mono); text-transform: uppercase; }
+      .receipt dd { margin: 0; overflow-wrap: anywhere; }
+      .empty-state { color: var(--ink); background: var(--paper-raised); border: 1px dashed var(--hairline-strong); }
+      .detail-page { grid-column: 1 / -1; background: var(--paper-raised); }
+      .detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); }
+      .detail-main, .detail-aside { padding: 20px; }
+      .detail-aside { background: var(--paper-recessed); border-left: 1px solid var(--hairline-strong); }
+      .timeline { margin: 0; padding: 0; list-style: none; }
+      .timeline li { position: relative; padding: 0 0 18px 24px; font-size: 12.5px; }
+      .timeline li::before { position: absolute; top: 5px; left: 0; width: 9px; height: 9px; content: ""; background: var(--amber); border: 1px solid var(--ink); border-radius: 50%; }
+      .timeline li::after { position: absolute; top: 15px; bottom: 0; left: 4px; width: 1px; content: ""; background: var(--hairline-strong); }
+      .timeline li:last-child::after { display: none; }
+      .timeline code { display: block; color: var(--ink-faint); font: 10.5px var(--mono); }
+      .future-empty { padding: 14px 0; color: var(--ink-muted); border-top: 1px solid var(--hairline); font-size: 12.5px; }
+      .synthetic { display: inline-block; margin-left: 8px; padding: 2px 5px; color: var(--ink); background: var(--amber-soft); border: 1px solid var(--amber); font: 10.5px var(--mono); text-transform: uppercase; vertical-align: middle; }
+
+      [hidden] { display: none !important; }
+      .jumpbar { display: none; }
+
+      @media (max-width: 1080px) {
+        .app-header { grid-template-columns: auto 1fr; }
+        .search { display: none; }
+        .primary-nav { justify-content: flex-end; overflow-x: auto; }
+        .folio { grid-template-columns: minmax(210px, 3fr) minmax(360px, 5fr); }
+        .decision { grid-column: 1 / -1; border-top: 1px solid var(--hairline-strong); border-left: 0 !important; }
+        .decision-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .9fr); gap: 18px; }
+        .decision-actions, .safety-line { grid-column: 2; }
+      }
+
+      @media (max-width: 720px) {
+        .mock-toolbar { align-items: stretch; flex-direction: column; gap: 4px; }
+        .mock-toolbar select { width: 100%; min-height: 44px; }
+        .app-header { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 12px 0; }
+        .brand { min-height: 44px; }
+        .primary-nav { order: 2; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; }
+        .primary-nav a { min-height: 46px; padding: 0 11px; }
+        .status-strip { gap: 4px 12px; padding: 7px 12px; }
+        .page { padding: 18px 12px 36px; }
+        .page-head { grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+        .page-head h1 { font-size: 31px; }
+        .queue-count { justify-self: start; min-width: 100px; }
+        .filters { flex-wrap: nowrap; overflow-x: auto; }
+        .filter { flex: 0 0 auto; min-height: 44px; }
+        .filter:last-child { margin-left: 0; }
+        .jumpbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; margin: 0 -12px; padding: 7px 12px; overflow-x: auto; background: var(--paper); border-bottom: 1px solid var(--hairline-strong); }
+        .jumpbar a { min-width: 44px; min-height: 44px; padding: 11px 10px; color: var(--ink); border: 1px solid var(--hairline-strong); border-radius: 4px; font-size: 12.5px; text-align: center; text-decoration: none; white-space: nowrap; }
+        .folio { display: block; min-height: 0; border-radius: 6px; }
+        .folio > * + * { border-top: 1px solid var(--hairline-strong); border-left: 0; }
+        .docket-row { min-height: 104px; }
+        .docket-row:nth-child(n + 3) { display: none; }
+        .subject-spine { grid-template-columns: minmax(0, 1fr); }
+        .subject-spine h2 { font-size: 22px; }
+        .subject-id { justify-self: start; }
+        .dimension-grid { grid-template-columns: minmax(0, 1fr); }
+        .dimension + .dimension { border-top: 1px solid var(--hairline); border-left: 0; }
+        .claim { grid-template-columns: minmax(0, 1fr); }
+        .claim-badge { justify-self: start; }
+        .decision-body { display: block; }
+        .choice-grid { grid-template-columns: repeat(2, 1fr); }
+        .decision-actions { grid-template-columns: minmax(0, 1fr); }
+        .detail-grid { grid-template-columns: minmax(0, 1fr); }
+        .detail-aside { border-top: 1px solid var(--hairline-strong); border-left: 0; }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .subject-spine, .receipt { animation: reveal .2s var(--ease) both; }
+        @keyframes reveal { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sr-only" id="state-announcer" aria-live="polite" aria-atomic="true"></div>
+    <!--
+      THESIS: One continuous decision folio binds docket, evidence, and authority; it refuses a dashboard of detached review cards.
+      OWN-WORLD: AllJobs Paper Workbench in cream paper, ink rules, amber provenance, human sans, and machine mono.
+      STORY: The owner selects a waiting item, proves the recommendation against evidence and Diff, then records one version-bound Human decision.
+      FIRST VIEWPORT: Header and filters lead into a 3/5/4 folio: docket left, dossier center, dark decision ledger right; mobile preserves that order vertically.
+      FORM: Grounded decision-folio structure, assigned surface candidate 7, seed b5613e4f.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
+    <a class="skip-link" href="#main">Skip to review evidence</a>
+    <div class="mock-toolbar" aria-label="Mockup state controls">
+      <label for="mock-state">Synthetic preview state</label>
+      <select id="mock-state">
+        <option value="waiting">Reviews — waiting</option>
+        <option value="submitting">Reviews — decision submitting</option>
+        <option value="approved">Reviews — approved, revocable</option>
+        <option value="consumed">Reviews — approved, consumed</option>
+        <option value="rejected">Reviews — rejected receipt</option>
+        <option value="revoked">Reviews — revoked receipt</option>
+        <option value="superseded">Reviews — superseded request</option>
+        <option value="stale">Reviews — stale conflict</option>
+        <option value="concurrent">Reviews — concurrent receipt</option>
+        <option value="idempotency">Reviews — idempotency conflict</option>
+        <option value="validation">Reviews — validation error</option>
+        <option value="server-error">Reviews — safe server error</option>
+        <option value="filtered-empty">Reviews — filtered empty</option>
+        <option value="empty">Reviews — globally empty</option>
+        <option value="disabled">Registry — disabled</option>
+        <option value="capture">Capture — complete lineage</option>
+        <option value="capability">Capability — Candidate only</option>
+      </select>
+    </div>
+
+    <header class="app-header">
+      <a class="brand" href="#" aria-label="AllJobs home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6"/></svg>
+        <span>AllJobs <span>/ Planning</span></span>
+      </a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a href="#">Portfolio</a><a href="#">Projects</a><a href="#">Tasks</a><a href="#">Monitoring</a><a href="#">Caphub</a><a href="#" aria-current="page">Reviews</a><a href="#">Register</a>
+      </nav>
+      <div class="search"><label class="sr-only" for="search">Universal search</label><input id="search" placeholder="Universal search…"/><kbd>⌘K</kbd></div>
+    </header>
+    <div class="status-strip"><span><strong>Path</strong> /reviews</span><span><strong>Custody</strong> registry: postgres</span><span><strong>Mode</strong> human decision</span><span><strong>Release</strong> prohibited</span></div>
+
+    <main class="page" id="main">
+      <div class="page-head">
+        <div><h1>Decide with the evidence still attached.</h1><p>Review one immutable subject version at a time. Decisions are append-only and cannot publish, install, build, or deploy.</p></div>
+        <div class="queue-count"><strong>3</strong><span>waiting</span></div>
+      </div>
+      <div class="filters" aria-label="Review filters"><button class="filter" id="state-filter" data-active="true">State: Waiting</button><button class="filter">Kind: Candidate</button><button class="filter">Risk: High</button><button class="filter">Value: 4–5</button><button class="filter">Age: Older than 24h</button><button class="filter">Clear filters</button></div>
+      <nav class="jumpbar" aria-label="Review workbench sections"><a href="#docket">Docket</a><a href="#evidence">Evidence</a><a href="#diff">Diff</a><a href="#decision">Decision</a></nav>
+
+      <section class="folio" aria-label="Review workbench" data-view="reviews">
+        <aside class="docket" id="docket" aria-labelledby="docket-title">
+          <div class="panel-head"><h2 id="docket-title">Docket</h2><span>Oldest first</span></div>
+          <ol class="docket-list">
+            <li><button class="docket-row" aria-current="true"><span class="docket-row__top"><span class="docket-row__kind">Candidate · v1</span><span class="docket-row__age" id="selected-row-state">31h waiting</span></span><strong>Browser Use Safety Layer</strong><span class="docket-row__bottom"><span class="risk">High risk · identity ambiguous</span><span>Build · 4/5 value</span></span><span class="changed">Confidence 3/5 · 1 unresolved · evidence changed</span></button></li>
+            <li><button class="docket-row"><span class="docket-row__top"><span class="docket-row__kind">Candidate · v1</span><span class="docket-row__age">17h waiting</span></span><strong>Compact task-context method</strong><span class="docket-row__bottom"><span class="risk risk--low">Low risk · identity verified</span><span>Learn · 3/5 value</span></span><span class="changed">Confidence 4/5 · 0 unresolved</span></button></li>
+            <li><button class="docket-row"><span class="docket-row__top"><span class="docket-row__kind">Candidate · v2</span><span class="docket-row__age">8h waiting</span></span><strong>Provider health probe adapter</strong><span class="docket-row__bottom"><span class="risk risk--medium">Medium risk · identity verified</span><span>Adapt · 4/5 value</span></span><span class="changed">Confidence 2/5 · 2 unresolved</span></button></li>
+          </ol>
+        </aside>
+
+        <article class="dossier" id="evidence" aria-labelledby="subject-title">
+          <div class="subject-spine"><div><h2 id="subject-title">Browser Use Safety Layer <span class="synthetic">Synthetic</span></h2><p>Candidate review from Capture <code>cap_7b3a…88d2</code> · exact subject version 1</p></div><code class="subject-id">cand_4d95f11c</code></div>
+          <div class="recommendation"><strong>Recommendation: Build a narrow safety adapter</strong><p>Research found no exact reusable match. The proposed boundary is valuable but high risk; approval records direction only and does not start implementation.</p></div>
+          <div class="dimension-grid" aria-label="Assessment dimensions"><div class="dimension"><span>Capability value</span><strong>4 / 5</strong><small>Useful across browser tasks</small></div><div class="dimension"><span>Security risk</span><strong>4 / 5</strong><small>External side effects</small></div><div class="dimension"><span>Evidence confidence</span><strong>3 / 5</strong><small>One unresolved claim</small></div></div>
+          <section class="section"><h3>Identity and independent critic</h3><div class="claim"><span class="claim-badge" data-state="unverified">Ambiguous</span><div><p>Two similarly named upstream projects remain; this Candidate is bound only to the cited official host.</p><small>Identity state · 1 unresolved match</small></div></div><div class="claim"><span class="claim-badge" data-state="corroborated">Agrees</span><div><p>The critic agrees the capability is valuable and that approval must not trigger a browser write.</p><small>Independent critic · scope agreement</small></div></div><div class="claim"><span class="claim-badge" data-state="unverified">Disagrees</span><div><p>The critic rates enforcement confidence 2/5 until blocked-write evidence exists.</p><small>Independent critic · confidence disagreement</small></div></div></section>
+          <section class="section"><h3>Claim checks</h3><div class="claim"><span class="claim-badge" data-state="corroborated">Corroborated</span><div><p>The source exposes a policy layer before browser actions.</p><small>ev_a104…d02e · official documentation</small></div></div><div class="claim"><span class="claim-badge" data-state="unverified">Unverified</span><div><p>The boundary prevents every cross-origin write without host integration.</p><small>ev_b8f1…99a0 · source claim only</small></div></div></section>
+          <section class="section"><h3>Conflicts and alternatives</h3><div class="claim"><span class="claim-badge">Overlap</span><div><p>Existing origin validation covers request admission, not browser-side action policy.</p><small>Registry comparison · 2 related capabilities</small></div></div><div class="claim"><span class="claim-badge">Alternative</span><div><p>Keep a manual allowlist checklist instead of building an adapter.</p><small>Lower maintenance · weaker enforcement</small></div></div></section>
+          <section class="section"><h3>Unresolved questions (1)</h3><div class="claim"><span class="claim-badge" data-state="unverified">Open</span><div><p>Can the host prove a write was blocked rather than merely omitted?</p><small>Must be resolved before any later implementation approval</small></div></div></section>
+          <section class="section" id="diff"><h3>Exact-version Diff</h3><ul class="diff-list"><li><code>NEW</code><span>First Candidate version; no prior Registry record.</span></li><li><code>BOUND</code><span>12 evidence items · 6 Claims · ReviewPacket <code>rvp_09a1…e72c</code></span></li><li><code>OPEN</code><span>Can the host prove a write was blocked rather than merely omitted?</span></li></ul></section>
+        </article>
+
+        <aside class="decision" id="decision" aria-labelledby="decision-title">
+          <div class="panel-head"><h2 id="decision-title">Decision ledger</h2><span>Human owner only</span></div>
+          <div class="decision-body" data-decision-state="waiting">
+            <div><div class="version-lock"><strong>Locked to Candidate version 1 · lock version 3</strong><code class="digest-value" aria-label="Full subject SHA-256 digest">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></div><p class="consequence"><strong>Approve means:</strong> accept one disposition as authority for a later separately gated phase. It does not create a Release, start a Builder, write Git, or deploy.</p><div class="choice-grid" aria-label="Approval disposition"><button aria-pressed="false">Adopt</button><button aria-pressed="false">Adapt</button><button aria-pressed="true">Build</button><button aria-pressed="false">Learn</button><button aria-pressed="false">Watch</button></div><label class="field"><span>Rationale <em>optional for approve</em></span><textarea>Proceed only with the reviewed no-side-effect boundary and explicit host enforcement.</textarea></label><label class="field"><span>Typed confirmation <em>exact match</em></span><input value="APPROVE CANDIDATE 4d95f11c"/><p class="confirm-copy">APPROVE CANDIDATE 4d95f11c</p></label></div><div class="decision-actions"><button class="reject">Reject version 1</button><button class="approve">Approve Build direction</button></div><p class="safety-line"><strong>Append-only:</strong> Reject is a separate permanent action and requires rationale plus <code>REJECT CANDIDATE 4d95f11c</code>. Approval can be revoked only before a downstream phase consumes this decision.</p>
+          </div>
+          <div class="notice" data-decision-state="submitting" role="status" hidden><h2 tabindex="-1">Recording this exact decision…</h2><p>Controls are locked while one transaction checks Candidate v1, lock 3, and the full digest. No downstream action has occurred.</p></div>
+          <div class="decision-body" data-decision-state="approved" hidden><div class="receipt"><h2 tabindex="-1">Decision recorded · revocable</h2><p>Build direction approved and still unconsumed. No release, implementation handoff, Git write, or deployment was created.</p><dl><dt>Decision</dt><dd><code>dec_72b8a09e</code></dd><dt>Authority</dt><dd>Unconsumed · revocable</dd><dt>Actor</dt><dd>human:owner</dd><dt>Subject</dt><dd>Candidate v1</dd><dt>Full digest</dt><dd><code class="digest-value">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></dd><dt>Recorded</dt><dd>2026-09-16 12:48 +08:00</dd></dl></div><label class="field"><span>Revocation rationale <em>required</em></span><textarea>New evidence invalidates the approved boundary.</textarea></label><label class="field"><span>Typed confirmation <em>exact match</em></span><input value="REVOKE CANDIDATE 4d95f11c"/><p class="confirm-copy">REVOKE CANDIDATE 4d95f11c</p></label><div class="decision-actions"><button class="reject">Revoke approval</button></div></div>
+          <div class="receipt" data-decision-state="consumed" hidden><h2 tabindex="-1">Decision recorded · consumed</h2><p>This approval was consumed by <code>bld_2c8f90a1</code> and cannot be revoked. Use the later lifecycle reversal defined for that phase.</p><dl><dt>Decision</dt><dd><code>dec_72b8a09e</code></dd><dt>Authority</dt><dd>Consumed · not revocable</dd><dt>Consumer</dt><dd><code>bld_2c8f90a1</code></dd><dt>Full digest</dt><dd><code class="digest-value">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></dd></dl></div>
+          <div class="receipt" data-decision-state="rejected" hidden><h2 tabindex="-1">Candidate version rejected</h2><p>This permanent terminal decision cannot be edited or revoked. Corrected evidence requires a new immutable version and review request.</p><dl><dt>Decision</dt><dd><code>dec_5fd28c10</code></dd><dt>Action</dt><dd>Reject · permanent</dd><dt>Full digest</dt><dd><code class="digest-value">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></dd></dl></div>
+          <div class="receipt" data-decision-state="revoked" hidden><h2 tabindex="-1">Approval revoked</h2><p>The unconsumed authority is closed. The unchanged Candidate version may receive a new review request; changed evidence requires a new version first.</p><dl><dt>Revocation</dt><dd><code>dec_c4fa1832</code></dd><dt>Revokes</dt><dd><code>dec_72b8a09e</code></dd><dt>Full digest</dt><dd><code class="digest-value">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></dd></dl></div>
+          <div class="notice" data-decision-state="superseded" hidden><h2 tabindex="-1">This request was superseded</h2><p>Candidate v1 remains readable with its original Diff, but its controls are removed because Candidate v2 has a new review request.</p><a class="notice-link" href="?state=waiting#decision">Open latest request rev_84c2f190</a></div>
+          <div class="notice" data-decision-state="stale" hidden><h2 tabindex="-1">This request changed before the decision</h2><p>Your rationale is preserved. Expected lock 3 and digest ending 082c; current lock 4 and digest ending a91e on the same Candidate v1 request. Refresh this request before deciding; this attempt wrote nothing.</p></div>
+          <div class="receipt" data-decision-state="concurrent" hidden><h2 tabindex="-1">Another decision was recorded first</h2><p>No duplicate was written. This is the existing immutable receipt returned by the concurrent transaction.</p><dl><dt>Decision</dt><dd><code>dec_72b8a09e</code></dd><dt>Action</dt><dd>Approve · Build</dd><dt>Full digest</dt><dd><code class="digest-value">39f2a12b6df4f53b40c977a64f74ab120631d112c833ab637b51d08822ea082c</code></dd></dl></div>
+          <div class="notice" data-decision-state="idempotency" hidden><h2 tabindex="-1">Intent key already binds a different decision</h2><p>Your rationale is preserved and this attempt wrote nothing. Refresh the request, confirm the intended action, then submit with a new intent key.</p></div>
+          <div class="notice" data-decision-state="validation" hidden><h2 tabindex="-1">Complete the required decision fields</h2><p>Select one approval disposition and enter the exact confirmation phrase. Reject and revoke also require a rationale.</p></div>
+          <div class="notice" data-decision-state="server-error" hidden><h2 tabindex="-1">Decision was not recorded</h2><p>Safe error <code>REVIEW_WRITE_UNAVAILABLE</code>. No connection, role, secret, SQL, or subject detail is exposed; your rationale remains available for retry.</p></div>
+        </aside>
+
+        <div class="detail-page" data-detail="filtered-empty" hidden><div class="empty-state"><h2>No reviews match these filters</h2><p>The active Waiting, Candidate, High risk, Value 4–5, and Older than 24h filters match no request. Clear one or all filters; existing requests are not changed.</p></div></div>
+        <div class="detail-page" data-detail="empty" hidden><div class="empty-state"><h2>No review requests exist</h2><p>A completed, verified P2 import creates a Candidate review. No filter is active, there is no manual create control, and no capability is published from this global empty state.</p></div></div>
+        <div class="detail-page" data-detail="disabled" hidden><div class="notice"><h2>Registry is disabled</h2><p>The Review Center is safe-off on this Control Host. Configure and verify PostgreSQL outside the browser; no secret, URL, role, or migration detail is exposed here.</p></div></div>
+        <div class="detail-page" data-detail="capture" hidden>
+          <div class="panel-head"><h2>Capture cap_7b3a…88d2 <span class="synthetic">Synthetic</span></h2><span>Complete lineage</span></div>
+          <div class="detail-grid"><div class="detail-main"><h3>Evidence and analysis</h3><div class="recommendation" style="margin:0"><strong>Immutable source preserved</strong><p>1 PNG · 4.8 MiB · received 2026-09-15 05:26 +08:00. Raw object key and filesystem path are withheld.</p></div><section class="section" style="margin-left:0;margin-right:0"><h3>Ordered source → OCR → Claims</h3><div class="claim"><span class="claim-badge">Source 1</span><div><p>Screenshot evidence from the approved Capture intake.</p><small>image/png · digest verified · external fetch not repeated</small></div></div><div class="claim"><span class="claim-badge">OCR</span><div><p>“A policy boundary should run before external browser actions.”</p><small>Preprocess artifact art_18af…0a2b</small></div></div><div class="claim"><span class="claim-badge">Entity</span><div><p>Identity ambiguous between two similarly named projects.</p><small>3 A/B evidence sources retained</small></div></div><div class="claim"><span class="claim-badge">Claim</span><div><p>Host enforcement is required before the boundary can be relied on.</p><small>Evidence links: docs.example.test · 2 corroborating citations</small></div></div></section><section class="section" style="margin-left:0;margin-right:0"><h3>Safe model-call metadata</h3><div class="claim"><span class="claim-badge" data-state="corroborated">Complete</span><div><p>Provider: approved-analysis-adapter · Model: bounded-research · Status: succeeded</p><small>call mc_83af…29d1 · 2026-09-15 05:31 +08:00 · prompts and reasoning withheld</small></div></div></section></div><aside class="detail-aside"><h3>Lineage timeline</h3><ol class="timeline"><li><strong>Capture received</strong><code>cap_7b3a…88d2</code></li><li><strong>Analysis job completed</strong><code>job_319a…7b42</code></li><li><strong>ReviewPacket v1 composed</strong><code>rvp_09a1…e72c</code></li><li><strong>Registry import committed</strong><code>imp_20a3…114f</code></li><li><strong>Decision status: waiting</strong><code>rev_7b12…091a · no decision yet</code></li></ol></aside></div>
+        </div>
+        <div class="detail-page" data-detail="capability" hidden>
+          <div class="panel-head"><h2>Browser Use Safety Layer <span class="synthetic">Synthetic</span></h2><span>Candidate only</span></div>
+          <div class="detail-grid"><div class="detail-main"><h3>Current Registry version</h3><div class="recommendation" style="margin:0"><strong>Candidate v1 · Build recommended</strong><p>This record has not become a Capability Release and is unavailable to Agent runtime routing.</p></div><section class="section" style="margin-left:0;margin-right:0"><h3>Versions and relationships</h3><div class="claim"><span class="claim-badge">Version</span><div><p>Candidate v1 is current; no prior version.</p><small>Full digest bound to review request rev_7b12…091a</small></div></div><div class="claim"><span class="claim-badge">Capture</span><div><p>cap_7b3a…88d2 → ReviewPacket v1 → Candidate v1</p><small>Exact-version lineage · 4 immutable edges</small></div></div><div class="claim"><span class="claim-badge">Evidence</span><div><p>12 immutable evidence records; 1 unresolved Claim.</p></div></div><div class="claim"><span class="claim-badge">Decision</span><div><p>Waiting for Human review; no authority token exists.</p><small>Candidate review rev_7b12…091a</small></div></div></section></div><aside class="detail-aside"><h3>Later-phase artifacts</h3><div class="future-empty"><strong>No BuildProposal</strong><br/>P3 approval cannot start an implementation handoff.</div><div class="future-empty"><strong>No Release</strong><br/>Capability Package generation belongs to P4.</div><div class="future-empty"><strong>No Deployment or Usage</strong><br/>Nothing is installed or routed.</div></aside></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const selector = document.querySelector("#mock-state");
+      const reviewParts = [...document.querySelectorAll(".docket, .dossier, .decision")];
+      const details = [...document.querySelectorAll("[data-detail]")];
+      const decisionStates = [...document.querySelectorAll("[data-decision-state]")];
+      const pageTitle = document.querySelector(".page-head h1");
+      const pageCopy = document.querySelector(".page-head p");
+      const count = document.querySelector(".queue-count strong");
+      const countLabel = document.querySelector(".queue-count span");
+      const pathFact = document.querySelector(".status-strip span:first-child");
+      const stateFilter = document.querySelector("#state-filter");
+      const selectedRowState = document.querySelector("#selected-row-state");
+      const announcer = document.querySelector("#state-announcer");
+      const announcementByState = {
+        approved: "Decision dec_72b8a09e recorded. No release, implementation build, Git write, or deployment was created.",
+        concurrent: "Existing decision dec_72b8a09e loaded. No duplicate, release, implementation build, Git write, or deployment was created.",
+        rejected: "Decision dec_5fd28c10 recorded. Candidate version 1 is permanently rejected and no release or build was created.",
+        revoked: "Decision dec_c4fa1832 recorded. Approval dec_72b8a09e is revoked and no release or build was created."
+      };
+      const waitingStates = new Set(["waiting", "submitting", "stale", "idempotency", "validation", "server-error", "filtered-empty"]);
+      const rowStates = {
+        waiting: "31h waiting",
+        submitting: "Decision submitting",
+        approved: "Approved 12:48",
+        consumed: "Consumed by Build",
+        rejected: "Rejected 12:48",
+        revoked: "Revoked 13:06",
+        superseded: "Superseded by v2",
+        stale: "31h waiting",
+        concurrent: "Approved in another tab",
+        idempotency: "31h waiting",
+        validation: "31h waiting",
+        "server-error": "31h waiting"
+      };
+      function render(state, announce = false) {
+        const detailState = ["filtered-empty", "empty", "disabled", "capture", "capability"].includes(state) ? state : null;
+        reviewParts.forEach((node) => node.hidden = Boolean(detailState));
+        details.forEach((node) => node.hidden = node.dataset.detail !== detailState);
+        decisionStates.forEach((node) => node.hidden = detailState ? true : node.dataset.decisionState !== state);
+        document.querySelector(".filters").hidden = ["empty", "disabled", "capture", "capability"].includes(state);
+        document.querySelector(".jumpbar").hidden = Boolean(detailState);
+        selectedRowState.textContent = rowStates[state] || "31h waiting";
+        stateFilter.textContent = waitingStates.has(state) ? "State: Waiting" : "State: All";
+        stateFilter.dataset.active = String(waitingStates.has(state));
+        if (state === "capture") {
+          pageTitle.textContent = "Trace the decision back to the source.";
+          pageCopy.textContent = "Capture evidence, analysis artifacts, Registry import, and Human review remain linked without exposing storage or provider internals.";
+          count.textContent = "1";
+          countLabel.textContent = "capture";
+          pathFact.innerHTML = "<strong>Path</strong> /captures/cap_7b3a…88d2";
+        } else if (state === "capability") {
+          pageTitle.textContent = "A Candidate is not a released capability.";
+          pageCopy.textContent = "Inspect the current version and lineage while later-phase artifacts remain honestly absent.";
+          count.textContent = "0";
+          countLabel.textContent = "released";
+          pathFact.innerHTML = "<strong>Path</strong> /capabilities/cand_4d95f11c";
+        } else if (state === "disabled") {
+          pageTitle.textContent = "Review Center is safe-off.";
+          pageCopy.textContent = "No browser control can enable PostgreSQL or reveal its configuration.";
+          count.textContent = "0";
+          countLabel.textContent = "requests";
+          pathFact.innerHTML = "<strong>Path</strong> /reviews";
+        } else if (state === "filtered-empty") {
+          pageTitle.textContent = "No reviews match these filters.";
+          pageCopy.textContent = "The queue is unchanged. Clear one or all active filter values to broaden the view.";
+          count.textContent = "0";
+          countLabel.textContent = "matching";
+          pathFact.innerHTML = "<strong>Path</strong> /reviews";
+        } else if (state === "empty") {
+          pageTitle.textContent = "Nothing is waiting for a decision.";
+          pageCopy.textContent = "The queue only receives verified P2 imports; it never invents work or creates capability records from the browser.";
+          count.textContent = "0";
+          countLabel.textContent = "requests";
+          pathFact.innerHTML = "<strong>Path</strong> /reviews";
+        } else {
+          pageTitle.textContent = "Decide with the evidence still attached.";
+          pageCopy.textContent = "Review one immutable subject version at a time. Decisions are append-only and cannot publish, install, build, or deploy.";
+          count.textContent = "3";
+          countLabel.textContent = waitingStates.has(state) ? "waiting" : "results";
+          pathFact.innerHTML = "<strong>Path</strong> /reviews";
+        }
+        if (announce) {
+          const visibleState = decisionStates.find((node) => !node.hidden);
+          const heading = visibleState?.querySelector("h2[tabindex='-1']");
+          const message = announcementByState[state] || heading?.textContent || pageTitle.textContent;
+          announcer.textContent = message;
+          heading?.focus();
+        }
+      }
+      const requestedState = new URLSearchParams(window.location.search).get("state");
+      if ([...selector.options].some((option) => option.value === requestedState)) {
+        selector.value = requestedState;
+      }
+      selector.addEventListener("change", () => render(selector.value, true));
+      document.querySelectorAll(".docket-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          const subject = row.querySelector("strong")?.textContent || "Selected review";
+          announcer.textContent = `Evidence dossier selected: ${subject}.`;
+        });
+      });
+      render(selector.value);
+      if (window.innerWidth <= 720) {
+        document.querySelector('.primary-nav [aria-current="page"]')?.scrollIntoView({
+          block: "nearest",
+          inline: "center"
+        });
+      }
+    </script>
+  </body>
+</html>
