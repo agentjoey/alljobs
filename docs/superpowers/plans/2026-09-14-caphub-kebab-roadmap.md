@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1-C 已批准；P1 已验收；P2-A 等待真实 provider probe 单独授权
+- 状态：P1-C 已批准；P1 已验收；P2-A 部分通过，等待 Kimi API-key mode 凭据/绑定
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -134,7 +134,7 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 - Human 分别验证 Kimi API key 与本地 OAuth/login 的可用性；至少批准一种主路径和另一种可替换 contract。
 - 独立 threat model 批准 Worker profiles 与外层 sandbox。
 
-**2026-09-16 preflight：**本机只读清单确认 `kimi` CLI 存在，且环境中存在 `KIMI_CODE_API_KEY`、`MINIMAX_API_KEY` 键名；未读取或输出值，也未发起网络请求。根据 Gate P2-A，真实 MiniMax/Kimi capability probe 仍等待 Human 单独授权，详细 implementation plan 在 probe 证据完成前不得定稿。
+**2026-09-16 P2-A evidence：**Human 单独授权限定真实 provider probe。MiniMax M3 synthetic-image + strict JSON probe PASS；Kimi local-login/K3-256K no-tool `stream-json` probe PASS。Kimi API-key mode 未执行：现有 `KIMI_CODE_API_KEY` 无法证明适用于 Kimi Platform API，且没有明确 `KIMI_API_KEY`/base URL binding。详细证据见 `.agent/caphub/p2-provider-probes.md`；dual-mode implementation plan 在该剩余输入解决前不得宣称 live-compatible。
 
 **产物**
 
