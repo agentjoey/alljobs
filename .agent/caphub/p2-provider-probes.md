@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-16
 **Gate:** P2-A — real provider requests require separate Human authorization
-**Authorization:** Human Owner explicitly replied `授权` to the bounded probe set: one MiniMax image/JSON request, one Kimi local-login no-tool request, and a Kimi API request only if the existing credential was clearly applicable.
+**Authorization:** Human Owner explicitly replied `授权` to the bounded probe set: one MiniMax image/JSON request, one Kimi local-login no-tool request, and a Kimi API request only if the existing credential was clearly applicable. After the initial evidence identified the missing API binding, the Human Owner supplied `https://api.kimi.com/coding` and explicitly authorized the API probe.
 
 ## Safety envelope
 
@@ -11,6 +11,7 @@
 - The first external-execution request proposed a repository mockup screenshot and was rejected before execution. The actual MiniMax request used only a fixed synthetic 68-byte 1×1 PNG containing no project or user data.
 - Kimi ran with an explicit no-tools agent. Its OAuth/config material was copied into a canonical `0700` temporary Kimi Home; all generated session/log/update data stayed there.
 - The exact temporary Kimi Home was inspected and removed after the probe. The default Kimi Home was not the session write target.
+- Kimi API-key mode used the documented versioned root `https://api.kimi.com/coding/v1`, derived from the Human-supplied base URL, and mapped the existing `KIMI_CODE_API_KEY` into an in-memory provider only. No persistent provider configuration was changed.
 
 ## MiniMax M3
 
@@ -55,15 +56,29 @@ This proves the local-login path can return a schema-valid no-tool result from a
 
 ## Kimi API-key mode
 
-**Result:** NOT RUN / NOT PROVEN.
+**CLI/provider:** Kimi Code CLI `0.42.0`, in-memory `kimi` provider, `kimi-for-coding`.
+**Request:** one non-interactive `stream-json` prompt through the same explicit no-tools agent.
+**Result:** PASS.
 
-The environment exposes the key name `KIMI_CODE_API_KEY`, but no `KIMI_API_KEY` or separately approved Kimi Platform base URL/credential binding was available. Official Kimi Code configuration requires an explicit provider credential/base URL mapping and does not justify sending an ambiguously named credential to `api.moonshot.ai`. No trial request was sent.
+```json
+{
+  "status": "passed",
+  "model": "kimi-for-coding",
+  "mode": "api_key",
+  "schema_valid": true,
+  "tool_calls": 0,
+  "protocol_events": 3,
+  "stderr_bytes": 0
+}
+```
+
+This proves the existing `KIMI_CODE_API_KEY` is accepted at the Human-supplied Kimi Coding endpoint and can return a schema-valid no-tool result from an isolated temporary profile. The key value and raw response were not logged. This single probe does not authorize additional provider requests or production use.
 
 ## Gate disposition
 
 - MiniMax image + strict JSON compatibility: PASS.
 - Kimi local-login no-tool compatibility: PASS.
-- Kimi API-key compatibility: OPEN hard stop — requires an applicable credential/binding and separate authorization.
-- P2 detailed implementation plan must not claim dual-mode live compatibility until the API-key path is proven. Fixture-only API adapter contract planning may resume only after the approved spec/roadmap precondition is reconciled by the Human Owner.
+- Kimi API-key no-tool compatibility: PASS.
+- P2-A provider compatibility preflight: PASS. The detailed P2 implementation plan may proceed while preserving separate authorization for any additional real provider request.
 
 No production configuration, Caphub enablement, service restart, deployment, publication, push, merge, tag, release, or data deletion occurred. Only the temporary credential/session copy created for this probe was removed after verification.
