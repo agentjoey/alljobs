@@ -3,6 +3,11 @@ import { createOpenAI } from "@ai-sdk/openai";
 export const MINIMAX_TOKEN_PLAN_BASE_URL = "https://api.minimax.io/v1";
 export const MINIMAX_TOKEN_PLAN_MODEL = "MiniMax-M3";
 export type MiniMaxTokenPlanMode = "standard" | "deep";
+export interface MiniMaxTokenPlanModelOptions {
+  apiKey?: string;
+  mode?: MiniMaxTokenPlanMode;
+  fetch?: typeof fetch;
+}
 
 export function withMiniMaxM3StreamOptions(body: Record<string, unknown>, mode: MiniMaxTokenPlanMode = "standard"): Record<string, unknown> {
   return {
@@ -52,7 +57,7 @@ export function requireMiniMaxTokenPlanKey(
 }
 
 /** Creates the fixed official Token Plan OpenAI-compatible MiniMax-M3 model. */
-export function createMiniMaxTokenPlanModel(options: { apiKey?: string; mode?: MiniMaxTokenPlanMode } | string = {}) {
+export function createMiniMaxTokenPlanModel(options: MiniMaxTokenPlanModelOptions | string = {}) {
   const normalized = typeof options === "string" ? { apiKey: options } : options;
   const apiKey = normalized.apiKey ?? requireMiniMaxTokenPlanKey();
   const mode = normalized.mode ?? "standard";
@@ -60,7 +65,7 @@ export function createMiniMaxTokenPlanModel(options: { apiKey?: string; mode?: M
     name: "minimax-token-plan",
     baseURL: MINIMAX_TOKEN_PLAN_BASE_URL,
     apiKey,
-    fetch: createMiniMaxTokenPlanFetch(globalThis.fetch, mode)
+    fetch: createMiniMaxTokenPlanFetch(normalized.fetch ?? globalThis.fetch, mode)
   });
 
   return provider.chat(MINIMAX_TOKEN_PLAN_MODEL);
