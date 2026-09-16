@@ -537,7 +537,7 @@ git commit -m "feat(caphub): add sandboxed dual-mode Kimi provider"
 - Consumes: `ExtractionResult`, exact allowed origins, injected DNS resolver/pinned-HTTPS/search ports, clock, and `KimiProvider`.
 - Produces: bounded `EvidenceRecord[]` and `ResearchDossier`; unresolvable identities become `IDENTITY_AMBIGUOUS`.
 
-- [ ] **Step 1: Write failing URL-policy and hostile-source tests**
+- [x] **Step 1: Write failing URL-policy and hostile-source tests**
 
 Reject HTTP, credentials, fragments used as authority, redirects to unapproved origins, DNS answers in private/loopback/link-local/multicast ranges, mixed public/private DNS answers, DNS rebinding between authorization and connection, a connected peer not in the vetted address set, oversized compressed or decompressed bodies, unsupported MIME types, fetches exceeding 10 seconds, more than two redirects, and more than the configured query/fetch counts.
 
@@ -546,13 +546,13 @@ await expect(policy.authorize("https://127.0.0.1/admin")).rejects.toMatchObject(
 await expect(policy.authorize("https://allowed.example/path")).resolves.toMatchObject({ origin: "https://allowed.example" });
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/research/source-policy.test.ts lib/caphub/research/source-gateway.test.ts lib/caphub/research/research.test.ts`
 
 Expected: FAIL because research modules do not exist.
 
-- [ ] **Step 3: Implement the disabled-by-default host gateway**
+- [x] **Step 3: Implement the disabled-by-default host gateway**
 
 `DisabledResearchSourceGateway.search()` and `.fetch()` return `SOURCE_ACCESS_DISABLED`. The live HTTP fetch implementation is injectable and cannot run with an empty allowlist. Search is a port only; no unapproved search provider or credential is added by this task.
 
@@ -575,22 +575,24 @@ export interface ResearchSourceGateway {
 
 Implement fetch with `node:https.request` and a custom `lookup` that returns only the previously vetted public address set. Preserve the original hostname for SNI and certificate verification, compare the socket's normalized `remoteAddress` to the vetted set before consuming response bytes, stream-enforce compressed/decompressed byte caps, and repeat authorization/address pinning for every redirect.
 
-- [ ] **Step 4: Implement evidence normalization and identity rules**
+- [x] **Step 4: Implement evidence normalization and identity rules**
 
 Assign source tiers A–D, retain checked timestamps and content digests, keep source claims separate from system conclusions, and require at least one unambiguous A/B identity citation before `confirmed` is legal. Otherwise return at least two candidates or an explicit insufficient-evidence ambiguity.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Run: `npm test -- lib/caphub/research/source-policy.test.ts lib/caphub/research/source-gateway.test.ts lib/caphub/research/research.test.ts`
 
 Expected: all tests pass; hostile instructions remain inert evidence strings.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/caphub/research
 git commit -m "feat(caphub): add bounded evidence research"
 ```
+
+**Evidence (2026-09-16):** committed as `0a1f22c`; RED failed on the three missing research modules, then GREEN passed 3 focused files / 21 tests. Typecheck and focused ESLint passed. Fixture coverage includes exact HTTPS origins, public-only DNS, pinned peers, redirect reauthorization, compressed/decompressed byte caps, MIME/deadline/query/fetch limits, disabled-by-default search, inert hostile source text, A/B identity confirmation, and ambiguity fallback. No live source or provider request occurred.
 
 ### Task 8: Assess capabilities, trigger critique, and compose ReviewPacket
 
