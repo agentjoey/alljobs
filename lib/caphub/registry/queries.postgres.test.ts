@@ -16,6 +16,7 @@ describe.sequential("Registry queue keyset pagination", () => {
     const rows = [
       { suffix: "f", risk: 5 },
       { suffix: "1", risk: 3 },
+      { suffix: "3", risk: 3 },
       { suffix: "2", risk: 1 }
     ];
     for (const { suffix, risk } of rows) {
@@ -81,7 +82,8 @@ describe.sequential("Registry queue keyset pagination", () => {
     const second = await queries.getReviewQueue({ limit: 2, cursor: first.nextCursor });
 
     expect(first.items.map(({ riskScore }) => riskScore)).toEqual([5, 3]);
-    expect(second.items.map(({ riskScore }) => riskScore)).toEqual([1]);
-    expect(new Set([...first.items, ...second.items].map(({ request }) => request.id)).size).toBe(3);
+    expect(second.items.map(({ riskScore }) => riskScore)).toEqual([3, 1]);
+    expect(second.items[0]?.request.id).toBe(`rev_${"3".repeat(32)}`);
+    expect(new Set([...first.items, ...second.items].map(({ request }) => request.id)).size).toBe(4);
   });
 });
