@@ -14,6 +14,7 @@ interface PreprocessCaptureInput {
   captureId: CaptureId;
   images: readonly CaptureImageInput[];
   now?: () => Date;
+  signal?: AbortSignal;
 }
 
 interface LimitOverrides {
@@ -87,7 +88,7 @@ export async function preprocessCapture(
     throw new Error("MAX_AGGREGATE_PIXELS");
   }
 
-  const work = async () => {
+  const work = async (signal: AbortSignal) => {
     const images: PreprocessResult["images"] = [];
     for (let index = 0; index < input.images.length; index += 1) {
       const image = input.images[index];
@@ -95,7 +96,7 @@ export async function preprocessCapture(
         index,
         bytes: image.bytes,
         sourceObject: image.object
-      }, dependencies, { ocrTimeoutMs: limits.ocrTimeoutMsPerImage }));
+      }, dependencies, { ocrTimeoutMs: limits.ocrTimeoutMsPerImage, signal }));
     }
     const textByImage = images.map((image) => image.ocr_blocks.map((block) => block.text));
     const indicators = extractTextIndicators(textByImage.flat());
@@ -123,11 +124,29 @@ export async function preprocessCapture(
     });
   };
 
-  return new Promise<PreprocessResult>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("PREPROCESSING_TIMEOUT")), limits.preprocessingTimeoutMs);
-    work().then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (error) => { clearTimeout(timer); reject(error); }
-    );
-  });
+  const controller = new AbortController();
+  let rejectExternal: ((reason: Error) => void) | undefined;
+  const externalAbort = new Promise<never>((_resolve, reject) => { rejectExternal = reject; });
+  const onExternalAbort = () => {
+    const reason = input.signal?.reason instanceof Error
+      ? input.signal.reason
+      : new Error("PREPROCESSING_ABORTED");
+    rejectExternal?.(reason);
+    controller.abort(reason);
+  };
+  input.signal?.addEventListener("abort", onExternalAbort, { once: true });
+  let rejectDeadline: ((reason: Error) => void) | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => { rejectDeadline = reject; });
+  const timer = setTimeout(() => {
+    const reason = new Error("PREPROCESSING_TIMEOUT");
+    rejectDeadline?.(reason);
+    controller.abort(reason);
+  }, limits.preprocessingTimeoutMs);
+  try {
+    if (input.signal?.aborted) onExternalAbort();
+    return await Promise.race([work(controller.signal), deadline, externalAbort]);
+  } finally {
+    clearTimeout(timer);
+    input.signal?.removeEventListener("abort", onExternalAbort);
+  }
 }

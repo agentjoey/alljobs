@@ -201,6 +201,15 @@ export class LocalCaptureObjectStore implements CaptureObjectStore {
     };
   }
 
+  async readImmutable(rawRef: ObjectRef): Promise<Uint8Array> {
+    const ref = objectRefSchema.parse(rawRef);
+    const bytes = await readSecureFile(this.root, objectPath(this.root, ref.digest), ref.bytes);
+    if (createHash("sha256").update(bytes).digest("hex") !== ref.digest) {
+      throw new ImmutableObjectMismatchError();
+    }
+    return new Uint8Array(bytes);
+  }
+
   async putImmutable(input: {
     bytes: Uint8Array;
     mimeType: CaptureMimeType;

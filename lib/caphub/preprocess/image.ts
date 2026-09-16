@@ -27,8 +27,8 @@ export interface BarcodeFinding {
 }
 
 export interface ImagePreprocessorDependencies {
-  recognizeText(bytes: Uint8Array, imageIndex: number): Promise<readonly OcrBlockInput[]>;
-  decodeBarcodes(bytes: Uint8Array, imageIndex: number): Promise<readonly BarcodeFinding[]>;
+  recognizeText(bytes: Uint8Array, imageIndex: number, signal?: AbortSignal): Promise<readonly OcrBlockInput[]>;
+  decodeBarcodes(bytes: Uint8Array, imageIndex: number, signal?: AbortSignal): Promise<readonly BarcodeFinding[]>;
 }
 
 export interface ImageMetadata {
@@ -41,7 +41,11 @@ export interface ImageMetadata {
 const localRequire = createRequire(import.meta.url);
 
 export function createPackagedTesseractRecognizer(language: "eng" | "chi_sim" = "eng") {
-  return async (bytes: Uint8Array): Promise<readonly OcrBlockInput[]> => {
+  return async (
+    bytes: Uint8Array,
+    _imageIndex = 0,
+    signal?: AbortSignal
+  ): Promise<readonly OcrBlockInput[]> => {
     const packageName = language === "eng" ? "@tesseract.js-data/eng" : "@tesseract.js-data/chi_sim";
     const languageData = localRequire(packageName) as { code: string; gzip: boolean; langPath: string };
     const worker = await createWorker(languageData.code, 1, {
@@ -49,8 +53,24 @@ export function createPackagedTesseractRecognizer(language: "eng" | "chi_sim" = 
       gzip: languageData.gzip,
       cacheMethod: "none"
     });
+    let termination: Promise<unknown> | undefined;
+    const terminate = async () => {
+      termination ??= worker.terminate();
+      await termination;
+    };
+    let rejectAbort: ((reason: Error) => void) | undefined;
+    const aborted = new Promise<never>((_resolve, reject) => { rejectAbort = reject; });
+    const onAbort = () => {
+      rejectAbort?.(signal?.reason instanceof Error ? signal.reason : new Error("OCR_ABORTED"));
+      void terminate().catch(() => undefined);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
     try {
-      const result = await worker.recognize(Buffer.from(bytes), {}, { blocks: true });
+      if (signal?.aborted) onAbort();
+      const result = await Promise.race([
+        worker.recognize(Buffer.from(bytes), {}, { blocks: true }),
+        aborted
+      ]);
       const output: OcrBlockInput[] = [];
       for (const block of result.data.blocks ?? []) {
         for (const paragraph of block.paragraphs) {
@@ -73,7 +93,8 @@ export function createPackagedTesseractRecognizer(language: "eng" | "chi_sim" = 
       }
       return output;
     } finally {
-      await worker.terminate();
+      signal?.removeEventListener("abort", onAbort);
+      await terminate();
     }
   };
 }
@@ -111,14 +132,37 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, code: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(code)), timeoutMs);
-    promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (error) => { clearTimeout(timer); reject(error); }
-    );
-  });
+async function withAbortableTimeout<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  code: string,
+  externalSignal?: AbortSignal
+): Promise<T> {
+  const controller = new AbortController();
+  let rejectExternal: ((reason: Error) => void) | undefined;
+  const externalAbort = new Promise<never>((_resolve, reject) => { rejectExternal = reject; });
+  const onExternalAbort = () => {
+    const reason = externalSignal?.reason instanceof Error
+      ? externalSignal.reason
+      : new Error("PREPROCESSING_ABORTED");
+    rejectExternal?.(reason);
+    controller.abort(reason);
+  };
+  externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+  let rejectDeadline: ((reason: Error) => void) | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => { rejectDeadline = reject; });
+  const timer = setTimeout(() => {
+    const reason = new Error(code);
+    rejectDeadline?.(reason);
+    controller.abort(reason);
+  }, timeoutMs);
+  try {
+    if (externalSignal?.aborted) onExternalAbort();
+    return await Promise.race([operation(controller.signal), deadline, externalAbort]);
+  } finally {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
+  }
 }
 
 export async function inspectImage(bytes: Uint8Array): Promise<ImageMetadata> {
@@ -176,7 +220,7 @@ function classifyRegion(block: OcrBlockInput, height: number): PreprocessImage["
 export async function preprocessImage(
   input: { index: number; bytes: Uint8Array; sourceObject: ObjectRef },
   dependencies: ImagePreprocessorDependencies,
-  options: { ocrTimeoutMs?: number } = {}
+  options: { ocrTimeoutMs?: number; signal?: AbortSignal } = {}
 ): Promise<PreprocessImage> {
   const metadata = await inspectImage(input.bytes);
   const normalized = new Uint8Array(await sharp(input.bytes)
@@ -184,10 +228,11 @@ export async function preprocessImage(
     .png({ compressionLevel: 9, adaptiveFiltering: false })
     .toBuffer());
   const raw = await sharp(normalized).greyscale().raw().toBuffer();
-  const ocr = await withTimeout(
-    dependencies.recognizeText(normalized, input.index),
+  const ocr = await withAbortableTimeout(
+    (signal) => dependencies.recognizeText(normalized, input.index, signal),
     options.ocrTimeoutMs ?? 15_000,
-    "OCR_TIMEOUT"
+    "OCR_TIMEOUT",
+    options.signal
   );
   const sortedOcr = [...ocr].sort((left, right) =>
     left.page - right.page
@@ -195,7 +240,7 @@ export async function preprocessImage(
     || left.bbox.x - right.bbox.x
     || left.text.localeCompare(right.text)
   );
-  const barcodes = await dependencies.decodeBarcodes(normalized, input.index);
+  const barcodes = await dependencies.decodeBarcodes(normalized, input.index, options.signal);
   const sharpness = calculateSharpness(raw, metadata.width, metadata.height);
 
   return {

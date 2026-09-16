@@ -84,9 +84,12 @@ function extractionInput(value: unknown): MiniMaxExtractionInput {
   return { preprocess: record.preprocess, normalizedImages };
 }
 
-async function generateMiniMax(request: MiniMaxGenerationRequest): Promise<MiniMaxGenerationResult> {
+async function generateMiniMax(
+  request: MiniMaxGenerationRequest,
+  apiKey?: string
+): Promise<MiniMaxGenerationResult> {
   const result = await generateText({
-    model: createMiniMaxTokenPlanModel({ mode: "standard" }),
+    model: createMiniMaxTokenPlanModel({ mode: "standard", apiKey }),
     messages: request.messages as ModelMessage[],
     maxOutputTokens: request.maxOutputTokens,
     maxRetries: request.maxRetries,
@@ -114,8 +117,8 @@ export class MiniMaxProvider implements StructuredProvider {
   readonly model = MINIMAX_TOKEN_PLAN_MODEL;
   private readonly generate: MiniMaxGenerate;
 
-  constructor(options: { generate?: MiniMaxGenerate } = {}) {
-    this.generate = options.generate ?? generateMiniMax;
+  constructor(options: { generate?: MiniMaxGenerate; apiKey?: string } = {}) {
+    this.generate = options.generate ?? ((request) => generateMiniMax(request, options.apiKey));
   }
 
   async invoke(input: StructuredProviderInput): Promise<StructuredProviderOutput> {

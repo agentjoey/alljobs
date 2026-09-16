@@ -52,14 +52,21 @@ describe("deterministic image preprocessing", () => {
 
   it("fails closed when OCR exceeds its deadline", async () => {
     const bytes = await createRasterFixture();
+    let observedSignal: AbortSignal | undefined;
     await expect(preprocessImage(
       { index: 0, bytes, sourceObject: objectRefFor(bytes) },
       {
-        recognizeText: async () => new Promise(() => undefined),
+        recognizeText: async (_input, _index, signal) => {
+          observedSignal = signal;
+          return await new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new Error("OCR_ABORTED")), { once: true });
+          });
+        },
         decodeBarcodes: async () => []
       },
       { ocrTimeoutMs: 5 }
     )).rejects.toThrow(/OCR_TIMEOUT/);
+    expect(observedSignal?.aborted).toBe(true);
   });
 
   it("decodes a generated QR fixture through the real ZXing boundary", async () => {

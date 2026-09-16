@@ -85,7 +85,8 @@ describe("LocalCaptureObjectStore", () => {
     const bytes = new Uint8Array([0, 255, 17, 34, 128, 10]);
     const digest = createHash("sha256").update(bytes).digest("hex");
 
-    const result = await new LocalCaptureObjectStore(root).putImmutable({
+    const store = new LocalCaptureObjectStore(root);
+    const result = await store.putImmutable({
       bytes,
       mimeType: "image/png"
     });
@@ -97,6 +98,7 @@ describe("LocalCaptureObjectStore", () => {
       bytes: 6
     });
     expect(readFileSync(join(root, "objects", result.key))).toEqual(Buffer.from(bytes));
+    await expect(store.readImmutable(result)).resolves.toEqual(bytes);
   });
 
   it("deduplicates identical bytes without changing the durable object", async () => {

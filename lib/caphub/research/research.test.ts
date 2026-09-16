@@ -3,7 +3,7 @@ import type { ExtractionResult } from "../analysis/types";
 import type { KimiInvocationOptions } from "../providers/kimi";
 import type { StructuredProviderOutput } from "../providers/contracts";
 import type { ResearchSourceGateway, SourceCandidate } from "./source-gateway";
-import { buildResearchDossier } from "./research";
+import { buildResearchDossier, ResearchDossierError } from "./research";
 
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
 const EXTRACTION_ARTIFACT_ID = `art_${"2".repeat(64)}`;
@@ -146,5 +146,36 @@ describe("buildResearchDossier", () => {
     if (dossier.identity.status === "IDENTITY_AMBIGUOUS") {
       expect(dossier.identity.candidates).toHaveLength(2);
     }
+  });
+
+  it("rejects claim checks that are not closed over the extracted claim set", async () => {
+    const worker = {
+      async research(input: unknown): Promise<StructuredProviderOutput> {
+        const evidenceId = (input as { evidence: Array<{ id: string }> }).evidence[0].id;
+        const value = proposed(evidenceId, {
+          status: "IDENTITY_AMBIGUOUS",
+          candidates: [
+            { name: "Example One", confidence: 0, evidence_ids: [evidenceId] },
+            { name: "Example Two", confidence: 0, evidence_ids: [evidenceId] }
+          ],
+          reason: "Ambiguous."
+        });
+        value.claim_checks = [{
+          claim_id: `clm_${"9".repeat(32)}`,
+          status: "contradicted",
+          evidence_ids: [evidenceId]
+        }];
+        return { value, usage: { inputTokens: 1, outputTokens: 1 } };
+      }
+    };
+
+    await expect(buildResearchDossier({
+      extraction,
+      extractionArtifactId: EXTRACTION_ARTIFACT_ID,
+      gateway: gateway([candidate()]),
+      worker,
+      clock: () => "2026-09-16T09:00:00.000Z",
+      signal: new AbortController().signal
+    })).rejects.toMatchObject({ code: "RESEARCH_INVALID_OUTPUT" } satisfies Partial<ResearchDossierError>);
   });
 });

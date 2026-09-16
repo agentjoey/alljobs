@@ -144,7 +144,7 @@ export async function buildResearchDossier(options: {
   const proposed = generated.value as Record<string, unknown>;
   const records = modelEvidence.map(({ content: _content, ...record }) => record);
   try {
-    return researchDossierSchema.parse({
+    const dossier = researchDossierSchema.parse({
       ...proposed,
       schema_version: 1,
       capture_id: options.extraction.capture_id,
@@ -153,7 +153,16 @@ export async function buildResearchDossier(options: {
       evidence: records,
       researched_at: options.clock()
     });
+    const expectedClaimIds = new Set(options.extraction.claims.map((claim) => claim.id));
+    const checkedClaimIds = dossier.claim_checks.map((check) => check.claim_id);
+    if (checkedClaimIds.length !== expectedClaimIds.size
+      || new Set(checkedClaimIds).size !== checkedClaimIds.length
+      || checkedClaimIds.some((claimId) => !expectedClaimIds.has(claimId))) {
+      throw new ResearchDossierError("RESEARCH_INVALID_OUTPUT");
+    }
+    return dossier;
   } catch (error) {
+    if (error instanceof ResearchDossierError) throw error;
     throw new ResearchDossierError("RESEARCH_INVALID_OUTPUT", { cause: error });
   }
 }

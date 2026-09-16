@@ -225,7 +225,8 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
             const value = await preprocessCapture({
               captureId: capture.id,
               images: [{ bytes, object: capture.object }],
-              now: dependencies.clock
+              now: dependencies.clock,
+              signal
             }, dependencies.preprocessDependencies);
             return { kind: "success", inputDigest: capture.object.digest, payload: value };
           }
