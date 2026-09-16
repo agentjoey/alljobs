@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P3 Registry/Analysis 生产启用仍停在 Gate P3-D；P4 spec/plan 已就绪并交由 KimiCode 实现
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P3 Registry/Analysis 生产启用仍停在 Gate P3-D；P4 implementation 已完成并交由 Codex 独立验收（P4-A/P4-B/P4-C Human gates 未动）
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -231,6 +231,8 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - KimiCode 交接：`.agent/caphub/p4-kimicode-handoff.md`
 - 实现负责人：KimiCode（`k3-256k`）；实现完成后由 Codex 独立验收。
 - 当前仅完成规划，不代表 P4 implementation、P4-A、P4-B 或 P4-C 通过。真实 Vault/Agent root、dry-run、publish 与 rollback 仍须对应 Human Gate。
+
+**2026-09-17 implementation evidence（KimiCode，base 4b373dd）：**P4 已在 `codex/caphub-p4-implementation` 完成实现，提交链 8261209 → docs closeout（逐任务窄提交）。最终门禁：150 files / 1335 tests PASS、typecheck PASS、lint 0 errors、production build PASS、deploy invariants PASS、P4 focused E2E 8/8（fixture PostgreSQL + sentinel-owned 临时根）。独立 Review/Verification 记录见 `.agent/caphub/p4-review.md`、`p4-verification.md`；截屏在 `.agent/caphub/p4-screenshots/`。未发生 push/merge/deploy/release/provider 调用/真实 root 配置。当前为 **ready for independent Codex acceptance**；Codex 验收通过前不得提议任何 Human gate。
 
 **目标**
 

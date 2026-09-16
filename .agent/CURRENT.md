@@ -56,6 +56,14 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **Task 13 (Deployment & Operations)**: LaunchAgents (`alljobs`, `alljobs-refresh`), deployment invariant verifier, operational recovery documentation.
 - **Task 14 (Release & Cutover)**: Merged to `main`, launchd services active, live domain verified.
 
+## Caphub P4 (ready for Codex acceptance)
+
+- **Branch / worktree:** `codex/caphub-p4-implementation` · `.worktrees/caphub-p4-implementation`
+- **Scope:** Capability Package contracts, deterministic renderers, Obsidian projection with byte-preserved human regions, Codex/Claude/Hermes preview adapters, exact Deployment plans, fixture publish/rollback, disabled-by-default export runtime, safe CLIs, read-only P4 UI.
+- **Status:** implementation complete; 1335 unit/behavior tests, production build, deploy invariants, and 8/8 focused P4 E2E pass; independent Review and Verification records live in `.agent/caphub/p4-{review,verification}.md`.
+- **Boundary:** no real Vault/Agent root, production database, provider call, push, merge, deploy, or release occurred. Gates P4-A/P4-B/P4-C remain open Human gates. Codex acceptance is the next step before any Human gate is proposed.
+- **Evidence:** `.agent/caphub/p4-implementation-log.md` · `p4-threat-model.md` · `p4-verification.md` · `p4-screenshots/`
+
 ## Next safe action
 
 Continue the authorized Caphub Capture-only trial without enabling Analysis or Registry, and implement P4 from the approved planning branch in a separate isolated worktree. Any real P4 Vault/Agent target or publish remains gated.
