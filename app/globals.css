@@ -165,7 +165,7 @@
 .registry-evidence-list { margin: 0; padding: 0 !important; list-style: none; }
 .registry-evidence-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px 0; }
 .registry-evidence-list li + li { border-top: 1px solid var(--hairline); }
-.registry-evidence-list a { color: var(--ink); font-weight: 700; }
+.registry-evidence-list a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 700; }
 .registry-evidence-list p { margin: 3px 0; color: var(--ink-muted); }
 .registry-evidence-list code, .registry-claim code { color: var(--ink-faint); font: 9.5px var(--font-mono); overflow-wrap: anywhere; }
 .registry-badge { align-self: start; padding: 3px 5px; background: var(--paper-recessed); border: 1px solid var(--hairline-strong); font: 9px var(--font-mono); }
@@ -238,8 +238,6 @@
   .registry-detail-grid { grid-template-columns: minmax(0, 1fr); }
   .registry-detail-aside { border-top: 1px solid var(--hairline-strong); border-left: 0; }
 }
-
-:root {
 
 :root {
   --font-sans: "General Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1110,6 +1108,17 @@ body {
     gap: 4px;
     font-size: 10px;
   }
+  .status-strip--registry .status-strip__segment {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  .status-strip--registry .status-strip__item {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .status-strip--registry .custody-badge { white-space: normal; }
   .main-content {
     padding: 16px 12px 48px;
   }

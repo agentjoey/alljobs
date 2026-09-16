@@ -11,6 +11,7 @@ import { FilesystemCaptureStore } from "../storage/filesystem";
 import { FilesystemAnalysisJobStore, FilesystemStageArtifactStore } from "../workflow/filesystem";
 import { applyRegistryMigrations } from "./migrate";
 import { createReviewPacketImporter } from "./import-review-packet";
+import { PostgresAnalysisJobStore } from "./postgres/caphub-stores";
 
 const NOW = "2026-09-16T10:00:00.000Z";
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
@@ -191,6 +192,7 @@ describe.sequential("ReviewPacket Registry import", () => {
     expect(second).toEqual(first);
     expect(first.job).toMatchObject({ status: "WAITING_FOR_REVIEW", review_request_id: first.requestId });
     await expect(seeded.jobs.get(JOB_ID)).resolves.toEqual(first.job);
+    await expect(new PostgresAnalysisJobStore(postgres.pool).get(JOB_ID)).resolves.toEqual(first.job);
 
     const kinds = await postgres.pool.query<{ kind: string }>(
       "SELECT kind FROM caphub.registry_records ORDER BY kind, record_id"

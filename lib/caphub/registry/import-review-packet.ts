@@ -9,7 +9,7 @@ import { confirmationFor } from "./confirmations";
 import { registryImportManifestSchema, registryJsonValueSchema } from "./schemas";
 import type { RegistryLineageEdge, RegistryRecordKind } from "./types";
 import { withSerializableRegistryTransaction } from "./postgres/database";
-import { registryArtifactPayloadSchema } from "./postgres/caphub-stores";
+import { PostgresAnalysisJobStore, registryArtifactPayloadSchema } from "./postgres/caphub-stores";
 
 export type ReviewPacketImportErrorCode =
   | "IMPORT_NOT_READY"
@@ -156,6 +156,25 @@ function waitingJob(job: AnalysisJob, requestId: string, at: string): AnalysisJo
   });
 }
 
+async function ensureRegistryWaitingJob(
+  pool: Pool,
+  expected: AnalysisJob
+): Promise<void> {
+  if (expected.status !== "WAITING_FOR_REVIEW") {
+    throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
+  }
+  const jobs = new PostgresAnalysisJobStore(pool);
+  const current = await jobs.get(expected.id);
+  if (!current) throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
+  if (current.status === "completed") {
+    await jobs.put(expected);
+    return;
+  }
+  if (current.status === "WAITING_FOR_REVIEW" && canonicalJson(current) === canonicalJson(expected)) return;
+  if (current.status === "reviewed" && current.review_request_id === expected.review_request_id) return;
+  throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
+}
+
 async function loadPacketArtifacts(
   artifacts: StageArtifactStore,
   job: AnalysisJob
@@ -289,6 +308,7 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
             throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
           }
           const repaired = waitingJob(job, requestId, manifest.imported_at);
+          await ensureRegistryWaitingJob(dependencies.pool, repaired);
           if (canonicalJson(repaired) !== canonicalJson(job)) await dependencies.jobs.put(repaired);
           return { requestId, job: repaired };
         }
@@ -364,8 +384,9 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
           `, [auditId, built.packet.id, canonicalJson({ import_id: manifest.id, review_request_id: requestId }), importedAt]);
         });
 
-        await dependencies.afterDatabaseCommit?.();
         const nextJob = waitingJob(job, requestId, importedAt);
+        await ensureRegistryWaitingJob(dependencies.pool, nextJob);
+        await dependencies.afterDatabaseCommit?.();
         await dependencies.jobs.put(nextJob);
         return { requestId, job: nextJob };
       } catch (error) {

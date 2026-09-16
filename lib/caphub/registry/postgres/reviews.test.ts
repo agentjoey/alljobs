@@ -43,6 +43,13 @@ function store(): PostgresReviewStore {
   });
 }
 
+function appStore(): PostgresReviewStore {
+  return new PostgresReviewStore(fixture.appPool, {
+    clock: () => NOW,
+    decisionId: () => id("dec_", decisionSeed++)
+  });
+}
+
 function decisionInput(
   review: ReviewRequest,
   overrides: Partial<ReviewDecisionInput> = {}
@@ -167,6 +174,27 @@ describe.sequential("PostgresReviewStore", () => {
       reject_confirmation: review.reject_confirmation
     });
     await expect(reviews.createRequest(replacement)).resolves.toBe("created");
+  });
+
+  it("revokes and consumes through the least-privileged application role", async () => {
+    const reviews = appStore();
+    const revocable = request();
+    await reviews.createRequest(revocable);
+    const approval = await reviews.decide(decisionInput(revocable));
+    await expect(reviews.revoke(decisionInput(revocable, {
+      idempotency_key: `review.app-revoke-${revocable.id.slice(-8)}`,
+      expected_lock_version: 2,
+      action: "revoke",
+      confirmation: confirmationFor(revocable, "revoke"),
+      rationale: "Application-role revocation",
+      disposition: undefined,
+      original_approval_decision_id: approval.decision.id
+    }))).resolves.toMatchObject({ decision: { action: "revoke" } });
+
+    const consumable = request();
+    await reviews.createRequest(consumable);
+    const consumed = await reviews.decide(decisionInput(consumable));
+    await expect(reviews.consumeDecision(consumed.decision.id, id("bld_", seed++))).resolves.toBeUndefined();
   });
 
   it("reports only the safe consumer ID when a consumed approval cannot be revoked", async () => {

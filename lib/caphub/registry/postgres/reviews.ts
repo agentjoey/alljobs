@@ -347,14 +347,14 @@ export class PostgresReviewStore implements ReviewStore {
             throw new ReviewStoreError("REVIEW_ALREADY_TERMINAL");
           }
           const approval = await client.query<ReviewDecisionRow>(
-            "SELECT * FROM caphub.review_decisions WHERE decision_id = $1 AND request_id = $2 FOR UPDATE",
+            "SELECT * FROM caphub.review_decisions WHERE decision_id = $1 AND request_id = $2",
             [input.original_approval_decision_id, request.id]
           );
           if (!approval.rows[0]) throw new ReviewStoreError("INVALID_REVIEW_DECISION");
           original = decisionFromRow(approval.rows[0]);
           if (original.action !== "approve") throw new ReviewStoreError("INVALID_REVIEW_DECISION");
           const consumed = await client.query<{ consumer_id: string }>(
-            "SELECT consumer_id FROM caphub.decision_consumers WHERE decision_id = $1 FOR UPDATE",
+            "SELECT consumer_id FROM caphub.decision_consumers WHERE decision_id = $1",
             [original.id]
           );
           if (consumed.rows[0]) {
@@ -428,14 +428,21 @@ export class PostgresReviewStore implements ReviewStore {
     try {
       await withSerializableRegistryTransaction(this.pool, async (client) => {
         const decisionResult = await client.query<ReviewDecisionRow>(
-          "SELECT * FROM caphub.review_decisions WHERE decision_id = $1 FOR UPDATE",
+          "SELECT * FROM caphub.review_decisions WHERE decision_id = $1",
           [decisionId]
         );
         if (!decisionResult.rows[0]) throw new ReviewStoreError("INVALID_REVIEW_DECISION");
         const decision = decisionFromRow(decisionResult.rows[0]);
         if (decision.action !== "approve") throw new ReviewStoreError("INVALID_REVIEW_DECISION");
+        const request = await client.query<{ state: ReviewRequest["state"] }>(
+          "SELECT state FROM caphub.review_requests WHERE request_id = $1 FOR UPDATE",
+          [decision.request_id]
+        );
+        if (request.rows[0]?.state !== "APPROVED") {
+          throw new ReviewStoreError("REVIEW_ALREADY_TERMINAL");
+        }
         const existing = await client.query<{ consumer_id: string }>(
-          "SELECT consumer_id FROM caphub.decision_consumers WHERE decision_id = $1 FOR UPDATE",
+          "SELECT consumer_id FROM caphub.decision_consumers WHERE decision_id = $1",
           [decision.id]
         );
         if (existing.rows[0]) {

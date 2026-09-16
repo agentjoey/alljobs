@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ReviewDetailDto } from "@/lib/caphub/registry/queries";
 
 type FoundReview = Extract<ReviewDetailDto, { kind: "found" }>;
@@ -34,6 +34,10 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
   const valid = confirmation === expectedConfirmation
     && (activeAction === "approve" || rationale.trim().length > 0)
     && !submitting;
+
+  useEffect(() => {
+    if (receipt) receiptRef.current?.focus();
+  }, [receipt]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,7 +74,6 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
         return;
       }
       setReceipt({ id: payload.decision.id, action: payload.decision.action, consequence: payload.consequence });
-      setTimeout(() => receiptRef.current?.focus(), 0);
     } catch {
       setError("Decision was not recorded (REVIEW_WRITE_UNAVAILABLE). Your rationale is preserved.");
     } finally {

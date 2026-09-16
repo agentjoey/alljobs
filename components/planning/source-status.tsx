@@ -47,6 +47,9 @@ export function SourceStatus({
 }: SourceStatusProps) {
   const caphubState = useContext(CaphubStateContext);
   const isCaphub = routePath === "/caphub" || routePath?.startsWith("/caphub/");
+  const isCaphubRegistry = routePath?.startsWith("/reviews")
+    || routePath?.startsWith("/captures")
+    || routePath?.startsWith("/capabilities");
   // Only render provenance facts that are actually known; never fabricate.
   const shortId = revision && revision !== "native" && revision !== "unknown"
     ? `rev ${revision.slice(0, 7)}`
@@ -61,7 +64,7 @@ export function SourceStatus({
     : "custody-badge custody-badge--mixed";
 
   return (
-    <div className="status-strip" role="region" aria-label="Planning Source Provenance">
+    <div className={`status-strip${isCaphubRegistry ? " status-strip--registry" : ""}`} role="region" aria-label="Planning Source Provenance">
       <div className="status-strip__segment">
         {source && (
           <span className="status-strip__item">
