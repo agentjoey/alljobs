@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：Draft，等待 Human Owner 分阶段授权
+- 状态：P1-B 已通过；等待 P1-C Human Owner 最终走查与阶段决策
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -19,7 +19,7 @@
 - PostgreSQL 是最终 Registry 事实来源；Obsidian 仅是可重建投影视图。
 - 不迁移 Linear 数据，不删除现有 Backlog 文档，不改变 Git remote，不自动 merge 或 production deploy。
 - 所有来源内容按不可信数据处理；Schema 校验、幂等、审计、权限拒绝和可恢复失败是阶段验收的一部分。
-- 任一新增页面/路由、审批、敏感数据或破坏性操作均按 frontend workflow 3.3 的 T3 流程执行：approved Brief + rendered mockup + 独立 Review + 独立 Verification + Human walkthrough + Human release approval。
+- 新增页面/路由、审批、敏感数据或破坏性操作仍须绑定 approved Brief、rendered mockup（适用时）、独立 Review/Verification、Human walkthrough 和明确 release gate。Human Owner 已于 2026-09-16 取消 `FRONTEND-DESIGN-WORKFLOW.md` 对 Caphub Task 7+ 的约束；这不取消上述证据与安全门禁。
 
 ## 阶段关系
 
@@ -81,36 +81,36 @@ P4 与 P5 在 P3 后可分别规划，但不得并发修改同一 Registry contr
 
 **目标**
 
-在不接模型、不建 review UI、不部署生产的条件下，建立 Caphub 模块壳、versioned schema、repository/object-store ports、本地原子 adapters，并完成一条 `POST /api/caphub/captures` Web JSON capture 到可查询状态的纵向链路。
+在不接模型、不建 review UI、不部署生产的条件下，建立 Caphub 模块壳、versioned schema、storage ports、本地原子 adapters，并完成一条由 `/caphub` 提交 multipart screenshot、经 `POST /api/caphub/captures` 写入不可变证据、再由 metadata-only GET 查询 `received` 状态的纵向链路。
 
 **依赖**
 
 - P0 已通过独立验证，壳层稳定。
 - Human 批准 P1 exact scope、filesystem storage 临时边界、请求大小和 origin/auth 策略。
-- frontend workflow 判定：仅新增 API route 仍属新路由且按 T3 处理；无可见 UI时记录技术型 Mockup Gate 跳过理由，安全验证不得跳过。
+- Human Gate P1-A 已批准 Brief revision 1 与 rendered mockup；`/caphub` 可见 UI、真实边界 E2E、最终截图和独立验证均已完成。Task 7+ 不再以已取消的 frontend workflow 文件为执行权威。
 
 **产物**
 
-- `lib/caphub/domain/` 的 Capture、SourceArtifact、状态与 audit schema。
-- `lib/caphub/ports/` 的 `CaptureRepository` 与 `ObjectStore`。
-- `lib/caphub/adapters/filesystem/` 的原子、内容寻址、幂等本地 adapters。
-- `lib/caphub/capture/service.ts` 与 `app/api/caphub/captures/route.ts`。
+- `lib/caphub/domain/` 的 Capture、object reference 与 audit schema。
+- `lib/caphub/storage/contracts.ts` 的 `CaptureStore`、`CaptureObjectStore` 与 `CaptureAuditLog` ports。
+- `lib/caphub/storage/` 的原子、内容寻址、幂等本地 adapters。
+- `lib/caphub/service/capture.ts`、`/caphub` UI 与 `app/api/caphub/captures/` POST/GET routes。
 - `GET /api/caphub/captures/[captureId]` 状态查询。
 - focused unit/integration/route tests 和明确的 PostgreSQL 迁移 contract。
 
 **人工门禁**
 
-- Gate P1-A：Human 批准 API contract、保存路径、保留策略和 Web caller 边界。
-- Gate P1-B：独立 Security/Review 验证 traversal、symlink、oversize、invalid URL、idempotency conflict、partial-write recovery 和 audit redaction。
-- Gate P1-C：Human 决定是否进入 P2；P1 不生产发布。
+- Gate P1-A：已通过。Human 批准 API contract、保存路径、保留策略、Web caller 边界、Brief revision 1 与 rendered mockup。
+- Gate P1-B：已通过。独立 Security/Review 验证 traversal、symlink、oversize、invalid URL、idempotency conflict、partial-write/audit recovery 和 redaction；首次审查发现的配置加载前置 symlink 写入已由 `058c381` 修复并通过定向复审。
+- Gate P1-C：等待 Human Owner 对 final build 走查并决定是否接受 P1、进入 P2。P1 不生产发布；本状态记录不授权配置启用、服务重启、部署、push、merge、tag 或 release。
 
 **验收条件**
 
-- 相同 idempotency key + 相同 canonical payload 返回同一 Capture；不同 payload 返回 `409 IDEMPOTENCY_CONFLICT`。
+- 在单一 active writer 且 matching idempotency index 已 durable 的边界内，相同 key + 相同 canonical payload 返回同一 Capture；不同 payload 返回 `409 IDEMPOTENCY_CONFLICT`。
 - 原始 payload/attachment metadata 可追溯，object bytes 由 SHA-256 内容寻址且不覆盖。
-- 状态仅能沿批准的确定性 transition 变化；P1 最高进入 `WAITING_FOR_REVIEW`，没有 publish/build/model side effect。
-- 无 token/secret/原始附件 bytes 进入 audit log；失败不留下可见半成品。
-- API 的 `400`、`401/403`、`409`、`413`、`415`、`500` 路径都有测试。
+- P1 Capture 固定停止在 `received`，并始终带 `human_review_required: true`；没有 approve/publish/build/model side effect。
+- 无 token/secret/原始附件 bytes 进入 audit log。审计失败后的 durable Capture 可由同 key/payload 重试修复；索引落盘前或不受支持的多进程写入产生的 orphan/unindexed evidence 必须 safe-off、保留并升级处理，不得手工编辑或删除。
+- API 的 `400`、`403`、`409`、`411`、`413`、`415` 与 bounded `500/503` 路径都有测试。
 
 **明确非目标**
 

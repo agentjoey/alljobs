@@ -3,7 +3,7 @@
 **Task / Brief / revision:** Caphub Foundation and Web Capture · Human Gate P1-A · `brief.md` revision 1  
 **Agent role / harness / session:** Primary Agent / Codex; independent fresh-context Design Review and Verification completed  
 **Branch / worktree:** `codex/caphub-foundation` · `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-foundation`  
-**Base commit / current implementation commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / `68b9e43d4f2f5da84f427b6241dcd1df556b3046`
+**Base commit / current implementation commit:** `59fd0e3cf750af39444476ae1a896aaf3e6bb869` / `058c3815114a8d3763705e61866f11507c72f4b2`
 
 ## Human Gate P1-A approval — 2026-09-15
 
@@ -44,7 +44,7 @@ The Human Owner explicitly approved Brief revision 1 SHA-256 `e694eae5615074afeb
 - Independent Design Review verdict pass: **PASS** with contract disposition `ship`.
 - Independent Verification verdict pass: **PASS** across all 10 states at 1440px and true 390px, with zero root overflow and no live side effects or sensitive values.
 
-## P1 implementation checkpoint — Tasks 1–8
+## P1 implementation checkpoint — Tasks 1–10 / Gate P1-B
 
 The standing authorization advanced P1 through the provider-free configuration, domain, path, storage, service, HTTP route, and approved Web Capture UI layers. Each task used focused RED→GREEN work, an independent task review, controller verification, and a narrow local commit. Review findings were resolved in scoped fix rounds and independently re-reviewed before the next task began.
 
@@ -58,15 +58,20 @@ The standing authorization advanced P1 through the provider-free configuration, 
 | 6 — bounded POST / metadata-only GET | `AGE-247` Done | `b1ea700` | route boundary 43/43 |
 | 7 — approved Web Capture inbox | `AGE-248` Done | `625af7a` + `6118f7c` | final focused 62/62; focused re-review Approved |
 | 8 — browser-to-filesystem proof | `AGE-245` Done | `68b9e43` | sentinel guards 3/3; Playwright 5/5; focused review Approved |
+| 9 — operations and adapter docs | `AGE-249` Done | `e751a05` | focused review findings fixed; focused re-review Approved |
+| 10 — P1 verification / P1-B | `AGE-250` In Progress | `058c381` | phase matrix passed; P1-B PASS after one blocking symlink fix |
 
-Final controller verification at this checkpoint:
+Plan-specified phase verification before the P1-B review:
 
 ```text
-npm test          -> 76 files / 852 tests passed
-npm run build     -> Next.js 16.3.0 Turbopack production build passed; both Caphub API routes present
-npm run typecheck -> passed when run serially after build
+npm test          -> 78 files / 905 tests passed
+npm run typecheck -> passed
 npm run lint      -> exit 0; 67 warnings (66 baseline plus one deferred Task 3 unused test import)
-git diff --check  -> implementation and fix ranges passed
+npm run build     -> Next.js 16.3.0 Turbopack production build passed; /caphub and both API routes present
+npm run test:e2e  -> 27 passed / 1 intentionally skipped evidence-capture test
+npm run test:e2e:caphub -> 5/5 passed
+npm run verify:deploy   -> passed
+git diff --check / remote / worktree checks -> passed; only Human-owned AGENTS.md remains modified
 ```
 
 No Caphub configuration was enabled. No service was restarted, no deployment or external provider was invoked, and no branch was pushed or merged. The main checkout and the pre-existing modified `AGENTS.md` in this worktree remain untouched by the P1 implementation commits.
@@ -74,6 +79,12 @@ No Caphub configuration was enabled. No service was restarted, no deployment or 
 Task 7 final-build evidence at `6118f7c` used the webpack production builder because Turbopack's CSS worker could not bind its sandbox-only temporary port. The isolated HTTPS loopback probe then passed 1440px and true 390px states, keyboard upload, real POST and metadata GET, immutable filesystem bytes, safe duplicate retry after an injected lost receipt, reduced motion, WCAG A/AA checks, and zero root overflow or browser page errors. Evidence is retained under `/private/tmp/alljobs-caphub-task7.ZjBbm1/run-orWDTF/`.
 
 Task 8 committed a sentinel-owned Playwright fixture and formalized the built browser → route → service → filesystem → metadata GET proof. The final one-worker suite passed 5/5 and retained ready, selected, received, and oversize screenshots at 1440px/390px under `test-results/caphub-foundation/`. Independent focused review approved both spec compliance and task quality with no findings.
+
+Task 9 added the source-accurate custody/operations guide and synchronized architecture/operations. It explicitly scopes stable retry to a durable matching index under one active writer process and treats pre-index or unsupported multi-writer orphan state as preserved incident evidence. Its first focused review found four documentation-accuracy issues; all were fixed and the focused re-review approved them.
+
+The first P1-B review found one blocking path defect: configuration loading recursively created the lexical Caphub directory before rejecting a symlinked `state`, so an external target could receive a directory. Commit `058c381` replaced that operation with owner/permission/no-symlink/direct-child checked, non-recursive initialization and added a RED→GREEN regression. Focused re-review confirmed no external creation, unsafe state/caphub rejection, safe `0700` creation, and no new blocker. Final verdict: **P1-B PASS**.
+
+Post-fix exact-commit verification at `058c381` intentionally remained scoped: configuration/path/monitoring callers passed 52/52, production build passed, Caphub Playwright passed 5/5 and regenerated final 1440px/390px screenshots, deployment invariants passed, Brief/mockup hashes remained unchanged, and `start:prod` remained `127.0.0.1:3456`. The previously completed phase-wide unit/lint/general-E2E evidence was not redundantly repeated after this localized fix.
 
 ## Commands / checks run
 
@@ -92,12 +103,12 @@ git diff --check                              -> passed
 ## Known open items
 
 - **Human Gate P1-A is complete.** This record preserves the exact approved Brief/mockup hashes; the Brief itself remains byte-for-byte unchanged.
-- The high-level roadmap retains earlier Web JSON / `WAITING_FOR_REVIEW` wording. The detailed P1 plan and this Brief use the later fixed multipart screenshot / `received` contract. Reconcile the roadmap as a documentation-only P1 follow-up.
+- The high-level roadmap has been reconciled to the approved multipart screenshot / `received` P1 contract and records P1-A/P1-B as passed with P1-C pending.
 - Impeccable reported `.impeccable/design.json` stale relative to `DESIGN.md`. This is unrelated drift; do not repair it as a side effect. `$impeccable document` may refresh it only if the Human Owner asks.
-- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, `AGE-248`, and `AGE-245` are `Done`. Task 9 is tracked by `AGE-249` and is `In Progress`.
+- Linear `AGE-241`, `AGE-240`, `AGE-242`, `AGE-244`, `AGE-243`, `AGE-246`, `AGE-247`, `AGE-248`, `AGE-245`, and `AGE-249` are `Done`. Task 10 / P1-C is tracked by `AGE-250` and remains `In Progress`.
 - **Task 7 workflow ruling — 2026-09-16:** the Human Owner explicitly removed `/Users/xtation/AgentWorks/Tools/FRONTEND-DESIGN-WORKFLOW.md` as an authority for Caphub development. Its absence is no longer a blocker. Task 7 proceeds from the approved Brief/mockup and development plan with TDD/BDD, independent Review/Verification, final-build browser evidence, screenshots, Linear tracking, and all existing safety/production gates preserved.
 - **Bounded verification ruling — 2026-09-16:** task work uses one independent focused review and related tests; a fix round receives only a focused re-review of the changed findings. Full-suite, production-build, all-state browser, and phase-wide Verification runs belong at plan-specified or batch gates rather than being repeated at every ordinary task boundary.
 
 ## Next safe action
 
-Implement Task 9's Caphub foundation, architecture, and operations documentation while `AGE-249` is `In Progress`. Do not enable Caphub, restart production services, deploy, push, merge, or cross the final P1-C production gate.
+Stop at Human Gate P1-C. The Human Owner must walk through the final build and explicitly accept or reject P1 / entry into P2. Do not enable Caphub, edit real production configuration, update LaunchAgents, restart production services, deploy, publish, push, merge, tag, release, switch traffic, or delete Caphub state before separate explicit authorization.
