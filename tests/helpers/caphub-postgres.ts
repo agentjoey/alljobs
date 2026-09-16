@@ -41,6 +41,7 @@ export interface CaphubTestPostgres {
   port: number;
   postmasterPid: number;
   stop(): Promise<void>;
+  createAppPool(applicationName?: string): Pool;
 }
 
 export interface StartCaphubTestPostgresOptions {
@@ -249,6 +250,17 @@ export async function startCaphubTestPostgres(
       sentinelPath,
       port,
       postmasterPid: runningPostmasterPid,
+      createAppPool(applicationName = "caphub_registry_app_test") {
+        return new Pool({
+          host: socketDir,
+          port,
+          user: APP_ROLE,
+          database: "postgres",
+          max: 2,
+          ssl: false,
+          application_name: applicationName
+        });
+      },
       async stop() {
         if (stopped) return;
         await stopAndRemoveOwnedCluster({

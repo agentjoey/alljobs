@@ -40,3 +40,41 @@ export interface ReviewStore {
   revoke(input: ReviewDecisionInput): Promise<ReviewDecisionResult>;
   consumeDecision(decisionId: string, consumerId: string): Promise<void>;
 }
+
+export interface ComposeReleaseInput {
+  release: RegistryVersion;
+  candidateApprovalDecisionId: string;
+  lineage: RegistryLineageEdge[];
+  reviewRequest: ReviewRequest;
+}
+
+export interface FinalizeReleaseInput {
+  releaseRecordId: string;
+  releaseVersion: number;
+  releaseDigest: string;
+  releaseApprovalDecisionId: string;
+}
+
+export interface ComposeDeploymentPlanInput {
+  plan: RegistryVersion;
+  lineage: RegistryLineageEdge[];
+  reviewRequest: ReviewRequest;
+}
+
+export interface RealizeDeploymentInput {
+  deployment: RegistryVersion;
+  planApprovalDecisionId: string;
+  lineage: RegistryLineageEdge[];
+}
+
+/**
+ * Transaction-capable export operations. Each method is atomic: either every
+ * version, lineage edge, review request, and decision consumption is durable,
+ * or none is. The API never exposes arbitrary SQL or raw table names.
+ */
+export interface RegistryExportStore {
+  composeRelease(input: ComposeReleaseInput): Promise<"created" | "existing">;
+  finalizeRelease(input: FinalizeReleaseInput): Promise<"finalized" | "existing">;
+  composeDeploymentPlan(input: ComposeDeploymentPlanInput): Promise<"created" | "existing">;
+  realizeDeployment(input: RealizeDeploymentInput): Promise<"created" | "existing">;
+}

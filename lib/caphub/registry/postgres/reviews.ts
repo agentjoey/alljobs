@@ -40,7 +40,7 @@ export class ReviewStoreError extends Error {
   }
 }
 
-interface ReviewRequestRow {
+export interface ReviewRequestRow {
   request_id: string;
   review_kind: ReviewRequest["review_kind"];
   subject_kind: ReviewRequest["subject_kind"];
@@ -83,7 +83,7 @@ function timestamp(value: Date | string): string {
   return parsed.toISOString();
 }
 
-function requestFromRow(row: ReviewRequestRow): ReviewRequest {
+export function reviewRequestRowToDomain(row: ReviewRequestRow): ReviewRequest {
   return reviewRequestSchema.parse({
     schema_version: 1,
     id: row.request_id,
@@ -208,7 +208,7 @@ export class PostgresReviewStore implements ReviewStore {
           [request.id]
         );
         if (existing.rows[0]) {
-          if (canonicalJson(requestFromRow(existing.rows[0])) !== canonicalJson(request)) {
+          if (canonicalJson(reviewRequestRowToDomain(existing.rows[0])) !== canonicalJson(request)) {
             throw new ReviewStoreError("IDEMPOTENCY_CONFLICT");
           }
           return "existing";
@@ -277,7 +277,7 @@ export class PostgresReviewStore implements ReviewStore {
         "SELECT * FROM caphub.review_requests WHERE request_id = $1",
         [requestId]
       );
-      return result.rows[0] ? requestFromRow(result.rows[0]) : null;
+      return result.rows[0] ? reviewRequestRowToDomain(result.rows[0]) : null;
     } catch (error) {
       throw mapReviewError(error);
     }
@@ -372,7 +372,7 @@ export class PostgresReviewStore implements ReviewStore {
           [input.request_id]
         );
         if (!requestResult.rows[0]) throw new ReviewStoreError("INVALID_REVIEW_DECISION");
-        const request = requestFromRow(requestResult.rows[0]);
+        const request = reviewRequestRowToDomain(requestResult.rows[0]);
         if (request.subject_digest !== input.expected_subject_digest) {
           throw new ReviewStoreError("STALE_REVIEW");
         }

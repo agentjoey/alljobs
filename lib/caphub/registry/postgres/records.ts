@@ -17,6 +17,28 @@ import {
 
 export type RegistryPayloadSchemas = Partial<Record<RegistryRecordKind, z.ZodType>>;
 
+export function validateRegistryVersion(
+  version: RegistryVersion,
+  payloadSchemas: RegistryPayloadSchemas
+): RegistryVersion {
+  const payloadSchema = payloadSchemas[version.kind];
+  if (!payloadSchema) throw new RegistryError("INVALID_REGISTRY_RECORD");
+  const parsed = registryVersionSchemaFor(payloadSchema).safeParse(version);
+  if (!parsed.success) {
+    if (parsed.error.issues.some((issue) => issue.path[0] === "previous_version")) {
+      throw new RegistryError("STALE_WRITE");
+    }
+    throw new RegistryError("INVALID_REGISTRY_RECORD");
+  }
+  if (digestCanonicalJson(parsed.data.payload) !== parsed.data.payload_digest) {
+    throw new RegistryError("REGISTRY_DIGEST_CONFLICT");
+  }
+  return {
+    ...parsed.data,
+    created_at: isoTimestamp(parsed.data.created_at)
+  } as RegistryVersion;
+}
+
 export interface RegistryRecordStoreHooks {
   afterVersionInserted?(version: RegistryVersion): Promise<void>;
 }
@@ -59,22 +81,7 @@ export class PostgresRegistryRecordStore implements RegistryRecordStore {
   ) {}
 
   private validate(version: RegistryVersion): RegistryVersion {
-    const payloadSchema = this.payloadSchemas[version.kind];
-    if (!payloadSchema) throw new RegistryError("INVALID_REGISTRY_RECORD");
-    const parsed = registryVersionSchemaFor(payloadSchema).safeParse(version);
-    if (!parsed.success) {
-      if (parsed.error.issues.some((issue) => issue.path[0] === "previous_version")) {
-        throw new RegistryError("STALE_WRITE");
-      }
-      throw new RegistryError("INVALID_REGISTRY_RECORD");
-    }
-    if (digestCanonicalJson(parsed.data.payload) !== parsed.data.payload_digest) {
-      throw new RegistryError("REGISTRY_DIGEST_CONFLICT");
-    }
-    return {
-      ...parsed.data,
-      created_at: isoTimestamp(parsed.data.created_at)
-    } as RegistryVersion;
+    return validateRegistryVersion(version, this.payloadSchemas);
   }
 
   private parseRow(row: VersionRow): RegistryVersion {

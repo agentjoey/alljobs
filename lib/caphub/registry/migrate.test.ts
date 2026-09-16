@@ -59,13 +59,13 @@ describe.sequential("Caphub Registry migrations", () => {
         applyRegistryMigrations(concurrentFixture.pool)
       ]);
       expect(results.map(({ applied }) => applied).sort((left, right) => right.length - left.length)).toEqual([
-        ["001_registry", "002_read_models"],
+        ["001_registry", "002_read_models", "003_exports"],
         []
       ]);
       const ledger = await concurrentFixture.pool.query<{ version: string }>(
         "SELECT version FROM caphub.schema_migrations ORDER BY version"
       );
-      expect(ledger.rows.map(({ version }) => version)).toEqual(["001_registry", "002_read_models"]);
+      expect(ledger.rows.map(({ version }) => version)).toEqual(["001_registry", "002_read_models", "003_exports"]);
     } finally {
       await concurrentFixture.stop();
     }
@@ -73,7 +73,7 @@ describe.sequential("Caphub Registry migrations", () => {
 
   it("applies the checksum-bound manifest once and reruns idempotently", async () => {
     await expect(applyRegistryMigrations(fixture.pool)).resolves.toEqual({
-      applied: ["001_registry", "002_read_models"]
+      applied: ["001_registry", "002_read_models", "003_exports"]
     });
     await expect(applyRegistryMigrations(fixture.pool)).resolves.toEqual({ applied: [] });
 
@@ -83,13 +83,127 @@ describe.sequential("Caphub Registry migrations", () => {
     expect(ledger.rows).toEqual(registryMigrationManifest.map(({ id, checksum }) => ({ version: id, checksum })));
   });
 
+  it("keeps the P3-approved 001 and 002 checksums byte-identical", async () => {
+    const byId = new Map(registryMigrationManifest.map((migration) => [migration.id, migration]));
+    expect(byId.get("001_registry")?.checksum)
+      .toBe("d48b33929743342b2fcfe11726a45653e06c0cc39a84949dcbf1ae9ec80e5fa8");
+    expect(byId.get("002_read_models")?.checksum)
+      .toBe("fa8fefdef331966fdcb67db911ace73eca2d2f54702028acaa6735de1e8716c7");
+    expect(registryMigrationManifest.map((migration) => migration.id))
+      .toEqual(["001_registry", "002_read_models", "003_exports"]);
+  });
+
+  it("enforces P4 deployment_plan and deployment review constraints at the SQL boundary", async () => {
+    const planId = `dpl_${"7".repeat(32)}`;
+    const wrongPrefix = `dep_${"7".repeat(32)}`;
+    const releaseId = `rel_${"8".repeat(32)}`;
+    const deploymentId = `dep_${"9".repeat(32)}`;
+
+    const insertRecordAndVersion = async (recordId: string, kind: string, payload: unknown): Promise<void> => {
+      const client = await fixture.pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `INSERT INTO caphub.registry_records
+            (record_id, kind, current_version, created_at, updated_at)
+           VALUES ($1, $2, 1, now(), now())`,
+          [recordId, kind]
+        );
+        await client.query(
+          `INSERT INTO caphub.registry_versions
+            (record_id, version, kind, schema_version, payload, payload_digest, previous_version, created_at)
+           VALUES ($1, 1, $2, 1, $3::jsonb, $4, NULL, now())`,
+          [recordId, kind, JSON.stringify(payload ?? {}), DIGEST]
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    };
+    await insertRecordAndVersion(releaseId, "release", {});
+
+    await expect(fixture.pool.query(
+      `INSERT INTO caphub.registry_records
+        (record_id, kind, current_version, created_at, updated_at)
+       VALUES ($1, 'deployment_plan', 1, now(), now())`,
+      [wrongPrefix]
+    )).rejects.toThrow();
+    await insertRecordAndVersion(planId, "deployment_plan", { action: "publish" });
+    await expect(fixture.pool.query(
+      `INSERT INTO caphub.registry_versions
+        (record_id, version, kind, schema_version, payload, payload_digest, previous_version, created_at)
+       VALUES ($1, 2, 'release', 1, '{}'::jsonb, $2, 1, now())`,
+      [planId, DIGEST]
+    )).rejects.toThrow();
+
+    await expect(fixture.pool.query(
+      `INSERT INTO caphub.review_requests
+        (request_id, review_kind, subject_kind, subject_id, subject_version, subject_digest,
+         lock_version, state, approve_confirmation, reject_confirmation,
+         superseded_by_request_id, created_at, updated_at)
+       VALUES ($1, 'deployment', 'release', $2, 1, $3, 1, 'WAITING_FOR_REVIEW',
+         'APPROVE DEPLOYMENT 77777777', 'REJECT DEPLOYMENT 77777777', NULL, now(), now())`,
+      [`rev_${"a".repeat(32)}`, planId, DIGEST]
+    )).rejects.toThrow();
+    await expect(fixture.pool.query(
+      `INSERT INTO caphub.review_requests
+        (request_id, review_kind, subject_kind, subject_id, subject_version, subject_digest,
+         lock_version, state, approve_confirmation, reject_confirmation,
+         superseded_by_request_id, created_at, updated_at)
+       VALUES ($1, 'release', 'deployment_plan', $2, 1, $3, 1, 'WAITING_FOR_REVIEW',
+         'APPROVE RELEASE 77777777', 'REJECT RELEASE 77777777', NULL, now(), now())`,
+      [`rev_${"b".repeat(32)}`, planId, DIGEST]
+    )).rejects.toThrow();
+    await fixture.pool.query(
+      `INSERT INTO caphub.review_requests
+        (request_id, review_kind, subject_kind, subject_id, subject_version, subject_digest,
+         lock_version, state, approve_confirmation, reject_confirmation,
+         superseded_by_request_id, created_at, updated_at)
+       VALUES ($1, 'deployment', 'deployment_plan', $2, 1, $3, 1, 'WAITING_FOR_REVIEW',
+         'APPROVE DEPLOYMENT 77777777', 'REJECT DEPLOYMENT 77777777', NULL, now(), now())`,
+      [`rev_${"c".repeat(32)}`, planId, DIGEST]
+    );
+
+    const proposesEdge = `
+      INSERT INTO caphub.registry_lineage
+        (from_node_id, from_kind, from_version, from_digest, relationship,
+         to_node_id, to_kind, to_version, to_digest, created_at)
+       VALUES ($1, 'release', 1, $2, 'proposes', $3, 'deployment_plan', 1, $2, now())`;
+    await fixture.pool.query(proposesEdge, [releaseId, DIGEST, planId]);
+    await expect(fixture.pool.query(
+      proposesEdge.replace("'proposes'", "'contains'"),
+      [releaseId, DIGEST, planId]
+    )).rejects.toThrow();
+    await expect(fixture.pool.query(
+      proposesEdge.replace("'deployment_plan'", "'release'"),
+      [releaseId, DIGEST, planId]
+    )).rejects.toThrow();
+
+    await insertRecordAndVersion(deploymentId, "deployment", {});
+    await fixture.pool.query(
+      `INSERT INTO caphub.registry_lineage
+        (from_node_id, from_kind, from_version, from_digest, relationship,
+         to_node_id, to_kind, to_version, to_digest, created_at)
+       VALUES ($1, 'deployment_plan', 1, $2, 'realized_as', $3, 'deployment', 1, $2, now())`,
+      [planId, DIGEST, deploymentId]
+    );
+    await expect(fixture.pool.query(
+      `UPDATE caphub.registry_versions SET payload = '{"action":"rollback"}'::jsonb
+       WHERE record_id = $1`,
+      [planId]
+    )).rejects.toMatchObject({ code: "55000", message: expect.stringMatching(/append-only/i) });
+  });
+
   it("rejects edited migration content before writing", async () => {
     const tampered = registryMigrationManifest.map((migration, index) => index === 0
       ? { ...migration, sql: `${migration.sql}\n-- edited after approval` }
       : migration);
     await expect(applyRegistryMigrations(fixture.pool, { migrations: tampered })).rejects.toThrow(/checksum/i);
     const ledger = await fixture.pool.query<{ count: string }>("SELECT count(*) FROM caphub.schema_migrations");
-    expect(ledger.rows[0]?.count).toBe("2");
+    expect(ledger.rows[0]?.count).toBe("3");
   });
 
   it("enforces append-only versions, lineage, decisions, consumers, imports, and audits", async () => {
