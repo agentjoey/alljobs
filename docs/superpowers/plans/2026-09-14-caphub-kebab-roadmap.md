@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3-C 本地/fixture Review Registry 已通过独立 Review/Verification；停在生产 Gate P3-D
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P3 Registry/Analysis 生产启用仍停在 Gate P3-D；P4 spec/plan 已就绪并交由 KimiCode 实现
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -223,6 +223,14 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - 不做 Obsidian 双向同步、平台发布、Kimi Code 实现、动态装配。
 
 ## P4：Obsidian 投影与 Capability Package 导出
+
+**规划状态（2026-09-16）**
+
+- 实现规范：`docs/superpowers/specs/2026-09-16-caphub-obsidian-package-export-design.md`
+- 开发计划：`docs/superpowers/plans/2026-09-16-caphub-obsidian-package-export.md`
+- KimiCode 交接：`.agent/caphub/p4-kimicode-handoff.md`
+- 实现负责人：KimiCode（`k3-256k`）；实现完成后由 Codex 独立验收。
+- 当前仅完成规划，不代表 P4 implementation、P4-A、P4-B 或 P4-C 通过。真实 Vault/Agent root、dry-run、publish 与 rollback 仍须对应 Human Gate。
 
 **目标**
 

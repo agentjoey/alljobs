@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-16 by Codex after the Caphub P3-C fixture verification closeout
+Last Updated:   2026-09-16 by Codex after Caphub P4 specification and implementation planning
 
 ## Current decision
 
@@ -58,14 +58,16 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Monitor production logs at `~/Library/Logs/alljobs/` and register pilot code/business projects via `/register`.
+Continue the authorized Caphub Capture-only trial without enabling Analysis or Registry, and implement P4 from the approved planning branch in a separate isolated worktree. Any real P4 Vault/Agent target or publish remains gated.
 
 ## Caphub development status — 2026-09-16
 
 - P1 Foundation is accepted; P2 fixture analysis is complete while live Kimi structured output remains unproven.
-- P3 Review Center and PostgreSQL Registry implementation/fixture verification is complete at `750efe3` with independent Review and Verification PASS and zero blocker/high/medium findings.
-- P3 is not enabled or released in production. No production database/provider/secret, migration, service restart, deployment, traffic switch, push, merge, tag, or release occurred.
-- Current action is **pause at Gate P3-D**. Fresh Human authorization is required for production PostgreSQL selection, credentials, backup/PITR, migration/release, or any other P3-D action. P4 has not started.
+- P3 Review Center and PostgreSQL Registry implementation/fixture verification passed independent Review and Verification with zero blocker/high/medium findings, was merged to `main`, and was deployed at `bac60042064e258072f025d42ce2d6633ba21a43` with production Registry and Analysis disabled.
+- Human separately authorized a Capture-only production trial. Capture is enabled on the Control Host; Analysis and Registry remain disabled, and the enablement verification did not create a Capture.
+- Gate P3-D remains a hard stop for production PostgreSQL selection, credentials, backup/PITR, migration, or Registry/Analysis enablement.
+- P4 design and implementation plan are now recorded in `docs/superpowers/specs/2026-09-16-caphub-obsidian-package-export-design.md` and `docs/superpowers/plans/2026-09-16-caphub-obsidian-package-export.md`. Implementation is assigned to KimiCode (`k3-256k`) on a separate local branch; Codex will independently accept the result.
+- No P4 implementation, real Vault/Agent root, dry run, publish, rollback, push, merge, deployment, or P4-A/P4-B/P4-C approval has occurred.
 
 ## P0 Backlog retirement (live)
 
