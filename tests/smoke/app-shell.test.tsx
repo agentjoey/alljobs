@@ -15,13 +15,13 @@ it("names the new planning product without legacy surfaces", async () => {
   expect(screen.queryByText(/working ledger|apple hig|quick add/i)).not.toBeInTheDocument();
 });
 
-it("identifies local capture custody and keeps Caphub between Monitoring and Register", () => {
+it("identifies local capture custody and keeps Caphub and Reviews before Register", () => {
   render(<AppShell><h1>Capture inbox</h1></AppShell>);
   expect(screen.getByText("NATIVE: LOCAL CAPTURE")).toBeVisible();
   const navigation = screen.getByRole("navigation", { name: "Main Navigation" });
   const links = [...navigation.querySelectorAll("a")];
   expect(links.map((link) => link.textContent?.trim())).toEqual([
-    "Portfolio", "Projects", "Tasks", "Monitoring", "Caphub", "Register", "Archived"
+    "Portfolio", "Projects", "Tasks", "Monitoring", "Caphub", "Reviews", "Register", "Archived"
   ]);
   expect(screen.getByRole("link", { name: "Caphub" })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("combobox", { name: "Search planning records" })).toBeVisible();
