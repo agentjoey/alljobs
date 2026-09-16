@@ -26,6 +26,7 @@ export const registryRecordKindSchema = z.enum([
   "build_proposal",
   "release",
   "deployment",
+  "deployment_plan",
   "usage_observation"
 ]);
 
@@ -39,6 +40,7 @@ const experienceCardIdSchema = z.string().regex(/^exp_[a-f0-9]{32}$/);
 const buildProposalIdSchema = z.string().regex(/^bld_[a-f0-9]{32}$/);
 const releaseIdSchema = z.string().regex(/^rel_[a-f0-9]{32}$/);
 const deploymentIdSchema = z.string().regex(/^dep_[a-f0-9]{32}$/);
+const deploymentPlanIdSchema = z.string().regex(/^dpl_[a-f0-9]{32}$/);
 const usageObservationIdSchema = z.string().regex(/^obs_[a-f0-9]{32}$/);
 
 export const registryRecordIdSchema = z.union([
@@ -54,6 +56,7 @@ export const registryRecordIdSchema = z.union([
   buildProposalIdSchema,
   releaseIdSchema,
   deploymentIdSchema,
+  deploymentPlanIdSchema,
   usageObservationIdSchema
 ]);
 
@@ -87,6 +90,7 @@ const recordPrefixByKind: Record<z.infer<typeof registryRecordKindSchema>, strin
   build_proposal: "bld_",
   release: "rel_",
   deployment: "dep_",
+  deployment_plan: "dpl_",
   usage_observation: "obs_"
 };
 
@@ -167,6 +171,8 @@ const allowedLineage = new Set([
   "candidate:realized_as:release",
   "build_proposal:realized_as:release",
   "release:deployed_as:deployment",
+  "release:proposes:deployment_plan",
+  "deployment_plan:realized_as:deployment",
   "deployment:observed_as:usage_observation",
   "review_request:decided_by:review_decision"
 ]);
@@ -199,7 +205,7 @@ export const registryLineageEdgeSchema = z.object({
   }
 });
 
-export const reviewKindSchema = z.enum(["candidate", "build", "implementation", "release", "update"]);
+export const reviewKindSchema = z.enum(["candidate", "build", "implementation", "release", "update", "deployment"]);
 export const reviewStateSchema = z.enum([
   "WAITING_FOR_REVIEW",
   "APPROVED",
@@ -215,7 +221,8 @@ export const reviewSubjectKindSchema = z.enum([
   "build_proposal",
   "implementation_asset",
   "release",
-  "update_proposal"
+  "update_proposal",
+  "deployment_plan"
 ]);
 
 const implementationAssetIdSchema = z.string().regex(/^impl_[a-f0-9]{32}$/);
@@ -225,7 +232,8 @@ const reviewSubjectIdSchema = z.union([
   buildProposalIdSchema,
   implementationAssetIdSchema,
   releaseIdSchema,
-  updateProposalIdSchema
+  updateProposalIdSchema,
+  deploymentPlanIdSchema
 ]);
 
 const kindSubjectKind: Record<z.infer<typeof reviewKindSchema>, z.infer<typeof reviewSubjectKindSchema>> = {
@@ -233,7 +241,8 @@ const kindSubjectKind: Record<z.infer<typeof reviewKindSchema>, z.infer<typeof r
   build: "build_proposal",
   implementation: "implementation_asset",
   release: "release",
-  update: "update_proposal"
+  update: "update_proposal",
+  deployment: "deployment_plan"
 };
 
 const reviewSubjectPrefixByKind: Record<z.infer<typeof reviewSubjectKindSchema>, string> = {
@@ -241,7 +250,8 @@ const reviewSubjectPrefixByKind: Record<z.infer<typeof reviewSubjectKindSchema>,
   build_proposal: "bld_",
   implementation_asset: "impl_",
   release: "rel_",
-  update_proposal: "upd_"
+  update_proposal: "upd_",
+  deployment_plan: "dpl_"
 };
 
 function subjectShortId(subjectId: string): string {
@@ -303,7 +313,7 @@ export const reviewRequestSchema = z.object({
 });
 
 const decisionConfirmationSchema = z.string().max(96).regex(
-  /^(?:APPROVE|ACCEPT|REJECT|REVOKE) (?:CANDIDATE|BUILD|IMPLEMENTATION|RELEASE|UPDATE) [a-f0-9]{8}$/
+  /^(?:APPROVE|ACCEPT|REJECT|REVOKE) (?:CANDIDATE|BUILD|IMPLEMENTATION|RELEASE|UPDATE|DEPLOYMENT) [a-f0-9]{8}$/
 );
 
 const reviewDecisionInputBase = {

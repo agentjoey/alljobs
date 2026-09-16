@@ -299,6 +299,117 @@ describe("review contracts", () => {
   });
 });
 
+describe("P4 export registry contracts", () => {
+  it("accepts deployment_plan as a Registry record kind with the dpl_ prefix", () => {
+    expect(registryVersionSchema.parse({
+      record_id: `dpl_${"a".repeat(32)}`,
+      kind: "deployment_plan",
+      version: 1,
+      schema_version: 1,
+      payload: { action: "publish" },
+      payload_digest: SUBJECT_DIGEST,
+      previous_version: null,
+      created_at: NOW
+    })).toMatchObject({ kind: "deployment_plan", version: 1 });
+    expect(() => registryVersionSchema.parse({
+      record_id: `dep_${"a".repeat(32)}`,
+      kind: "deployment_plan",
+      version: 1,
+      schema_version: 1,
+      payload: {},
+      payload_digest: SUBJECT_DIGEST,
+      previous_version: null,
+      created_at: NOW
+    })).toThrow();
+  });
+
+  it("accepts deployment reviews bound to deployment_plan subjects with exact confirmations", () => {
+    const subjectId = `dpl_${"b".repeat(32)}`;
+    const shortId = subjectId.slice(subjectId.indexOf("_") + 1, subjectId.indexOf("_") + 9);
+    expect(reviewRequestSchema.parse({
+      ...waitingRequest,
+      review_kind: "deployment",
+      subject_kind: "deployment_plan",
+      subject_id: subjectId,
+      approve_confirmation: `APPROVE DEPLOYMENT ${shortId}`,
+      reject_confirmation: `REJECT DEPLOYMENT ${shortId}`
+    }).subject_kind).toBe("deployment_plan");
+    expect(() => reviewRequestSchema.parse({
+      ...waitingRequest,
+      review_kind: "deployment",
+      subject_kind: "release",
+      subject_id: subjectId,
+      approve_confirmation: `APPROVE DEPLOYMENT ${shortId}`,
+      reject_confirmation: `REJECT DEPLOYMENT ${shortId}`
+    })).toThrow();
+  });
+
+  it("accepts deployment review decisions with DEPLOYMENT confirmation phrases only", () => {
+    const subjectId = `dpl_${"b".repeat(32)}`;
+    const shortId = subjectId.slice(subjectId.indexOf("_") + 1, subjectId.indexOf("_") + 9);
+    expect(reviewDecisionSchema.parse({
+      ...approvedDecision,
+      review_kind: "deployment",
+      subject_id: subjectId,
+      disposition: undefined,
+      confirmation: `APPROVE DEPLOYMENT ${shortId}`
+    }).review_kind).toBe("deployment");
+    expect(() => reviewDecisionSchema.parse({
+      ...approvedDecision,
+      review_kind: "deployment",
+      subject_id: subjectId,
+      disposition: undefined,
+      confirmation: `APPROVE RELEASE ${shortId}`
+    })).toThrow();
+  });
+
+  it("allows release->deployment_plan->deployment lineage while preserving existing edges", () => {
+    const proposesEdge = {
+      schema_version: 1,
+      from_record_id: `rel_${"c".repeat(32)}`,
+      from_kind: "release",
+      from_version: 1,
+      from_digest: "c".repeat(64),
+      relationship: "proposes",
+      to_record_id: `dpl_${"d".repeat(32)}`,
+      to_kind: "deployment_plan",
+      to_version: 1,
+      to_digest: "d".repeat(64),
+      created_at: NOW
+    };
+    expect(registryLineageEdgeSchema.parse(proposesEdge).relationship).toBe("proposes");
+    expect(registryLineageEdgeSchema.parse({
+      ...proposesEdge,
+      from_record_id: `dpl_${"d".repeat(32)}`,
+      from_kind: "deployment_plan",
+      to_record_id: `dep_${"e".repeat(32)}`,
+      to_kind: "deployment",
+      relationship: "realized_as"
+    })).toMatchObject({ relationship: "realized_as" });
+    expect(registryLineageEdgeSchema.parse({
+      schema_version: 1,
+      from_record_id: `rel_${"c".repeat(32)}`,
+      from_kind: "release",
+      from_version: 1,
+      from_digest: "c".repeat(64),
+      relationship: "deployed_as",
+      to_record_id: `dep_${"e".repeat(32)}`,
+      to_kind: "deployment",
+      to_version: 1,
+      to_digest: "e".repeat(64),
+      created_at: NOW
+    }).relationship).toBe("deployed_as");
+    expect(() => registryLineageEdgeSchema.parse({
+      ...proposesEdge,
+      relationship: "deployed_as"
+    })).toThrow();
+    expect(() => registryLineageEdgeSchema.parse({
+      ...proposesEdge,
+      from_kind: "deployment_plan"
+    })).toThrow();
+  });
+});
+
 describe("Registry import manifest", () => {
   it("binds exact source and target digests without paths or URLs", () => {
     const manifest = {
