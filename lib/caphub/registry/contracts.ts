@@ -21,6 +21,7 @@ export interface RegistryRecordStore {
 export interface RegistryLineageStore {
   put(edge: RegistryLineageEdge): Promise<"created" | "existing">;
   listFrom(recordId: string, version: number): Promise<RegistryLineageEdge[]>;
+  listTo(recordId: string, version: number): Promise<RegistryLineageEdge[]>;
 }
 
 export interface RegistryImportStore {
@@ -35,6 +36,7 @@ export interface RegistryAuditStore {
 export interface ReviewStore {
   createRequest(request: ReviewRequest): Promise<"created" | "existing">;
   getRequest(requestId: string): Promise<ReviewRequest | null>;
+  getDecision(decisionId: string): Promise<ReviewDecision | null>;
   listDecisions(requestId: string): Promise<ReviewDecision[]>;
   decide(input: ReviewDecisionInput): Promise<ReviewDecisionResult>;
   revoke(input: ReviewDecisionInput): Promise<ReviewDecisionResult>;

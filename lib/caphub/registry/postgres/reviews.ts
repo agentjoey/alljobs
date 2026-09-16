@@ -5,6 +5,7 @@ import type { ReviewStore } from "../contracts";
 import { confirmationFor } from "../confirmations";
 import {
   registryRecordIdSchema,
+  reviewDecisionIdSchema,
   reviewDecisionInputSchema,
   reviewDecisionResultSchema,
   reviewDecisionSchema,
@@ -278,6 +279,21 @@ export class PostgresReviewStore implements ReviewStore {
         [requestId]
       );
       return result.rows[0] ? reviewRequestRowToDomain(result.rows[0]) : null;
+    } catch (error) {
+      throw mapReviewError(error);
+    }
+  }
+
+  async getDecision(decisionId: string): Promise<ReviewDecision | null> {
+    if (!reviewDecisionIdSchema.safeParse(decisionId).success) {
+      throw new ReviewStoreError("INVALID_REVIEW_DECISION");
+    }
+    try {
+      const result = await this.pool.query<ReviewDecisionRow>(
+        "SELECT * FROM caphub.review_decisions WHERE decision_id = $1",
+        [decisionId]
+      );
+      return result.rows[0] ? decisionFromRow(result.rows[0]) : null;
     } catch (error) {
       throw mapReviewError(error);
     }

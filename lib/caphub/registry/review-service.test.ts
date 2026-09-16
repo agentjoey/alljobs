@@ -63,7 +63,7 @@ describe("review decision service", () => {
       } }] })
     } as unknown as Pool;
     const reviews = {
-      createRequest: vi.fn(), getRequest: vi.fn(), listDecisions: vi.fn(), revoke: vi.fn(),
+      createRequest: vi.fn(), getRequest: vi.fn(), getDecision: vi.fn(), listDecisions: vi.fn(), revoke: vi.fn(),
       consumeDecision: vi.fn(), decide: vi.fn().mockResolvedValue(result)
     };
     const jobs = { get: vi.fn().mockResolvedValue(waiting), put: vi.fn() };

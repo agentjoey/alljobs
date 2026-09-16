@@ -294,4 +294,21 @@ export class PostgresRegistryLineageStore implements RegistryLineageStore {
       throw mapRegistryDatabaseError(error, "LINEAGE_CONFLICT");
     }
   }
+
+  async listTo(recordId: string, version: number): Promise<RegistryLineageEdge[]> {
+    if (!registryRecordIdSchema.safeParse(recordId).success || !Number.isInteger(version) || version <= 0) {
+      throw new RegistryError("LINEAGE_CONFLICT");
+    }
+    try {
+      const result = await this.pool.query<LineageRow>(
+        `SELECT * FROM caphub.registry_lineage
+         WHERE to_node_id=$1 AND to_version=$2
+         ORDER BY relationship, from_node_id, from_version`,
+        [recordId, version]
+      );
+      return result.rows.map(lineageRowToDomain);
+    } catch (error) {
+      throw mapRegistryDatabaseError(error, "LINEAGE_CONFLICT");
+    }
+  }
 }
