@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Pool } from "pg";
+import { testCapabilityPackage } from "../packages/fixtures";
 import { createRegistryQueries } from "./queries";
 
 const REQUEST_ID = `rev_${"1".repeat(32)}`;
@@ -247,5 +248,167 @@ describe("Registry read DTOs", () => {
       code: "REGISTRY_UNAVAILABLE",
       message: "Registry is unavailable"
     });
+  });
+});
+
+describe("getCapabilityExportState DTO", () => {
+  const RELEASE_ID = `rel_${"a".repeat(32)}`;
+  const PLAN_ID = `dpl_${"b".repeat(32)}`;
+  const DEPLOY_ID = `dep_${"c".repeat(32)}`;
+
+  function releasePayload() {
+    return testCapabilityPackage({ release_id: RELEASE_ID, dependencies: [] });
+  }
+
+  function releaseDecisionRow() {
+    return [{
+      decision: {
+        decision_id: `dec_${"d".repeat(32)}`,
+        request_id: `rev_${"e".repeat(32)}`,
+        idempotency_key: "intent-release-final-1",
+        expected_lock_version: 2,
+        expected_subject_digest: "f".repeat(64),
+        action: "approve",
+        confirmation: "APPROVE RELEASE aaaaaaaa",
+        rationale: "Final.",
+        disposition: null,
+        review_kind: "release",
+        subject_id: RELEASE_ID,
+        subject_version: 1,
+        subject_digest: "f".repeat(64),
+        actor: "human:owner",
+        confirmation_digest: "f".repeat(64),
+        original_approval_decision_id: null,
+        revokes_decision_id: null,
+        recorded_at: NOW
+      },
+      consumer_id: RELEASE_ID
+    }];
+  }
+
+  it("reports disabled and no-release states without touching the pool", async () => {
+    const pool = poolWith([]);
+    const queries = createRegistryQueries(pool);
+    expect((await queries.getCapabilityExportState(CANDIDATE_ID, { exportsEnabled: false })).kind).toBe("disabled");
+    expect((await queries.getCapabilityExportState(CANDIDATE_ID, { exportsEnabled: true })).kind).toBe("no_release");
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps the release, adapters, plans, history, and active pointer into a safe DTO", async () => {
+    const pkg = releasePayload();
+    const pool = poolWith(
+      [{
+        record_id: RELEASE_ID,
+        version: 1,
+        payload_digest: "f".repeat(64),
+        payload: pkg,
+        created_at: new Date(NOW)
+      }],
+      [{ state: "APPROVED", request_id: `rev_${"e".repeat(32)}` }],
+      releaseDecisionRow(),
+      [{
+        record_id: PLAN_ID,
+        version: 1,
+        payload_digest: "e".repeat(64),
+        payload: {
+          schema_version: 1,
+          action: "publish",
+          target: "codex",
+          target_alias: "codex-primary",
+          release: { record_id: RELEASE_ID, version: 1, digest: "f".repeat(64) },
+          adapter: { name: "codex", version: "1.0.0", digest: "f".repeat(64) },
+          preview_manifest_digest: "f".repeat(64),
+          preview_diff_digest: "f".repeat(64),
+          expected_current_pointer: null,
+          target_preimage_digest: "f".repeat(64),
+          created_at: NOW
+        },
+        created_at: new Date(NOW)
+      }],
+      [{ state: "WAITING_FOR_REVIEW", request_id: `rev_${"f".repeat(32)}` }],
+      [{
+        decision: {
+          decision_id: `dec_${"d".repeat(32)}`,
+          request_id: `rev_${"f".repeat(32)}`,
+          idempotency_key: "intent-plan-0001",
+          expected_lock_version: 1,
+          expected_subject_digest: "e".repeat(64),
+          action: "reject",
+          confirmation: "REJECT DEPLOYMENT bbbbbbbb",
+          rationale: "Not yet.",
+          disposition: null,
+          review_kind: "deployment",
+          subject_id: PLAN_ID,
+          subject_version: 1,
+          subject_digest: "e".repeat(64),
+          actor: "human:owner",
+          confirmation_digest: "e".repeat(64),
+          original_approval_decision_id: null,
+          revokes_decision_id: null,
+          recorded_at: NOW
+        },
+        consumer_id: null
+      }],
+      [{
+        record_id: DEPLOY_ID,
+        payload: {
+          schema_version: 1,
+          action: "publish",
+          target: "codex",
+          target_alias: "codex-primary",
+          release: { record_id: RELEASE_ID, version: 1, digest: "f".repeat(64) },
+          plan: { record_id: PLAN_ID, version: 1, digest: "e".repeat(64) },
+          prior_pointer: null,
+          created_at: NOW
+        },
+        created_at: new Date(NOW)
+      }]
+    );
+    const queries = createRegistryQueries(pool);
+    const result = await queries.getCapabilityExportState(CANDIDATE_ID, {
+      exportsEnabled: true,
+      readPointer: async () => ({
+        deployment_id: DEPLOY_ID,
+        release_id: RELEASE_ID,
+        release_version: 1,
+        release_digest: "f".repeat(64),
+        pointer_digest: "a1".repeat(32)
+      })
+    });
+    if (result.kind !== "ready") throw new Error(`unexpected ${result.kind}`);
+    expect(result.release).toMatchObject({
+      recordId: RELEASE_ID,
+      state: "approved_finalized",
+      semver: pkg.version,
+      packageDigest: pkg.digest
+    });
+    expect(result.packageManifest.fileCount).toBeGreaterThan(0);
+    expect(result.adapters.map((adapter) => adapter.target)).toEqual(["codex", "claude", "hermes"]);
+    expect(result.adapters.find((adapter) => adapter.target === "codex")?.state).toBe("supported");
+    expect(result.deployment.plans).toEqual([expect.objectContaining({
+      planId: PLAN_ID,
+      targetAlias: "codex-primary",
+      reviewState: "WAITING_FOR_REVIEW",
+      decisionConsumed: false
+    })]);
+    expect(result.deployment.history).toEqual([expect.objectContaining({
+      deploymentId: DEPLOY_ID,
+      targetAlias: "codex-primary"
+    })]);
+    expect(result.deployment.activePointer).toEqual({
+      deploymentId: DEPLOY_ID,
+      releaseId: RELEASE_ID,
+      releaseVersion: 1,
+      pointerDigest: "a1".repeat(32)
+    });
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toMatch(/\/Users\/|\/private\/tmp|postgres:\/\/|CAPHUB_DATABASE_URL/);
+  });
+
+  it("rejects invalid candidate ids without querying", async () => {
+    const pool = poolWith([]);
+    await expect(createRegistryQueries(pool).getCapabilityExportState("not-an-id", { exportsEnabled: true }))
+      .rejects.toMatchObject({ code: "INVALID_QUERY" });
   });
 });

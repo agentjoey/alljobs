@@ -21,7 +21,7 @@ async function loadReviewCenterView(
     const member = <T extends string>(value: string | null, allowed: readonly T[]): T | null =>
       value && allowed.includes(value as T) ? value as T : null;
     const queueInput: ReviewQueueInput = {
-      reviewKind: member(one("kind"), ["candidate", "build", "implementation", "release", "update"] as const),
+      reviewKind: member(one("kind"), ["candidate", "build", "implementation", "release", "update", "deployment"] as const),
       state: member(one("state"), ["WAITING_FOR_REVIEW", "APPROVED", "REJECTED", "REVOKED", "SUPERSEDED"] as const),
       valueBand: member(one("value"), ["high", "medium", "low", "unknown"] as const),
       riskBand: member(one("risk"), ["high", "medium", "low", "unknown"] as const),

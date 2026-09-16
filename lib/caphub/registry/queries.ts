@@ -2,7 +2,12 @@ import "server-only";
 
 import type { Pool } from "pg";
 import { z } from "zod";
-import { reviewDecisionSchema, reviewRequestIdSchema, reviewRequestSchema } from "./schemas";
+import { renderClaudePreview } from "../adapters/claude";
+import { renderCodexPreview } from "../adapters/codex";
+import { renderHermesPreview } from "../adapters/hermes";
+import { capabilityPackageSchema, deploymentPlanSchema } from "../packages/schemas";
+import { renderNeutralPackage } from "../packages/render";
+import { registryRecordIdSchema, reviewDecisionSchema, reviewRequestIdSchema, reviewRequestSchema } from "./schemas";
 import type { ReviewDecision, ReviewRequest } from "./types";
 import { diffRegistryVersions, type RegistryDiffEntry } from "./diff";
 
@@ -16,7 +21,7 @@ export class RegistryReadError extends Error {
 const reviewQueueInputSchema = z.object({
   limit: z.number().int().min(1).max(200).default(25),
   cursor: reviewRequestIdSchema.nullable().default(null),
-  reviewKind: z.enum(["candidate", "build", "implementation", "release", "update"]).nullable().default(null),
+  reviewKind: z.enum(["candidate", "build", "implementation", "release", "update", "deployment"]).nullable().default(null),
   state: z.enum(["WAITING_FOR_REVIEW", "APPROVED", "REJECTED", "REVOKED", "SUPERSEDED"])
     .nullable().default(null),
   valueBand: z.enum(["high", "medium", "low", "unknown"]).nullable().default(null),
@@ -616,6 +621,182 @@ export function createRegistryQueries(pool: Pool) {
       } catch {
         throw new RegistryReadError("REGISTRY_UNAVAILABLE");
       }
+    },
+
+    async getCapabilityExportState(
+      candidateId: string,
+      options: {
+        exportsEnabled: boolean;
+        readPointer?: (targetAlias: string) => Promise<unknown>;
+        projectionSummary?: () => Promise<{ state: string; conflicts: Array<{ path: string; reason: string }> }>;
+      } = { exportsEnabled: false }
+    ) {
+      if (!registryRecordIdSchema.safeParse(candidateId).success || !candidateId.startsWith("cand_")) {
+        throw new RegistryReadError("INVALID_QUERY");
+      }
+      if (!options.exportsEnabled) return { kind: "disabled" as const };
+      try {
+        const releases = await pool.query<{
+          record_id: string; version: number; payload_digest: string;
+          payload: unknown; created_at: Date | string;
+        }>(`
+          SELECT v.record_id, v.version, v.payload_digest, v.payload, v.created_at
+          FROM caphub.registry_lineage l
+          JOIN caphub.registry_versions v
+            ON v.record_id = l.to_node_id AND v.version = l.to_version
+          WHERE l.from_node_id = $1 AND l.from_kind = 'candidate'
+            AND l.relationship = 'realized_as' AND l.to_kind = 'release'
+          ORDER BY v.created_at DESC, v.record_id DESC
+        `, [candidateId]);
+        if (!releases.rows[0]) return { kind: "no_release" as const, candidateId };
+
+        const current = releases.rows[0];
+        const parsedPackage = capabilityPackageSchema.safeParse(current.payload);
+        if (!parsedPackage.success) return { kind: "unavailable" as const, candidateId };
+        const pkg = parsedPackage.data;
+
+        const releaseReview = await pool.query<{ state: ReviewRequest["state"]; request_id: string }>(`
+          SELECT state, request_id FROM caphub.review_requests
+          WHERE subject_id = $1
+          ORDER BY created_at DESC, request_id DESC
+          LIMIT 1
+        `, [current.record_id]);
+        const releaseDecision = releaseReview.rows[0]
+          ? await latestDecision(pool, releaseReview.rows[0].request_id)
+          : { decision: null, authority: null };
+        const reviewState = releaseReview.rows[0]?.state ?? "WAITING_FOR_REVIEW";
+        const releaseState = reviewState === "APPROVED"
+          ? (releaseDecision.authority?.state === "consumed" ? "approved_finalized" as const : "approved_unfinalized" as const)
+          : reviewState === "WAITING_FOR_REVIEW" ? "waiting" as const
+            : reviewState === "REJECTED" ? "rejected" as const
+              : reviewState === "REVOKED" ? "revoked" as const : "superseded" as const;
+
+        const rendered = renderNeutralPackage(pkg);
+        const adapters = (["codex", "claude", "hermes"] as const).map((target) => {
+          const adapter = { codex: renderCodexPreview, claude: renderClaudePreview, hermes: renderHermesPreview }[target](pkg);
+          return adapter.ok
+            ? {
+              target,
+              state: "supported" as const,
+              manifestDigest: adapter.result.output_manifest_digest,
+              diagnostics: adapter.result.diagnostics
+            }
+            : {
+              target,
+              state: "unsupported" as const,
+              manifestDigest: null,
+              diagnostics: adapter.diagnostics
+            };
+        });
+
+        const plans = await pool.query<{
+          record_id: string; version: number; payload_digest: string;
+          payload: unknown; created_at: Date | string;
+        }>(`
+          SELECT v.record_id, v.version, v.payload_digest, v.payload, v.created_at
+          FROM caphub.registry_lineage l
+          JOIN caphub.registry_versions v
+            ON v.record_id = l.to_node_id AND v.version = l.to_version
+          WHERE l.from_node_id = $1 AND l.relationship = 'proposes' AND l.to_kind = 'deployment_plan'
+          ORDER BY v.created_at DESC, v.record_id DESC
+        `, [current.record_id]);
+        const planDtos = [];
+        for (const plan of plans.rows) {
+          const parsedPlan = deploymentPlanSchema.safeParse(plan.payload);
+          const review = await pool.query<{ state: ReviewRequest["state"]; request_id: string }>(`
+            SELECT state, request_id FROM caphub.review_requests
+            WHERE subject_id = $1
+            ORDER BY created_at DESC, request_id DESC
+            LIMIT 1
+          `, [plan.record_id]);
+          const decision = review.rows[0] ? await latestDecision(pool, review.rows[0].request_id) : null;
+          planDtos.push({
+            planId: plan.record_id,
+            version: plan.version,
+            digest: plan.payload_digest,
+            action: parsedPlan.success ? parsedPlan.data.action : null,
+            target: parsedPlan.success ? parsedPlan.data.target : null,
+            targetAlias: parsedPlan.success ? parsedPlan.data.target_alias : null,
+            reviewState: review.rows[0]?.state ?? "WAITING_FOR_REVIEW",
+            decisionConsumed: decision?.authority?.state === "consumed",
+            createdAt: iso(plan.created_at)
+          });
+        }
+
+        const deployments = await pool.query<{ record_id: string; payload: unknown; created_at: Date | string }>(`
+          SELECT v.record_id, v.payload, v.created_at
+          FROM caphub.registry_lineage l
+          JOIN caphub.registry_versions v
+            ON v.record_id = l.to_node_id AND v.version = l.to_version
+          WHERE l.from_node_id = $1 AND l.relationship = 'deployed_as' AND l.to_kind = 'deployment'
+          ORDER BY v.created_at, v.record_id
+        `, [current.record_id]);
+        const history = deployments.rows.map((row) => {
+          const payload = asObject(row.payload);
+          const release = asObject(payload.release);
+          return {
+            deploymentId: row.record_id,
+            action: String(payload.action ?? ""),
+            targetAlias: String(payload.target_alias ?? ""),
+            releaseVersion: typeof release.version === "number" ? release.version : 0,
+            createdAt: iso(row.created_at)
+          };
+        });
+
+        let activePointer: {
+          deploymentId: string; releaseId: string; releaseVersion: number; pointerDigest: string;
+        } | null = null;
+        const latestAlias = history.at(-1)?.targetAlias ?? planDtos[0]?.targetAlias ?? null;
+        if (latestAlias && options.readPointer) {
+          const raw = await options.readPointer(latestAlias);
+          const pointer = asObject(raw);
+          if (typeof pointer.deployment_id === "string") {
+            activePointer = {
+              deploymentId: pointer.deployment_id,
+              releaseId: String(pointer.release_id ?? ""),
+              releaseVersion: typeof pointer.release_version === "number" ? pointer.release_version : 0,
+              pointerDigest: String(pointer.pointer_digest ?? "")
+            };
+          }
+        }
+
+        let obsidian: { state: string; conflicts: Array<{ path: string; reason: string }> } = {
+          state: "unavailable",
+          conflicts: []
+        };
+        if (options.projectionSummary) {
+          obsidian = await options.projectionSummary();
+        }
+
+        return {
+          kind: "ready" as const,
+          candidateId,
+          release: {
+            recordId: current.record_id,
+            version: current.version,
+            digest: current.payload_digest,
+            packageDigest: pkg.digest,
+            slug: pkg.slug,
+            title: pkg.title,
+            semver: pkg.version,
+            state: releaseState,
+            reviewState
+          },
+          packageManifest: rendered.ok
+            ? { fileCount: rendered.files.length, manifestDigest: rendered.manifest_digest }
+            : { fileCount: 0, manifestDigest: null },
+          adapters,
+          obsidian,
+          deployment: {
+            plans: planDtos,
+            history,
+            activePointer
+          }
+        };
+      } catch (error) {
+        if (error instanceof RegistryReadError) throw error;
+        throw new RegistryReadError("REGISTRY_UNAVAILABLE");
+      }
     }
   };
 }
@@ -624,4 +805,5 @@ export type ReviewDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistr
 export type ReviewQueueDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getReviewQueue"]>>;
 export type CaptureDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCaptureDetail"]>>;
 export type CapabilityDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCapabilityDetail"]>>;
+export type CapabilityExportDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCapabilityExportState"]>>;
 export type { RegistryDiffEntry };
