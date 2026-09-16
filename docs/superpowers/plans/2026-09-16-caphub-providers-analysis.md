@@ -323,7 +323,7 @@ git commit -m "feat(caphub): add deterministic capture preprocessing"
 - Consumes: a Zod schema, one primary provider call, one correction provider call, deterministic clock/id factories, and `ModelCallAuditStore`.
 - Produces: `runStructuredStage<T>(request): Promise<T>` and deterministic redacted audit events.
 
-- [ ] **Step 1: Write failing one-correction and audit tests**
+- [x] **Step 1: Write failing one-correction and audit tests**
 
 Cover valid first response, invalid then valid correction, two invalid responses routing to `HUMAN_REVIEW_REQUIRED`, abort/timeout, provider-unavailable mapping, zero transport retry, deterministic call IDs, per-stage input-byte rejection before transport, eight-call total job ceiling including corrections/critic, terminal 256,000-token ceiling, and audit payload secret/reasoning exclusion.
 
@@ -333,13 +333,13 @@ expect(result).toEqual({ kind: "human_review", reason: "SCHEMA_INVALID_TWICE" })
 expect(JSON.stringify(auditEvents)).not.toMatch(/api[_-]?key|reasoning|secret/i);
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- lib/caphub/providers/structured-stage.test.ts lib/caphub/workflow/audit.test.ts`
 
 Expected: FAIL because runner and audit modules do not exist.
 
-- [ ] **Step 3: Implement the closed provider contract**
+- [x] **Step 3: Implement the closed provider contract**
 
 ```ts
 export interface StructuredProvider {
@@ -360,18 +360,20 @@ export type ProviderFailureCode =
 
 The correction prompt contains only validation issue paths and the original input digest, never the raw rejected response or credentials.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `npm test -- lib/caphub/providers/structured-stage.test.ts lib/caphub/workflow/audit.test.ts`
 
 Expected: all tests pass with exactly two calls only in the invalid-first-response case.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/caphub/providers/contracts.ts lib/caphub/providers/structured-stage.ts lib/caphub/providers/structured-stage.test.ts lib/caphub/workflow/contracts.ts lib/caphub/workflow/audit.ts lib/caphub/workflow/audit.test.ts
 git commit -m "feat(caphub): bound structured provider execution"
 ```
+
+**Evidence (2026-09-16):** commit `776c126`; RED failed because the structured runner and audit modules did not exist. GREEN passed 2 focused files / 17 tests, `npm run typecheck`, and focused ESLint. The contract permits one initial call and at most one schema-only correction, gives transport failures zero retry, uses deterministic call/event IDs, excludes prompts/responses/reasoning/secrets from audit records, and closes per-stage bytes, shared eight-call, and 256,000-token job budgets before further transport.
 
 ### Task 5: Implement no-tool MiniMax extraction and critic adapters
 
