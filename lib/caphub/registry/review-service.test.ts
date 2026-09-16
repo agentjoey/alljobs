@@ -50,18 +50,27 @@ const result: ReviewDecisionResult = {
 };
 
 describe("review decision service", () => {
-  it("transitions the exact imported job to reviewed after the decision commits", async () => {
-    const pool = {
-      query: vi.fn().mockResolvedValue({ rows: [{ manifest: {
-        schema_version: 1,
-        id: `imp_${"a".repeat(32)}`,
-        source_review_packet_id: `rvp_${"b".repeat(32)}`,
-        source_review_packet_digest: "c".repeat(64),
-        records: [{ record_id: JOB_ID, kind: "analysis_job", version: 1, payload_digest: "d".repeat(64) }],
-        review_request_id: REQUEST_ID,
-        imported_at: NOW
-      } }] })
+  function poolFor(reviewKind: string): Pool {
+    return {
+      query: vi.fn().mockImplementation((text: string) => {
+        if (text.includes("review_kind")) {
+          return Promise.resolve({ rows: [{ review_kind: reviewKind }] });
+        }
+        return Promise.resolve({ rows: [{ manifest: {
+          schema_version: 1,
+          id: `imp_${"a".repeat(32)}`,
+          source_review_packet_id: `rvp_${"b".repeat(32)}`,
+          source_review_packet_digest: "c".repeat(64),
+          records: [{ record_id: JOB_ID, kind: "analysis_job", version: 1, payload_digest: "d".repeat(64) }],
+          review_request_id: REQUEST_ID,
+          imported_at: NOW
+        } }] });
+      })
     } as unknown as Pool;
+  }
+
+  it("transitions the exact imported job to reviewed after the decision commits", async () => {
+    const pool = poolFor("candidate");
     const reviews = {
       createRequest: vi.fn(), getRequest: vi.fn(), getDecision: vi.fn(), listDecisions: vi.fn(),
       listDecisionsForSubject: vi.fn(), getConsumption: vi.fn(), revoke: vi.fn(),
@@ -85,5 +94,27 @@ describe("review decision service", () => {
       decision: { outcome: "approve", disposition: "build" }
     });
     expect(jobs.put).toHaveBeenCalledWith(output.job);
+  });
+
+  it("records deployment decisions without demanding an analysis job", async () => {
+    const pool = poolFor("deployment");
+    const reviews = {
+      createRequest: vi.fn(), getRequest: vi.fn(), getDecision: vi.fn(), listDecisions: vi.fn(),
+      listDecisionsForSubject: vi.fn(), getConsumption: vi.fn(), revoke: vi.fn(),
+      consumeDecision: vi.fn(), decide: vi.fn().mockResolvedValue(result)
+    };
+    const jobs = { get: vi.fn(), put: vi.fn() };
+    const service = createReviewDecisionService({ pool, reviews, jobs, clock: () => NOW });
+    const output = await service.decide(REQUEST_ID, {
+      idempotency_key: result.decision.idempotency_key,
+      expected_lock_version: 1,
+      expected_subject_digest: result.decision.subject_digest,
+      action: "approve",
+      confirmation: result.decision.confirmation,
+      rationale: "Approve the exact plan."
+    });
+    expect(output.result.decision.id).toBe(result.decision.id);
+    expect(output.job).toBeNull();
+    expect(jobs.get).not.toHaveBeenCalled();
   });
 });

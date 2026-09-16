@@ -40,8 +40,19 @@ export function createReviewDecisionService(dependencies: {
     return jobs[0].record_id;
   }
 
+  async function isCandidateReview(requestId: string): Promise<boolean> {
+    const row = await dependencies.pool.query<{ review_kind: string }>(
+      "SELECT review_kind FROM caphub.review_requests WHERE request_id = $1",
+      [requestId]
+    );
+    return row.rows[0]?.review_kind === "candidate";
+  }
+
   async function transitionJob(requestId: string, result: ReviewDecisionResult): Promise<AnalysisJob | null> {
     if (result.decision.action === "revoke") return null;
+    // Only Candidate reviews resume an analysis job; release/deployment and
+    // later-phase reviews have no linked job and must not fail here.
+    if (!(await isCandidateReview(requestId))) return null;
     const jobId = await linkedJob(requestId);
     const current = await dependencies.jobs.get(jobId);
     if (!current) throw new ReviewServiceError("REVIEW_JOB_NOT_FOUND");

@@ -52,8 +52,12 @@ let sharedRuntime: Promise<ControlHostRegistryRuntime> | null = null;
 const E2E_ROOT_ENV = "ALLJOBS_CAPHUB_REVIEW_E2E_ROOT";
 const E2E_TOKEN_ENV = "ALLJOBS_CAPHUB_REVIEW_E2E_TOKEN";
 const E2E_OWNER_ENV = "ALLJOBS_CAPHUB_REVIEW_E2E_OWNER_PID";
+const P4_ROOT_ENV = "ALLJOBS_CAPHUB_P4_E2E_ROOT";
+const P4_TOKEN_ENV = "ALLJOBS_CAPHUB_P4_E2E_TOKEN";
+const P4_OWNER_ENV = "ALLJOBS_CAPHUB_P4_E2E_OWNER_PID";
 const E2E_DATABASE_ENV = "CAPHUB_E2E_DATABASE_URL";
 const E2E_SENTINEL = ".alljobs-caphub-review-e2e-fixture.json";
+const P4_SENTINEL = ".alljobs-caphub-p4-e2e-fixture.json";
 
 function assertRegularOwnedPath(path: string, kind: "file" | "directory"): void {
   const metadata = lstatSync(path);
@@ -71,19 +75,22 @@ function isOwnedE2eSocket(
   databaseUrl: string
 ): boolean {
   if (registry.databaseUrlEnv !== E2E_DATABASE_ENV) return false;
-  const root = env[E2E_ROOT_ENV];
-  const token = env[E2E_TOKEN_ENV];
-  const ownerPid = Number(env[E2E_OWNER_ENV]);
+  const root = env[E2E_ROOT_ENV] ?? env[P4_ROOT_ENV];
+  const token = env[E2E_TOKEN_ENV] ?? env[P4_TOKEN_ENV];
+  const ownerPid = Number(env[E2E_OWNER_ENV] ?? env[P4_OWNER_ENV]);
   if (!root || !token || !Number.isSafeInteger(ownerPid) || ownerPid <= 0) {
     throw new Error("missing Registry E2E fixture ownership");
   }
   const canonicalTmp = realpathSync(tmpdir());
   assertRegularOwnedPath(root, "directory");
-  if (dirname(root) !== canonicalTmp || !basename(root).startsWith("alljobs-caphub-review-e2e-")
+  const ownedPrefix = basename(root).startsWith("alljobs-caphub-review-e2e-")
+    || basename(root).startsWith("alljobs-caphub-p4-e2e-");
+  if (dirname(root) !== canonicalTmp || !ownedPrefix
     || objectRoot !== join(root, "home", "state", "caphub")) {
     throw new Error("unsafe Registry E2E fixture root");
   }
-  const sentinelPath = join(root, E2E_SENTINEL);
+  const sentinelName = basename(root).startsWith("alljobs-caphub-p4-e2e-") ? P4_SENTINEL : E2E_SENTINEL;
+  const sentinelPath = join(root, sentinelName);
   assertRegularOwnedPath(sentinelPath, "file");
   const sentinel = JSON.parse(readFileSync(sentinelPath, "utf8")) as { token?: unknown; ownerPid?: unknown };
   if (sentinel.token !== token || sentinel.ownerPid !== ownerPid) {

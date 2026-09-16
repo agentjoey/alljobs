@@ -1,0 +1,20 @@
+# Caphub P4 final-build screenshots
+
+All captures come from the production build (`next build` + `next start`) bound to the exact
+final implementation commit recorded in `.agent/caphub/p4-implementation-log.md`. Browser
+captures use true 390px device metrics via Playwright (never raw headless Chrome
+`--window-size=390`). The fixture PostgreSQL cluster and fixture Vault/target roots are
+sentinel-owned temporary directories created by `tests/e2e/caphub-package-export-fixtures.ts`.
+
+| File | Route | Viewport | State |
+|---|---|---|---|
+| `capability-waiting-1440.png` | `/capabilities/<waiting-release>` | 1440×1000 | Release waiting, adapter previews, Obsidian conflict, unconsumed deployment plan |
+| `capability-deployed-1440.png` | `/capabilities/<deployed-release>` | 1440×1000 | Finalized release, active pointer, deployment history, rollback plan |
+| `capability-deployed-390.png` | `/capabilities/<deployed-release>` | 390×844 (true device metrics) | Narrow viewport, no horizontal overflow |
+
+Visual assertions per capture: semantic section headings (Release candidate / Neutral package
+manifest / Adapter previews / Obsidian projection / Deployment plans / Deployment history),
+no absolute roots, no publish action, Paper Workbench styling preserved.
+
+Build SHA: see `p4-implementation-log.md` final entry.
+Registry fixture digest: deterministic seeded records from `caphub-package-export-fixtures.ts`.
