@@ -83,20 +83,32 @@ describe("capture-level deterministic preprocessing", () => {
   it("aborts in-flight OCR when the whole preprocessing stage reaches its deadline", async () => {
     const bytes = await createRasterFixture();
     let observedSignal: AbortSignal | undefined;
-    await expect(preprocessCapture({
-      captureId: CAPTURE_ID,
-      images: [{ bytes, object: objectRefFor(bytes) }]
-    }, {
-      recognizeText: async (_input, _index, signal) => {
-        observedSignal = signal;
-        return await new Promise((_resolve, reject) => {
-          signal?.addEventListener("abort", () => reject(new Error("OCR_ABORTED")), { once: true });
-        });
-      },
-      decodeBarcodes: async () => []
-    }, {
-      limits: { preprocessingTimeoutMs: 5, ocrTimeoutMsPerImage: 50 }
-    })).rejects.toThrow(/PREPROCESSING_TIMEOUT/);
-    expect(observedSignal?.aborted).toBe(true);
+    let markStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => { markStarted = resolve; });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const pending = preprocessCapture({
+        captureId: CAPTURE_ID,
+        images: [{ bytes, object: objectRefFor(bytes) }]
+      }, {
+        recognizeText: async (_input, _index, signal) => {
+          observedSignal = signal;
+          markStarted?.();
+          return await new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new Error("OCR_ABORTED")), { once: true });
+          });
+        },
+        decodeBarcodes: async () => []
+      }, {
+        limits: { preprocessingTimeoutMs: 5, ocrTimeoutMsPerImage: 50 }
+      });
+      await started;
+      const rejection = expect(pending).rejects.toThrow(/PREPROCESSING_TIMEOUT/);
+      await vi.advanceTimersByTimeAsync(5);
+      await rejection;
+      expect(observedSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
