@@ -1,3 +1,8 @@
+// @vitest-environment node
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { main, parseCaphubAnalyzeArgs, runCaphubAnalyze } from "./caphub-analyze";
 
@@ -37,5 +42,28 @@ describe("caphub-analyze command boundary", () => {
     expect(write).toHaveBeenCalledWith(expect.stringContaining(`job_${"b".repeat(32)}`));
 
     await expect(main(["--api-key=secret"], loadService, write)).rejects.toThrow(/Usage|invalid/i);
+  });
+
+  it("runs the package command in an explicit server-only module condition and stays disabled by default", () => {
+    const home = mkdtempSync(join(tmpdir(), "alljobs-caphub-cli-"));
+    try {
+      chmodSync(home, 0o700);
+      const trusted = join(home, "trusted");
+      mkdirSync(trusted, { mode: 0o700 });
+      writeFileSync(join(home, "config.json"), JSON.stringify({
+        trustedCodeRoots: [trusted],
+        caphub: { enabled: false }
+      }), { mode: 0o600 });
+      const result = spawnSync("npm", ["run", "caphub:analyze", "--", CAPTURE_ID], {
+        cwd: process.cwd(),
+        env: { ...process.env, ALLJOBS_HOME: home },
+        encoding: "utf8"
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("ANALYSIS_DISABLED");
+      expect(result.stderr).not.toContain("Client Component module");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });
