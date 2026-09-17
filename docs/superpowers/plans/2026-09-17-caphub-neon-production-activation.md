@@ -321,27 +321,27 @@
 - The E2E fixture receives only a non-Production validation branch alias and temporary credential environment references supplied by the authorized operator; it never reads Production values.
 - Scenario evidence records only aliases, source digests, object counts, migration checksums, and pass/fail results.
 
-- [ ] **Step 1: Write fixture-only BDD scenarios.**
+- [x] **Step 1: Write fixture-only BDD scenarios.**
 
   Cover: a synthetic image Capture is written to the private validation bucket and Registry, read back through the runtime, and shows no public URL; a second equal write is idempotent; a deliberately mismatched object fails closed; a fresh Neon child branch can read the matching database row/object snapshot; and an attempted delete is absent from client operations. Mark the suite skipped unless all explicit validation environment references are supplied.
 
-- [ ] **Step 2: Run local RED/skip validation.**
+- [x] **Step 2: Run local RED/skip validation.**
 
   Run: `pnpm exec playwright test --config playwright.caphub-production-pilot.config.ts tests/e2e/caphub-neon-validation.spec.ts`
 
   Expected: skipped with no validation-branch references; the test must make no network call in this state.
 
-- [ ] **Step 3: Implement the fixture and authorized validation procedure.**
+- [x] **Step 3: Implement the fixture and authorized validation procedure.**
 
   Create only the narrowly scoped test fixture. Before executing against Neon, stop and obtain the explicit N1 validation authorization naming the non-Production branch, temporary credentials, and permitted synthetic objects. On authorization, run exactly one checksum-bound synthetic scenario, capture redacted evidence, and stop on the first mismatch. Do not use Production data, create Production resources, or run the app service.
 
-- [ ] **Step 4: Run the final implementation gates.**
+- [x] **Step 4: Run the final implementation gates.**
 
   Run focused tests from Tasks 1–5, then `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `pnpm run verify:deploy`. Run the Caphub production-pilot browser suite only if this code changes its visible routes; otherwise record that no UI surface changed and reuse the existing final-build screenshots.
 
   Expected: every selected check passes. Resolve failures before review; do not substitute broad unrelated suites for a failed focused test.
 
-- [ ] **Step 5: Update evidence and commit.**
+- [x] **Step 5: Update evidence and commit.**
 
   Record exact commit, focused test totals, build/lint/typecheck/deploy invariant results, BDD result or its explicit authorization block, and remaining N1/N4 hard gates. Then commit:
 

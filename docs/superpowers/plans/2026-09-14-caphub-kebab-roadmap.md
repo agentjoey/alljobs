@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Production activation 已批准采用 local-first 方案并完成 spec/plan，implementation 与 PA-B/PA-C/PA-D 仍待执行；P4-A/P4-B/P4-C 未动
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Neon activation implementation 已完成，等待 N1/PA-B-N 的逐项 Production 授权；P4-A/P4-B/P4-C 未动
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -272,9 +272,9 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 **实现状态（2026-09-17）**
 
-- Spec：`docs/superpowers/specs/2026-09-17-caphub-production-activation-design.md`
+- Spec：`docs/superpowers/specs/2026-09-17-caphub-neon-production-activation-design.md`
 - 开发计划：`docs/superpowers/plans/2026-09-17-caphub-production-activation.md`
-- 数据库决策：方案 A，Control Host 本地 PostgreSQL 17；保持 Neon-ready，P6 前复评。
+- 数据库/对象树决策：既有 Neon `alljobs` Production branch 的 TLS Registry 与 private Object Storage；本地 Capture tree 保留为只读回滚源。尚未创建或改动任何 Neon 资源。
 - 范围：Capture → operator-started analysis → Review Center → Candidate/Release 审批 → neutral package 与 Codex/Claude/Hermes adapter preview。
 - P5/P6、自研能力、真实 Obsidian/Agent root、Deployment plan、publish/install/rollback 均不进入本轮。
 - Tasks 0–8 已在隔离分支完成并通过 PA-A：Next.js `16.3.3`、Unix-socket PostgreSQL contracts、checksum migrations、filesystem Capture import、备份/隔离恢复、Registry-native analysis import、Release compose/finalize、单条 P1–P4 fixture pilot、最终 build 截图、metadata-only preflight、threat model 与 runbook。最终门禁为 167 files / 1430 tests、typecheck PASS、lint 0 errors / 79 warnings、webpack Production build PASS、deployment invariants PASS、pilot E2E 1/1；三项 scoped Review finding 已在 `5b434f4` 修复，fix-only Review 与独立 Verification 均 PASS。Linear 因 workspace free-plan issue limit 未能更新，不声明 Linear 完成。
@@ -283,10 +283,10 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 - implementation 先补齐 Next.js `16.3.3` 安全基线、本地 Unix-socket Registry、filesystem Capture migration、备份/恢复、analysis→ReviewPacket import 和 Release compose/finalize operator bridge。
 - task 内只跑聚焦 RED→GREEN；最终只做一次全量 phase gate、一次 scoped independent Review 和一次 independent Verification。
-- PA-B 继续控制真实数据库/LaunchAgent/config/secret；PA-C 控制每次真实 provider request；PA-D 控制 push/merge/release/rebuild/reload/cutover。
+- N1/PA-B-N 继续控制真实 Neon bucket/database/roles/network/credential/config 写入；PA-C 控制每次真实 provider request；PA-D 控制 push/merge/release/rebuild/reload/cutover。
 - Kimi `k3-256k` direct-HTTP structured output 未证明；失败时可停在 S3（Capture + Registry + Review + read-only P4 preview），不得自动重试或降级。
 - P4 exports master 只用于 read-only package/adapter preview；所有 target switches 保持 false 且无 root/alias，因此 P4-A/P4-B/P4-C 继续关闭。
-- PA-B 与单独明确的 S1 listener-stop 已获授权并执行停机；应用 listener 已停止。当前卡在 source backup 前置条件：未配置 Time Machine destination、未发现已挂载或已配置的 off-host backup facility，因此不得创建真实 Registry。尚未发生数据库、LaunchAgent、config/secret、provider、Capture import、Registry backup、push/merge/deploy/release 变更；PA-C/PA-D 未执行。
+- PA-B 与单独明确的 S1 listener-stop 已获授权并执行停机；应用 listener 已停止。原 Time Machine/off-host source-backup 前置条件已由批准的 Neon N2 immutable-object transfer + N4 recovery-branch proof 取代。Neon implementation 提供 strict TLS host policy、private path-style S3 adapter、manifest-bound object transfer、redacted preflight/attestations 和 opt-in non-Production BDD；当前 BDD 因没有显式 temporary validation references 而 1 skipped，未发起网络请求。N1 前没有数据库、bucket、role、network、config/secret、provider、Capture import、target、push/merge/deploy/release 变更；PA-C/PA-D 未执行。
 
 ## P5：自研能力人工移交闭环
 

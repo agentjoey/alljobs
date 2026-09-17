@@ -257,3 +257,28 @@ and one independent Verification occur only after the implementation tasks.
 - PA-A is complete. Production smoke is intentionally unrun. PA-B plus a
   separately explicit S1 listener-stop action is the next hard stop; PA-C,
   PA-D, P4 targets, P5/P6, push, merge, deploy, and release remain closed.
+
+## Neon activation revision — Tasks 1–6
+
+- Human-approved design replaces the unavailable local Time Machine/off-host
+  backup prerequisite with a private immutable Neon object copy and a recovery
+  branch proof. The existing `alljobs` Production branch's Object Storage
+  capability was verified in the control plane; this log records no Neon write.
+- Implementation commits: `ceb8b51` strict Registry configuration/host policy;
+  `9633bd9` private path-style immutable S3 adapter; `af126df` manifest-bound
+  object transfer; `260b583` runtime composition; `62f3384` managed readiness,
+  redacted attestations, and N1–N4 runbook.
+- The Task 6 BDD suite receives only explicitly named non-Production source and
+  recovery branch references. Without all temporary references it skips before
+  constructing a pool or S3 client: `1 skipped`, no network request. It never
+  reads Production environment names or manages branches/buckets.
+- Final local implementation gate: 13 focused files / 108 tests PASS;
+  typecheck PASS; full lint 0 errors / 79 existing warnings; webpack Production
+  build PASS (Build ID `QO-gOxPfjA0_Ls8KP3HjH`); deployment invariants PASS.
+  No visible route changed in this revision, so no new browser screenshot was
+  required; existing final-build P1–P4 screenshots remain the UI evidence.
+- Remaining hard gates: N1/PA-B-N for any Production Neon provisioning or
+  private environment installation; N2 object transfer; N3 Registry import;
+  N4 recovery proof; PA-D application rebuild/reload; PA-C one real Kimi
+  canary. No provider call, service restart, deployment, push, merge, or
+  release occurred.
