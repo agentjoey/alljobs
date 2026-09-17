@@ -1,8 +1,8 @@
-import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { listIncompleteOperations, readOperation, writeOperation, type OperationRecord } from "./recovery";
+import { acquireLeaseLock, listIncompleteOperations, readOperation, writeOperation, type OperationRecord } from "./recovery";
 
 let created: string[] = [];
 
@@ -64,5 +64,52 @@ describe("operation records", () => {
     await mkdir(join(root, "operations"), { recursive: true });
     await writeFile(join(root, "operations", `dep_${"9".repeat(32)}.json`), "not json", "utf8");
     expect(await listIncompleteOperations(root)).toEqual([]);
+  });
+});
+
+describe("lease lock ownership", () => {
+  function leaseOptions(overrides: { alive?: boolean; staleMs?: number } = {}) {
+    return {
+      isProcessAlive: () => overrides.alive ?? true,
+      staleMs: overrides.staleMs ?? 0,
+      now: () => Date.parse("2026-09-17T00:00:00.000Z")
+    };
+  }
+
+  it("refuses to take over a live lock and leaves it untouched", async () => {
+    const root = await freshRoot();
+    const first = await acquireLeaseLock(root, ".test-lock", "op-a", leaseOptions({ alive: true }));
+    await expect(acquireLeaseLock(root, ".test-lock", "op-a", leaseOptions({ alive: true })))
+      .rejects.toMatchObject({ code: "PUBLISH_RECOVERY_REQUIRED" });
+    const owner = JSON.parse(await readFile(join(root, ".test-lock", "owner.json"), "utf8"));
+    expect(owner.operation_id).toBe("op-a");
+    await first();
+  });
+
+  it("takes over only a proven-stale lock for the same operation", async () => {
+    const root = await freshRoot();
+    const release = await acquireLeaseLock(root, ".test-lock", "op-a", leaseOptions({ alive: false }));
+    await release();
+    // Simulate a crashed holder: lock dir remains with a dead pid.
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir(join(root, ".test-lock"), { recursive: true });
+    await writeFile(join(root, ".test-lock", "owner.json"), JSON.stringify({
+      schema_version: 1, operation_id: "op-a", pid: 999999, acquired_at: "2026-09-16T23:00:00.000Z"
+    }));
+    const takeover = await acquireLeaseLock(root, ".test-lock", "op-a", leaseOptions({ alive: false }));
+    const owner = JSON.parse(await readFile(join(root, ".test-lock", "owner.json"), "utf8"));
+    expect(owner.operation_id).toBe("op-a");
+    await takeover();
+  });
+
+  it("never takes over a stale lock belonging to a different operation", async () => {
+    const root = await freshRoot();
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir(join(root, ".test-lock"), { recursive: true });
+    await writeFile(join(root, ".test-lock", "owner.json"), JSON.stringify({
+      schema_version: 1, operation_id: "op-other", pid: 999999, acquired_at: "2026-09-16T23:00:00.000Z"
+    }));
+    await expect(acquireLeaseLock(root, ".test-lock", "op-a", leaseOptions({ alive: false })))
+      .rejects.toMatchObject({ code: "PUBLISH_RECOVERY_REQUIRED" });
   });
 });

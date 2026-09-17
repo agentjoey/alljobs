@@ -48,6 +48,7 @@ async function freshTarget(): Promise<ValidatedTargetRoot> {
 async function readTargetState(root: ValidatedTargetRoot): Promise<TargetState> {
   const active = await readActiveManifestDirectory(root.root);
   if (active === null) return { files: [], pointer: null };
+  const activeDirectory = active.directory;
   const files: PackageFile[] = [];
   const { readdir } = await import("node:fs/promises");
   async function walk(directory: string): Promise<void> {
@@ -58,7 +59,7 @@ async function readTargetState(root: ValidatedTargetRoot): Promise<TargetState> 
       else if (entry.isFile() && entry.name !== ".caphub-version.json") {
         const raw = await readFile(full);
         files.push({
-          path: full.slice(active.directory.length + 1),
+          path: full.slice(activeDirectory.length + 1),
           media_type: "text/markdown",
           content: raw.toString("utf8"),
           sha256: createHash("sha256").update(raw).digest("hex"),
@@ -67,7 +68,7 @@ async function readTargetState(root: ValidatedTargetRoot): Promise<TargetState> 
       }
     }
   }
-  await walk(active.directory);
+  await walk(activeDirectory);
   return { files, pointer: active.pointer };
 }
 

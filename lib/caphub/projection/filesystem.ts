@@ -32,6 +32,8 @@ export interface ApplyInput {
     postimage_digest: string;
   };
   documents: ProjectionDocumentInput[];
+  /** Injectable lease liveness/staleness for recovery tests. */
+  lock?: import("../deployments/recovery").AcquireLeaseOptions;
   hooks?: ApplyHooks;
 }
 
@@ -39,21 +41,9 @@ function sha256Hex(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function acquireLock(root: string): Promise<() => Promise<void>> {
-  try {
-    await mkdir(join(root, LOCK_DIRECTORY));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new ProjectionApplyError("PUBLISH_RECOVERY_REQUIRED", "another apply holds the target lock");
-    }
-    throw error;
-  }
-  let released = false;
-  return async () => {
-    if (released) return;
-    released = true;
-    await rm(join(root, LOCK_DIRECTORY), { recursive: true, force: true });
-  };
+async function acquireLock(root: string, operationId: string, options?: import("../deployments/recovery").AcquireLeaseOptions): Promise<() => Promise<void>> {
+  const { acquireLeaseLock } = await import("../deployments/recovery");
+  return acquireLeaseLock(root, LOCK_DIRECTORY, operationId, options);
 }
 
 async function readRecovery(root: string): Promise<unknown | null> {
@@ -163,7 +153,7 @@ export async function applyProjectionPlan(input: ApplyInput): Promise<{ applied:
   if (recovery !== null) {
     throw new ProjectionApplyError("PUBLISH_RECOVERY_REQUIRED", "an interrupted apply must be reconciled first");
   }
-  const releaseLock = await acquireLock(input.root.root);
+  const releaseLock = await acquireLock(input.root.root, input.plan.postimage_digest, input.lock);
   let applied = 0;
   try {
     const documentsByPath = new Map(input.documents.map((document) => [document.relative_path, document]));
@@ -213,7 +203,6 @@ export async function reconcileProjection(input: ApplyInput): Promise<{ applied:
   if (record.plan_postimage_digest !== input.plan.postimage_digest) {
     throw new ProjectionApplyError("PUBLISH_RECOVERY_REQUIRED", "recovery record does not match the supplied plan");
   }
-  await rm(join(input.root.root, LOCK_DIRECTORY), { recursive: true, force: true });
   await rm(join(input.root.root, RECOVERY_FILE), { force: true });
   const result = await applyProjectionPlan(input);
   return result;

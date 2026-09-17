@@ -291,3 +291,48 @@ describe.sequential("Codex acceptance fixes 1-3 (publisher fail-closed)", () => 
     await expect(readFile(join(target.root, "versions", plan.release.record_id, "1", plan.preview_manifest_digest, ".caphub-version.json"), "utf8")).rejects.toThrow();
   });
 });
+
+describe.sequential("Codex acceptance fix 4 (recovery lock lease)", () => {
+  const LOCK_DIR = ".caphub-deployment.lock";
+
+  async function writeLease(target: ValidatedTargetRoot, operationId: string, pid: number, acquiredAt: string): Promise<void> {
+    await mkdir(join(target.root, LOCK_DIR), { recursive: true });
+    await writeFile(join(target.root, LOCK_DIR, "owner.json"), JSON.stringify({
+      schema_version: 1, operation_id: operationId, pid, acquired_at: acquiredAt
+    }));
+  }
+
+  it("refuses recovery while a live lock is held and preserves the lock untouched", async () => {
+    const seed = nextSeed() + 3000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    await writeLease(target, deploymentId, 424242, "2026-09-17T00:00:00.000Z");
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    input.lock = { isProcessAlive: () => true, staleMs: 0, now: () => Date.parse("2026-09-17T00:00:10.000Z") };
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "PUBLISH_RECOVERY_REQUIRED" });
+    const owner = JSON.parse(await readFile(join(target.root, LOCK_DIR, "owner.json"), "utf8"));
+    expect(owner.pid).toBe(424242);
+    await expect(readFile(join(target.root, "current.json"), "utf8")).rejects.toThrow();
+  });
+
+  it("takes over only a proven-stale lock for the interrupted operation", async () => {
+    const seed = nextSeed() + 3000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    await writeLease(target, deploymentId, 999999, "2026-09-16T23:00:00.000Z");
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    input.lock = { isProcessAlive: () => false, staleMs: 0, now: () => Date.parse("2026-09-17T00:00:10.000Z") };
+    const { pointer } = await publishToTarget(input);
+    expect(pointer.deployment_id).toBe(deploymentId);
+    // The stale lease was taken over and released cleanly on success.
+    await expect(readFile(join(target.root, LOCK_DIR, "owner.json"), "utf8")).rejects.toThrow();
+    const completed = JSON.parse(await readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8"));
+    expect(completed.stage).toBe("completed");
+  });
+});

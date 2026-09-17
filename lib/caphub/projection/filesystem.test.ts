@@ -199,3 +199,48 @@ describe("applyProjectionPlan", () => {
       .rejects.toBeInstanceOf(ProjectionApplyError);
   });
 });
+
+describe("recovery lock lease (acceptance fix 4)", () => {
+  const LOCK_DIR = ".caphub-projection.lock";
+
+  async function writeLease(root: ValidatedTargetRoot, operationId: string, pid: number, acquiredAt: string): Promise<void> {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir(join(root.root, LOCK_DIR), { recursive: true });
+    await writeFile(join(root.root, LOCK_DIR, "owner.json"), JSON.stringify({
+      schema_version: 1, operation_id: operationId, pid, acquired_at: acquiredAt
+    }));
+  }
+
+  it("refuses apply while a live lock is held and preserves the lock", async () => {
+    const root = await freshValidatedRoot();
+    const doc = document();
+    const plan = await planned(root, [doc]);
+    await writeLease(root, plan.postimage_digest, 424242, "2026-09-17T00:00:00.000Z");
+    await expect(applyProjectionPlan({
+      root,
+      plan,
+      documents: [doc],
+      lock: { isProcessAlive: () => true, staleMs: 0, now: () => Date.parse("2026-09-17T00:00:10.000Z") }
+    })).rejects.toMatchObject({ code: "PUBLISH_RECOVERY_REQUIRED" });
+    const { readFile } = await import("node:fs/promises");
+    const owner = JSON.parse(await readFile(join(root.root, LOCK_DIR, "owner.json"), "utf8"));
+    expect(owner.pid).toBe(424242);
+  });
+
+  it("takes over a proven-stale lock bound to the same projection plan", async () => {
+    const root = await freshValidatedRoot();
+    const doc = document();
+    const plan = await planned(root, [doc]);
+    await writeLease(root, plan.postimage_digest, 999999, "2026-09-16T23:00:00.000Z");
+    const result = await applyProjectionPlan({
+      root,
+      plan,
+      documents: [doc],
+      lock: { isProcessAlive: () => false, staleMs: 0, now: () => Date.parse("2026-09-17T00:00:10.000Z") }
+    });
+    expect(result.applied).toBe(1);
+    const { readFile } = await import("node:fs/promises");
+    const parsed = parseObsidianDocument(await readFile(join(root.root, "Caphub", "20 Capabilities", "pdf-tool.md"), "utf8"));
+    expect(parsed.record_id).toBe(FIXTURE_RECORD_ID);
+  });
+});

@@ -10,10 +10,12 @@ import { ProjectionPathError, resolveSafeDescendant, type ValidatedTargetRoot } 
 import type { CurrentPointer } from "./plan";
 import { derivePlanRecordId } from "./plan";
 import {
+  acquireLeaseLock,
   DEPLOYMENT_LOCK_DIRECTORY,
   listIncompleteOperations,
   readOperation,
   writeOperation,
+  type AcquireLeaseOptions,
   type OperationRecord
 } from "./recovery";
 
@@ -141,21 +143,8 @@ function manifestDigestFor(files: PackageFile[]): string {
   });
 }
 
-async function acquireLock(root: string): Promise<() => Promise<void>> {
-  try {
-    await mkdir(join(root, DEPLOYMENT_LOCK_DIRECTORY));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new PublishError("PUBLISH_RECOVERY_REQUIRED", "another publish holds the target lock");
-    }
-    throw error;
-  }
-  let released = false;
-  return async () => {
-    if (released) return;
-    released = true;
-    await rm(join(root, DEPLOYMENT_LOCK_DIRECTORY), { recursive: true, force: true });
-  };
+async function acquireLock(root: string, operationId: string, options?: AcquireLeaseOptions): Promise<() => Promise<void>> {
+  return acquireLeaseLock(root, DEPLOYMENT_LOCK_DIRECTORY, operationId, options);
 }
 
 interface VersionMarker {
@@ -407,6 +396,8 @@ export interface PublishInput {
   /** Mandatory spec §9.2 apply-time authority revalidation. Must throw a P4
    * coded error on any mismatch; the publish fails closed when absent. */
   assertAuthority: (plan: DeploymentPlan) => Promise<void>;
+  /** Injectable lease liveness/staleness for recovery tests. */
+  lock?: AcquireLeaseOptions;
   hooks?: {
     afterVersionFinalization?(): Promise<void>;
     afterRegistryDeployment?(): Promise<void>;
@@ -541,7 +532,7 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     return { pointer: pointer! };
   }
 
-  const releaseLock = await acquireLock(input.root.root);
+  const releaseLock = await acquireLock(input.root.root, input.deploymentRecordId, input.lock);
   try {
     const currentPointer = await readTargetPointer(input.root);
 
