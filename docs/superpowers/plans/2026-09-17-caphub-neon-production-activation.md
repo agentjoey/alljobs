@@ -238,27 +238,27 @@
 - Local mode keeps `LocalCaptureObjectStore`; Neon mode creates `NeonS3CaptureObjectStore` only after exact config and all four secret environment references validate.
 - Produces no fallback from selected Neon mode to a local tree.
 
-- [ ] **Step 1: Add RED composition tests.**
+- [x] **Step 1: Add RED composition tests.**
 
   Add a runtime test that supplies valid fake Neon storage credentials through the named environment references and an injected S3 command-port factory; assert the runtime uses the Neon adapter and captures/analysis can reread the same immutable ref. Add failure cases for missing secret reference, HTTP endpoint, wrong bucket, or unapproved Registry host; assert no `Pool`/S3 factory runs on those failures. Preserve an explicit local-mode regression.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/runtime.test.ts lib/caphub/service/analyze-runtime.test.ts app/api/caphub/captures/route.test.ts app/api/caphub/captures/[id]/route.test.ts`
 
   Expected: FAIL because runtime always instantiates local objects.
 
-- [ ] **Step 3: Implement composition.**
+- [x] **Step 3: Implement composition.**
 
   Parse the Object Storage environment before constructing an S3 client. Keep all secrets out of thrown public errors. Make routes rely on the composed Registry runtime whenever Registry is enabled; in disabled/local Capture-only mode retain the local adapter. In Neon mode, storage construction failure maps to the existing bounded storage-unavailable response and must not cause a local fallback. Update analysis runtime to consume `ReadableCaptureObjectStore` rather than importing the local implementation as the selected adapter.
 
-- [ ] **Step 4: Run focused GREEN checks.**
+- [x] **Step 4: Run focused GREEN checks.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/runtime.test.ts lib/caphub/service/analyze-runtime.test.ts app/api/caphub/captures/route.test.ts app/api/caphub/captures/[id]/route.test.ts lib/caphub/service/capture.test.ts && pnpm typecheck && pnpm lint -- lib/caphub/registry/runtime.ts lib/caphub/service/analyze-runtime.ts app/api/caphub/captures`
 
   Expected: PASS; no UI behavior or public DTO leaks object keys/credentials.
 
-- [ ] **Step 5: Commit runtime composition.**
+- [x] **Step 5: Commit runtime composition.**
 
   ```bash
   git add lib/caphub/registry/runtime.ts lib/caphub/registry/runtime.test.ts lib/caphub/service/analyze-runtime.ts lib/caphub/service/analyze-runtime.test.ts app/api/caphub/captures/route.ts app/api/caphub/captures/[id]/route.ts app/api/caphub/captures/route.test.ts app/api/caphub/captures/[id]/route.test.ts

@@ -6,6 +6,7 @@ import type { CaphubTestPostgres } from "../../../tests/helpers/caphub-postgres"
 import { startCaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import { applyRegistryMigrations } from "./migrate";
 import { loadControlHostRegistryRuntime } from "./runtime";
+import { NeonS3CaptureObjectStore } from "../storage/neon-s3";
 
 const registryConfig = {
   enabled: true,
@@ -88,6 +89,81 @@ describe.sequential("Control Host Registry runtime", () => {
       "SELECT count(*) FROM caphub.registry_records WHERE kind = 'capture'"
     );
     expect(database.rows[0]?.count).toBe("1");
+  });
+
+  it("uses the configured Neon object adapter without a local fallback", async () => {
+    const objectRoot = join(root, "home", "state", "caphub");
+    let constructed = 0;
+    const runtime = await loadControlHostRegistryRuntime({
+      config: {
+        caphubEnabled: true,
+        registry: registryConfig,
+        storage: {
+          mode: "neon_s3",
+          bucket: "caphub-objects",
+          accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
+          secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
+          endpointEnv: "CAPHUB_S3_ENDPOINT",
+          regionEnv: "CAPHUB_S3_REGION"
+        }
+      },
+      homeDir: join(root, "home"),
+      objectRoot,
+      env: {
+        CAPHUB_DATABASE_URL: "postgresql://caphub_app:fixture-secret@registry.example.test/caphub",
+        CAPHUB_S3_ACCESS_KEY_ID: "fixture-access",
+        CAPHUB_S3_SECRET_ACCESS_KEY: "fixture-secret",
+        CAPHUB_S3_ENDPOINT: "https://storage.example.test",
+        CAPHUB_S3_REGION: "aws-ap-southeast-1"
+      },
+      poolFactory: () => postgres.pool,
+      objectPortFactory: () => {
+        constructed += 1;
+        return {
+          head: async () => null,
+          putIfAbsent: async () => undefined,
+          get: async () => new Uint8Array(),
+          list: async () => []
+        };
+      }
+    });
+    expect(constructed).toBe(1);
+    expect(runtime.objects).toBeInstanceOf(NeonS3CaptureObjectStore);
+  });
+
+  it("rejects unsafe Neon storage before constructing a database pool or S3 command port", async () => {
+    let poolConstructed = false;
+    let portConstructed = false;
+    await expect(loadControlHostRegistryRuntime({
+      config: {
+        caphubEnabled: true,
+        registry: registryConfig,
+        storage: {
+          mode: "neon_s3",
+          bucket: "caphub-objects",
+          accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
+          secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
+          endpointEnv: "CAPHUB_S3_ENDPOINT",
+          regionEnv: "CAPHUB_S3_REGION"
+        }
+      },
+      homeDir: join(root, "home"),
+      objectRoot: join(root, "home", "state", "caphub"),
+      env: {
+        CAPHUB_DATABASE_URL: "postgresql://caphub_app:fixture-secret@registry.example.test/caphub",
+        CAPHUB_S3_ACCESS_KEY_ID: "fixture-access",
+        CAPHUB_S3_SECRET_ACCESS_KEY: "fixture-secret",
+        CAPHUB_S3_ENDPOINT: "http://storage.example.test",
+        CAPHUB_S3_REGION: "aws-ap-southeast-1"
+      },
+      poolFactory: () => { poolConstructed = true; return postgres.pool; },
+      objectPortFactory: () => {
+        portConstructed = true;
+        return { head: async () => null, putIfAbsent: async () => undefined, get: async () => new Uint8Array(), list: async () => [] };
+      }
+    })).rejects.toMatchObject({ code: "REGISTRY_UNAVAILABLE" });
+    expect(poolConstructed).toBe(false);
+    expect(portConstructed).toBe(false);
   });
 
   it("rejects connection-string attempts to downgrade the required production TLS policy", async () => {

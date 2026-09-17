@@ -5,7 +5,15 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Pool } from "pg";
 import type { loadControlHostConfig } from "../../planning/config";
+import type { ReadableCaptureObjectStore } from "../storage/contracts";
 import { LocalCaptureObjectStore } from "../storage/local-objects";
+import {
+  createNeonS3CommandPort,
+  NeonS3CaptureObjectStore,
+  parseNeonS3Environment,
+  type NeonS3Environment,
+  type S3ImmutableCommandPort
+} from "../storage/neon-s3";
 import { parseRegistryConnection } from "./connection";
 import {
   PostgresAnalysisJobStore,
@@ -18,6 +26,7 @@ import { PostgresReviewStore } from "./postgres/reviews";
 
 type ResolvedControlHost = ReturnType<typeof loadControlHostConfig>;
 type RegistryConfig = NonNullable<NonNullable<ResolvedControlHost["config"]["caphub"]>["registry"]>;
+type StorageConfig = NonNullable<NonNullable<ResolvedControlHost["config"]["caphub"]>["storage"]>;
 
 export class RegistryRuntimeError extends Error {
   constructor(
@@ -33,7 +42,7 @@ export interface ControlHostRegistryRuntime {
   pool: Pool;
   captures: PostgresCaptureStore;
   captureAudit: PostgresCaptureAuditLog;
-  objects: LocalCaptureObjectStore;
+  objects: ReadableCaptureObjectStore;
   jobs: PostgresAnalysisJobStore;
   artifacts: PostgresStageArtifactStore;
   modelAudits: PostgresModelCallAuditStore;
@@ -42,11 +51,12 @@ export interface ControlHostRegistryRuntime {
 
 export interface RegistryRuntimeOptions {
   resolved?: ResolvedControlHost;
-  config?: { caphubEnabled: boolean; registry: RegistryConfig };
+  config?: { caphubEnabled: boolean; registry: RegistryConfig; storage?: StorageConfig };
   homeDir?: string;
   objectRoot?: string;
   env?: Readonly<Record<string, string | undefined>>;
   poolFactory?: (options: ConstructorParameters<typeof Pool>[0]) => Pool;
+  objectPortFactory?: (environment: NeonS3Environment) => S3ImmutableCommandPort;
 }
 
 let sharedRuntime: Promise<ControlHostRegistryRuntime> | null = null;
@@ -176,12 +186,30 @@ function registryPoolOptions(
   };
 }
 
+function registryObjectStore(input: {
+  storage: StorageConfig | undefined;
+  root: string;
+  env: Readonly<Record<string, string | undefined>>;
+  portFactory?: (environment: NeonS3Environment) => S3ImmutableCommandPort;
+}): ReadableCaptureObjectStore {
+  if (input.storage?.mode !== "neon_s3") return new LocalCaptureObjectStore(input.root);
+  const environment = parseNeonS3Environment({
+    bucket: input.storage.bucket,
+    refs: input.storage,
+    env: input.env
+  });
+  return new NeonS3CaptureObjectStore({
+    port: (input.portFactory ?? createNeonS3CommandPort)(environment)
+  });
+}
+
 export async function loadControlHostRegistryRuntime(
   options: RegistryRuntimeOptions
 ): Promise<ControlHostRegistryRuntime> {
   const caphub = options.resolved?.config.caphub;
   const caphubEnabled = options.config?.caphubEnabled ?? caphub?.enabled ?? false;
   const registry = options.config?.registry ?? caphub?.registry;
+  const storage = options.config?.storage ?? caphub?.storage;
   if (!caphubEnabled || !registry?.enabled) throw new RegistryRuntimeError("REGISTRY_DISABLED");
 
   const root = options.objectRoot ?? options.resolved?.caphubStateDir;
@@ -195,17 +223,24 @@ export async function loadControlHostRegistryRuntime(
     && options.config === undefined
     && options.homeDir === undefined
     && options.objectRoot === undefined
-    && options.poolFactory === undefined;
+    && options.poolFactory === undefined
+    && options.objectPortFactory === undefined;
   if (useSharedRuntime && sharedRuntime) return sharedRuntime;
 
   const createRuntime = async (): Promise<ControlHostRegistryRuntime> => {
+    const objects = registryObjectStore({
+      storage,
+      root,
+      env,
+      portFactory: options.objectPortFactory
+    });
     const poolOptions = registryPoolOptions(registry, homeDir, root, env, databaseUrl);
     const pool = (options.poolFactory ?? ((value) => new Pool(value)))(poolOptions);
     return {
       pool,
       captures: new PostgresCaptureStore(pool),
       captureAudit: new PostgresCaptureAuditLog(pool),
-      objects: new LocalCaptureObjectStore(root),
+      objects,
       jobs: new PostgresAnalysisJobStore(pool),
       artifacts: new PostgresStageArtifactStore(pool),
       modelAudits: new PostgresModelCallAuditStore(pool),
