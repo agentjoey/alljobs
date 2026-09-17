@@ -69,11 +69,13 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 PA-A implementation acceptance is complete on
 `codex/caphub-production-activation`: full gate PASS, scoped independent Review
 PASS, and independent Verification PASS against final code candidate
-`5b434f4049eba40dab71c3d96f1cacf364115e7a`. Stop before PA-B. The next action
-requires fresh PA-B authorization for the exact local database/LaunchAgent/
-config/secret/import/backup changes and a separately explicit authorization to
-stop the Production listener for S1. Provider calls, application cutover, and
-P4 targets remain separately Human-gated.
+`5b434f4049eba40dab71c3d96f1cacf364115e7a`. PA-B and the separate S1 listener
+stop were authorized and the listener is now stopped. Execution is paused in S1
+because no approved off-host/Time Machine backup destination is configured;
+the complete Capture source backup is required before Registry mutation. The
+next safe action is to provide or authorize one backup destination, create and
+verify the whole-tree source backup, then resume PA-B. Provider calls,
+application cutover, and P4 targets remain separately Human-gated.
 
 ## Caphub development status — 2026-09-16
 

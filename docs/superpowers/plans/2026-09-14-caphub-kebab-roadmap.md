@@ -286,7 +286,7 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - PA-B 继续控制真实数据库/LaunchAgent/config/secret；PA-C 控制每次真实 provider request；PA-D 控制 push/merge/release/rebuild/reload/cutover。
 - Kimi `k3-256k` direct-HTTP structured output 未证明；失败时可停在 S3（Capture + Registry + Review + read-only P4 preview），不得自动重试或降级。
 - P4 exports master 只用于 read-only package/adapter preview；所有 target switches 保持 false 且无 root/alias，因此 P4-A/P4-B/P4-C 继续关闭。
-- 当前停点仍在 Production mutation 之前；下一步需要 PA-B 以及单独明确的 S1 listener-stop 授权。PA-B/PA-C/PA-D 均未执行，真实数据库、LaunchAgent、config/secret、provider、service、push/merge/deploy/release 均未改变。
+- PA-B 与单独明确的 S1 listener-stop 已获授权并执行停机；应用 listener 已停止。当前卡在 source backup 前置条件：未配置 Time Machine destination、未发现已挂载或已配置的 off-host backup facility，因此不得创建真实 Registry。尚未发生数据库、LaunchAgent、config/secret、provider、Capture import、Registry backup、push/merge/deploy/release 变更；PA-C/PA-D 未执行。
 
 ## P5：自研能力人工移交闭环
 
