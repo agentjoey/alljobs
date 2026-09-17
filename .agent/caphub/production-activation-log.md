@@ -312,6 +312,10 @@ and one independent Verification occur only after the implementation tasks.
   role inventory confirms `caphub_migrator` and `caphub_app` use
   `authentication_method: no_login`; no replacement secret was issued or
   retained.
-- No Caphub database creation, credential installation, migration, object
-  transfer, Registry import, recovery proof, provider request, service restart,
-  deployment, push, merge, or release occurred.
+- Under the later explicit N1 configuration authorization, `caphub` was created
+  with `caphub_migrator` as owner and both target roles were restored as login
+  roles. Their final passwords were rotated and only the application pooled URL
+  and direct migrator URL were installed in the existing mode-`600` private
+  LaunchAgent environment. No credential value is retained here.
+- No migration, object transfer, Registry import, recovery proof, provider
+  request, service restart, deployment, push, merge, or release occurred.

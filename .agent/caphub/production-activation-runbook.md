@@ -108,9 +108,10 @@ tree and recovery branch remain preserved.
 
 PA-D must name the accepted commit/build, migration checksums, object digest and
 count, recovery proof, intended private environment-reference/config diff, and
-rollback build. Only then may the operator install the private Neon environment
-references, rebuild/reload `com.agentjoey.alljobs`, and enter S3. Do not restart
-the refresh worker, Tunnel, Access, or domain.
+rollback build. A separately authorized N1 step may install private Neon
+environment references while the service remains stopped; only PA-D may
+rebuild/reload `com.agentjoey.alljobs` and enter S3. Do not restart the refresh
+worker, Tunnel, Access, or domain.
 
 ## S3 / PA-C / S4
 
