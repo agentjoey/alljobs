@@ -90,3 +90,7 @@ Codex acceptance at 3b167b3 was **changes requested** (7 boundary findings). Fix
 - `.pact/seat` is a **tracked** file with a local seat-binding modification (opencode→kimi); preserved, never staged/restored/committed in any fix commit.
 - The earlier independent verification evaluated pre-fix evidence; a fresh independent verification is bound to the final fix SHA (see `.agent/caphub/p4-acceptance-verification.md`).
 - Lint warnings reconciled from fresh output: 89 (was recorded as 81/82 mid-batch before the fix batch grew the test surface).
+
+### Scoped independent review of the fix batch
+
+One independent reviewer evaluated `3b167b3..628b553`: 1 HIGH + 4 MEDIUM + 2 LOW. All HIGH/MEDIUM fixed in `196110d` (convergence stage gate, mandatory authority factory with diff reproduction, rollback replay, operation JSON validation, state-aware page copy, lease temp naming) plus LOW hygiene; see `.agent/caphub/p4-acceptance-review.md`. Re-verification: 84 files / 562 tests, build PASS, E2E 11/11, full suite 152 files / 1361 tests, typecheck PASS, lint 0 errors / 79 warnings, verify:deploy PASS.

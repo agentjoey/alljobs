@@ -19,10 +19,10 @@ Visual assertions per capture: semantic section headings (Release candidate / Ne
 manifest / Adapter previews / Obsidian projection / Deployment plans / Deployment history),
 no absolute roots, no publish action, Paper Workbench styling preserved.
 
-Build SHA: `628b553` (acceptance-fix batch; see `p4-implementation-log.md`).
+Build SHA: `196110d` (acceptance-fix batch including scoped review fixes; see `p4-implementation-log.md`).
 
 shot.mjs capture hashes (final build):
-- shot-capability-deployed-1440.png `a767f992…a0cb44`
-- shot-capability-deployed-390.png `17e56ec7…11d2ea6`
-- shot-capability-waiting-1440.png `887dc0c0…3e5d00`
+- shot-capability-deployed-1440.png `bb9261c0…052245e1`
+- shot-capability-deployed-390.png `68453964…190234c`
+- shot-capability-waiting-1440.png `5f6f4ec5…3a56a17`
 Registry fixture digest: deterministic seeded records from `caphub-package-export-fixtures.ts`.
