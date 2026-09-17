@@ -1,4 +1,5 @@
 import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -501,6 +502,31 @@ describe.sequential("Codex acceptance review regressions", () => {
     expect(realize).not.toHaveBeenCalled();
     const operation = JSON.parse(await readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8"));
     expect(operation.stage).toBe("versioned");
+  });
+
+  it("revalidates the target sentinel under lock before completing a realized recovery", async () => {
+    const seed = nextSeed() + 4000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    await publishToTarget(input);
+
+    const operationPath = join(target.root, "operations", `${deploymentId}.json`);
+    const operation = JSON.parse(await readFile(operationPath, "utf8"));
+    operation.stage = "realized";
+    await writeFile(operationPath, `${JSON.stringify(operation, null, 2)}\n`, "utf8");
+    input.lock = {
+      now: () => {
+        writeFileSync(target.sentinelPath, `${JSON.stringify({ schema_version: 1, caphub: true, alias: "changed-during-lease" })}\n`, "utf8");
+        return Date.parse(NOW);
+      }
+    };
+
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "UNSAFE_TARGET_ROOT" });
+    expect(JSON.parse(await readFile(operationPath, "utf8")).stage).toBe("realized");
   });
 
   it("replays a completed rollback idempotently from its publish-created version directory", async () => {

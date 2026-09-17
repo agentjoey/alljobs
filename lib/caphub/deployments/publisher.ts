@@ -545,7 +545,6 @@ async function revalidateAuthority(input: PublishInput): Promise<void> {
 /** Strict pre-state revalidation: authority, pointer shape + expectation,
  * target preimage reproduction, and preview manifest reproduction. */
 async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | null> {
-  await revalidateTargetRoot(input.root);
   await revalidateAuthority(input);
   const actual = await readTargetPointer(input.root);
   if (!samePointer(actual, input.plan.expected_current_pointer)) {
@@ -606,6 +605,7 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
 
   const releaseLock = await acquireLock(input.root.root, input.deploymentRecordId, input.lock);
   try {
+    await revalidateTargetRoot(input.root);
     const currentPointer = await readTargetPointer(input.root);
 
     // Crash-after-pointer convergence: a realized operation for this exact
