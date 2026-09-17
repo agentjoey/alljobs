@@ -126,3 +126,28 @@ and one independent Verification occur only after the implementation tasks.
   `pg_restore` drill. Typecheck and scoped lint PASS.
 - No Production backup, database dump, restore cluster, or state mutation was
   created or performed.
+
+## Task 5 — Production analysis/import and Release composition
+
+- Added one fixed Production analysis workflow that reuses a single Registry
+  runtime, runs the accepted P2 analysis service, and imports a completed
+  ReviewPacket into the Review queue. Terminal failure/human-review results do
+  not import; retry remains idempotent through the existing analysis and import
+  contracts.
+- `caphub:analyze` now returns metadata-only Capture, job, artifact, and review
+  identifiers after the combined operation. Its argument boundary remains one
+  validated Capture ID with no prompt, provider, credential, URL, or path
+  input.
+- Added the Registry-backed P4 Release runtime and `caphub:release` command.
+  It exposes only Candidate-to-Release composition and Release approval
+  finalization; publish, install, rollback, Deployment, target, root, raw URL,
+  and SQL inputs remain unavailable.
+- Corrected the plan's CLI spelling to the already-implemented P4 `learnKind`
+  contract: `experience_card | reference`.
+- TDD/BDD evidence: the four new module/command suites first failed because the
+  modules did not exist. Final focused gate passed 7 files / 20 tests, including
+  real temporary PostgreSQL ReviewPacket import and Release lifecycle tests.
+  Typecheck and scoped lint PASS.
+- No real provider, Production Registry, filesystem Capture, Release, target,
+  Deployment, Production configuration, secret, or service state was used or
+  changed.

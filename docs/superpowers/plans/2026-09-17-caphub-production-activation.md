@@ -572,7 +572,7 @@ filesystem write, provider call, Git action, or publish.
 The CLI accepts only:
 
 ```text
---compose --candidate CANDIDATE_ID --decision DECISION_ID [--learn-kind skill|prompt|workflow]
+--compose --candidate CANDIDATE_ID --decision DECISION_ID [--learn-kind experience_card|reference]
 --finalize --release RELEASE_ID --decision DECISION_ID
 ```
 

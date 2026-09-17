@@ -18,27 +18,34 @@ describe("caphub-analyze command boundary", () => {
   });
 
   it("returns identifiers from an injected server-side service without accepting dependency arguments", async () => {
-    const start = vi.fn(async () => ({
+    const startAndImport = vi.fn(async () => ({
+      captureId: CAPTURE_ID,
       jobId: `job_${"b".repeat(32)}`,
-      status: "completed" as const,
-      reviewPacketArtifactId: `art_${"c".repeat(64)}`
+      analysisStatus: "WAITING_FOR_REVIEW",
+      reviewPacketArtifactId: `art_${"c".repeat(64)}`,
+      reviewRequestId: `rev_${"d".repeat(32)}`
     }));
-    await expect(runCaphubAnalyze([CAPTURE_ID], async () => ({ start }))).resolves.toMatchObject({ status: "completed" });
-    expect(start).toHaveBeenCalledWith(CAPTURE_ID);
+    await expect(runCaphubAnalyze([CAPTURE_ID], async () => ({ startAndImport }))).resolves.toMatchObject({
+      analysisStatus: "WAITING_FOR_REVIEW",
+      reviewRequestId: `rev_${"d".repeat(32)}`
+    });
+    expect(startAndImport).toHaveBeenCalledWith(CAPTURE_ID);
   });
 
   it("uses the same strict parser and fixed loader at the executable entry point", async () => {
-    const start = vi.fn(async () => ({
+    const startAndImport = vi.fn(async () => ({
+      captureId: CAPTURE_ID,
       jobId: `job_${"b".repeat(32)}`,
-      status: "completed" as const,
-      reviewPacketArtifactId: `art_${"c".repeat(64)}`
+      analysisStatus: "WAITING_FOR_REVIEW",
+      reviewPacketArtifactId: `art_${"c".repeat(64)}`,
+      reviewRequestId: `rev_${"d".repeat(32)}`
     }));
-    const loadService = vi.fn(async () => ({ start }));
+    const loadService = vi.fn(async () => ({ startAndImport }));
     const write = vi.fn();
 
     await main([CAPTURE_ID], loadService, write);
     expect(loadService).toHaveBeenCalledOnce();
-    expect(start).toHaveBeenCalledWith(CAPTURE_ID);
+    expect(startAndImport).toHaveBeenCalledWith(CAPTURE_ID);
     expect(write).toHaveBeenCalledWith(expect.stringContaining(`job_${"b".repeat(32)}`));
 
     await expect(main(["--api-key=secret"], loadService, write)).rejects.toThrow(/Usage|invalid/i);

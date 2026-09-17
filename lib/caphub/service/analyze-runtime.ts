@@ -24,7 +24,7 @@ import {
   FilesystemStageArtifactStore
 } from "../workflow/filesystem";
 import { AnalysisServiceError, createAnalysisService, type AnalysisService } from "./analyze";
-import { loadControlHostRegistryRuntime } from "../registry/runtime";
+import { loadControlHostRegistryRuntime, type ControlHostRegistryRuntime } from "../registry/runtime";
 
 function requiredSecret(
   env: Readonly<Record<string, string | undefined>>,
@@ -80,6 +80,7 @@ function createSourceGateway(allowedOrigins: readonly string[]): ResearchSourceG
 export async function loadControlHostAnalysisService(options: {
   env?: Readonly<Record<string, string | undefined>>;
   home?: string;
+  registryRuntime?: ControlHostRegistryRuntime;
 } = {}): Promise<AnalysisService> {
   const resolved = loadControlHostConfig(options.home);
   const caphub = resolved.config.caphub;
@@ -89,9 +90,9 @@ export async function loadControlHostAnalysisService(options: {
   const root = resolved.caphubStateDir;
   if (!root) throw new Error("Resolved Caphub state directory is unavailable");
   const env = options.env ?? process.env;
-  const registry = caphub.registry.enabled
+  const registry = options.registryRuntime ?? (caphub.registry.enabled
     ? await loadControlHostRegistryRuntime({ resolved, env })
-    : null;
+    : null);
   const miniMax = new MiniMaxProvider({
     apiKey: requiredSecret(env, caphub.analysis.miniMaxSecretEnv)
   });

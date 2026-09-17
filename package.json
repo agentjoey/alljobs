@@ -23,6 +23,7 @@
     "caphub:postgres": "tsx --conditions=react-server scripts/caphub-postgres.ts",
     "caphub:registry-import": "tsx --conditions=react-server scripts/caphub-registry-import.ts",
     "caphub:backup": "tsx --conditions=react-server scripts/caphub-backup.ts",
+    "caphub:release": "tsx --conditions=react-server scripts/caphub-release.ts",
     "planning:refresh": "tsx scripts/planning-refresh.ts",
     "monitoring:refresh": "tsx scripts/monitoring-refresh.ts --once",
     "planning:skill:validate": "node scripts/validate-planning-skill.mjs",
