@@ -350,7 +350,7 @@
   git commit -m "test(caphub): cover Neon validation boundary"
   ```
 
-- [ ] **Step 6: Run one scoped independent Review and Verification.**
+- [x] **Step 6: Run one scoped independent Review and Verification.**
 
   Review only the Task 1–6 diff and the Neon design/plan contracts: credential redaction, TLS host allowlist, private/path-style bucket enforcement, immutable semantics, object-first transfer, no-delete behavior, managed readiness, and the unchanged P4/P5/P6 limits. Verification reruns the selected focused tests plus typecheck/lint/build/deploy invariant and validates that the working tree contains no unintended files. Record findings once; repair blockers and perform one targeted re-review only when a finding changes the reviewed contract.
 

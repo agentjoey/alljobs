@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Neon activation implementation 已完成，等待 N1/PA-B-N 的逐项 Production 授权；P4-A/P4-B/P4-C 未动
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Neon activation implementation 与 scoped independent Review/Verification 已通过，等待 N1/PA-B-N 的逐项 Production 授权；P4-A/P4-B/P4-C 未动
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`

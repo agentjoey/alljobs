@@ -289,3 +289,9 @@ and one independent Verification occur only after the implementation tasks.
   the preflight PostgreSQL version whitelist is fully anchored. Focused
   regression: 5 files / 65 tests PASS; typecheck PASS; scoped lint 0 errors
   (one pre-existing warning in `lib/planning/config.ts`).
+- Scoped independent Review: PASS after `ced4425`; it confirmed exact S3 host
+  binding before client construction, SDK-shaped 412 recovery, exact
+  non-Production fixture host binding before Pool/S3 construction, and the
+  fully anchored version allowlist. Independent fix-only Verification: PASS;
+  it reran the preflight regression (6/6), confirmed a clean worktree and
+  `git diff --check`, and performed no Neon/service action.
