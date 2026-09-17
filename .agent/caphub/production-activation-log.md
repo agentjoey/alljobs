@@ -82,3 +82,25 @@ and one independent Verification occur only after the implementation tasks.
   invariants PASS; LaunchAgent plist lint PASS.
 - No Production database, LaunchAgent, configuration, secret, or service was
   created, installed, started, or changed.
+
+## Task 3 — immutable filesystem Capture import
+
+- Added a bounded, secure, read-only inventory of filesystem Capture records,
+  idempotency indices, monthly audit events, and immutable objects. It rejects
+  missing, extra, duplicate, conflicting, malformed, partial, tampered,
+  symlinked, foreign-owned, or broadly writable source material.
+- The plan binds every source file byte to one SHA-256 digest while exposing a
+  metadata-only manifest. Apply replans and requires that exact digest before
+  it performs any Registry preflight or write.
+- PostgreSQL conflicts are checked across both Capture ID and idempotency key
+  before writes. Exact existing rows and audit events are idempotent; differing
+  immutable content aborts.
+- Added a fixed CLI that defaults to dry-run. Apply accepts only the exact
+  manifest digest and confirmation `IMPORT-CAPHUB-CAPTURES`; raw roots, URLs,
+  SQL, or connection arguments are not accepted.
+- TDD/BDD evidence: missing importer/CLI produced the expected RED; unit and
+  command tests passed 7/7; the final focused gate passed 4 files / 15 tests,
+  including real temporary PostgreSQL first import, exact rerun, and digest
+  conflict without added rows. Typecheck and scoped lint PASS.
+- No real filesystem Capture, Production Registry, or service state was read,
+  mutated, or migrated.
