@@ -1,4 +1,5 @@
 import type { CapabilityPackage } from "../lib/caphub/packages/types";
+import type { CurrentPointer } from "../lib/caphub/deployments/plan";
 import type { RegistryVersion } from "../lib/caphub/registry/types";
 import type { ExportRuntime, ExportTargetName } from "../lib/caphub/exports/runtime";
 import { join } from "node:path";
@@ -8,13 +9,9 @@ import { consoleIo, parseFlags, rejectForbiddenArgs, reportError, requireDryRun,
 /** Read only the exact active manifest directory named by the validated
  * pointer + operation binding. Paths are normalized relative to that manifest
  * directory so base and next files share adapter-relative paths. */
-export async function readActiveAdapterFiles(rootDir: string): Promise<Array<{ path: string; content: string }>> {
-  const { readActiveManifestDirectory } = await import("../lib/caphub/deployments/publisher");
+async function readAdapterFilesFromDirectory(directory: string): Promise<Array<{ path: string; content: string }>> {
   const { readdir } = await import("node:fs/promises");
   const { readFile: readFileAsync } = await import("node:fs/promises");
-  const active = await readActiveManifestDirectory(rootDir);
-  if (active === null) return [];
-  const directory = active.directory;
   const files: Array<{ path: string; content: string }> = [];
   async function walk(current: string): Promise<void> {
     for (const entry of await readdir(current, { withFileTypes: true }).catch(() => [])) {
@@ -28,6 +25,22 @@ export async function readActiveAdapterFiles(rootDir: string): Promise<Array<{ p
   }
   await walk(directory);
   return files;
+}
+
+export async function readAdapterFilesForPointer(
+  rootDir: string,
+  pointer: CurrentPointer
+): Promise<Array<{ path: string; content: string }>> {
+  const { readManifestDirectoryForPointer } = await import("../lib/caphub/deployments/publisher");
+  const manifest = await readManifestDirectoryForPointer(rootDir, pointer);
+  return readAdapterFilesFromDirectory(manifest.directory);
+}
+
+export async function readActiveAdapterFiles(rootDir: string): Promise<Array<{ path: string; content: string }>> {
+  const { readActiveManifestDirectory } = await import("../lib/caphub/deployments/publisher");
+  const active = await readActiveManifestDirectory(rootDir);
+  if (active === null) return [];
+  return readAdapterFilesFromDirectory(active.directory);
 }
 
 export interface ExportCliDeps {

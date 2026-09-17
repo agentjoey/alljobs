@@ -216,6 +216,37 @@ describe.sequential("Codex acceptance fixes 1-3 (publisher fail-closed)", () => 
     expect((await readFile(join(target.root, "current.json"), "utf8"))).toContain(first.pointer.deployment_id);
   });
 
+  it("rejects a forged marker that rewrites its file manifest while claiming the approved digest", async () => {
+    const seed = nextSeed() + 2000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const input = makeInput(pkg, plan, decisionId, hexId("dep_", seed + 5000), target);
+    await publishToTarget(input);
+
+    const versionDir = join(target.root, "versions", plan.release.record_id, "1", plan.preview_manifest_digest);
+    const markerPath = join(versionDir, ".caphub-version.json");
+    const marker = JSON.parse(await readFile(markerPath, "utf8")) as {
+      manifest_digest: string;
+      files: Array<{ path: string; sha256: string; bytes: number }>;
+    };
+    const rewritten = "malicious replacement accepted by a forged marker\n";
+    const chosen = marker.files[0]!;
+    await writeFile(join(versionDir, chosen.path), rewritten, "utf8");
+    chosen.bytes = Buffer.byteLength(rewritten, "utf8");
+    chosen.sha256 = createHash("sha256").update(rewritten, "utf8").digest("hex");
+    await writeFile(markerPath, `${JSON.stringify(marker, null, 2)}\n`, "utf8");
+
+    const actualManifestDigest = digestCanonicalJson({
+      schema_version: 1,
+      files: marker.files.map(({ path, sha256, bytes }) => ({ path, sha256, bytes }))
+    });
+    expect(marker.manifest_digest).toBe(plan.preview_manifest_digest);
+    expect(actualManifestDigest).not.toBe(plan.preview_manifest_digest);
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "PACKAGE_DIGEST_CONFLICT" });
+  });
+
   it("rejects unexpected managed files inside a completed version directory", async () => {
     const seed = nextSeed() + 2000;
     const pkg = adapterPackage(seed);
@@ -399,5 +430,84 @@ describe.sequential("Codex acceptance review regressions", () => {
     expect(rolledBack.pointer.release_id).toBe(publishPlan.release.record_id);
     const replay = await publishToTarget(rollbackInput);
     expect(replay.pointer).toEqual(rolledBack.pointer);
+  });
+
+  it("rejects rollback when the approved historical version bytes were tampered", async () => {
+    const seed = nextSeed() + 5000;
+    const originalPackage = adapterPackage(seed);
+    const originalPlan = planFor(originalPackage, nullPointerPreimage());
+    const originalDecisionId = await seedApprovedPlan(seed, originalPlan);
+    const target = await freshTarget();
+    const originalInput = makeInput(
+      originalPackage,
+      originalPlan,
+      originalDecisionId,
+      hexId("dep_", seed + 5000),
+      target
+    );
+    const original = await publishToTarget(originalInput);
+    const originalMarker = JSON.parse(await readFile(
+      join(target.root, "versions", originalPlan.release.record_id, "1", originalPlan.preview_manifest_digest, ".caphub-version.json"),
+      "utf8"
+    )) as { files: Array<{ path: string; sha256: string; bytes: number }> };
+    const originalPreimage = digestCanonicalJson({
+      schema_version: 1,
+      pointer: original.pointer,
+      files: originalMarker.files
+    });
+
+    const replacementPackage = adapterPackage(seed + 1);
+    const replacementPlan: DeploymentPlan = {
+      ...planFor(replacementPackage, originalPreimage),
+      expected_current_pointer: original.pointer
+    };
+    const replacementDecisionId = await seedApprovedPlan(seed + 1, replacementPlan);
+    const replacementInput = makeInput(
+      replacementPackage,
+      replacementPlan,
+      replacementDecisionId,
+      hexId("dep_", seed + 5001),
+      target
+    );
+    const replacement = await publishToTarget(replacementInput);
+    const replacementMarker = JSON.parse(await readFile(
+      join(target.root, "versions", replacementPlan.release.record_id, "1", replacementPlan.preview_manifest_digest, ".caphub-version.json"),
+      "utf8"
+    )) as { files: Array<{ path: string; sha256: string; bytes: number }> };
+    const replacementPreimage = digestCanonicalJson({
+      schema_version: 1,
+      pointer: replacement.pointer,
+      files: replacementMarker.files
+    });
+
+    const rollbackPlan: DeploymentPlan = {
+      ...originalPlan,
+      action: "rollback",
+      expected_current_pointer: replacement.pointer,
+      target_preimage_digest: replacementPreimage
+    };
+    const rollbackDecisionId = await seedApprovedPlan(seed + 2, rollbackPlan);
+    const rollbackInput = makeInput(
+      originalPackage,
+      rollbackPlan,
+      rollbackDecisionId,
+      hexId("dep_", seed + 5002),
+      target
+    );
+    const originalSkillPath = join(
+      target.root,
+      "versions",
+      originalPlan.release.record_id,
+      "1",
+      originalPlan.preview_manifest_digest,
+      "$CODEX_HOME",
+      "skills",
+      originalPackage.slug,
+      "SKILL.md"
+    );
+    await writeFile(originalSkillPath, "# tampered historical version\n", "utf8");
+
+    await expect(publishToTarget(rollbackInput)).rejects.toMatchObject({ code: "PACKAGE_DIGEST_CONFLICT" });
+    expect(JSON.parse(await readFile(join(target.root, "current.json"), "utf8"))).toEqual(replacement.pointer);
   });
 });

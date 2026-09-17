@@ -36,6 +36,10 @@ function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+function expectedPointerDigest(pointer: Omit<CurrentPointer, "pointer_digest">): string {
+  return sha256Hex(digestCanonicalJson({ schema_version: 1, pointer }));
+}
+
 /** Parse target-controlled pointer JSON instead of casting to trusted types. */
 function parsePointerJson(raw: string): CurrentPointer | null {
   let value: unknown;
@@ -53,13 +57,14 @@ function parsePointerJson(raw: string): CurrentPointer | null {
     || typeof record.pointer_digest !== "string" || !/^[a-f0-9]{64}$/.test(record.pointer_digest)) {
     return null;
   }
-  return {
+  const pointer = {
     deployment_id: record.deployment_id,
     release_id: record.release_id,
     release_version: record.release_version as number,
-    release_digest: record.release_digest,
-    pointer_digest: record.pointer_digest
+    release_digest: record.release_digest
   };
+  if (record.pointer_digest !== expectedPointerDigest(pointer)) return null;
+  return { ...pointer, pointer_digest: record.pointer_digest };
 }
 
 export async function readTargetPointer(root: ValidatedTargetRoot): Promise<CurrentPointer | null> {
@@ -115,7 +120,7 @@ function pointerFor(deploymentId: string, plan: DeploymentPlan): CurrentPointer 
   };
   return {
     ...base,
-    pointer_digest: sha256Hex(digestCanonicalJson({ schema_version: 1, pointer: base }))
+    pointer_digest: expectedPointerDigest(base)
   };
 }
 
@@ -128,11 +133,17 @@ function samePointer(left: CurrentPointer | null, right: CurrentPointer | null):
     && left.pointer_digest === right.pointer_digest;
 }
 
-function manifestDigestFor(files: PackageFile[]): string {
+type ManifestEntry = Pick<PackageFile, "path" | "sha256" | "bytes">;
+
+function manifestDigestForEntries(files: ManifestEntry[]): string {
   return digestCanonicalJson({
     schema_version: 1,
     files: files.map(({ path, sha256, bytes }) => ({ path, sha256, bytes }))
   });
+}
+
+function manifestDigestFor(files: PackageFile[]): string {
+  return manifestDigestForEntries(files);
 }
 
 async function acquireLock(root: string, operationId: string, options?: AcquireLeaseOptions): Promise<() => Promise<void>> {
@@ -203,6 +214,9 @@ async function listVersionFiles(directory: string, relative = ""): Promise<strin
  * file set: paths, byte counts, SHA-256 digests, no missing files, no
  * unexpected files, no symlinks. Never repairs or overwrites. */
 async function verifyVersionDirectory(root: ValidatedTargetRoot, relativeDir: string, expected: VersionMarker): Promise<void> {
+  if (manifestDigestForEntries(expected.files) !== expected.manifest_digest) {
+    throw new PublishError("PACKAGE_DIGEST_CONFLICT", "version marker file manifest does not reproduce its claimed digest");
+  }
   const expectedPaths = new Set(expected.files.map((file) => file.path));
   const actualFiles = await listVersionFiles(join(root.root, relativeDir));
   for (const actual of actualFiles) {
@@ -266,6 +280,28 @@ async function verifiedManifestState(
 /** Read and validate the active pointer and its operation record, returning
  * the exact active manifest directory. Shared by publish revalidation, dry-run
  * previews, and tests so the preimage path convention stays identical. */
+export async function readManifestDirectoryForPointer(rootDir: string, pointer: CurrentPointer): Promise<{
+  pointer: CurrentPointer;
+  operation: OperationRecord;
+  directory: string;
+}> {
+  const operation = await readOperation(rootDir, pointer.deployment_id);
+  if (!operation) {
+    throw new PublishError("STALE_DEPLOYMENT", "pointer has no operation record");
+  }
+  if (operation.stage !== "completed"
+    || operation.release.record_id !== pointer.release_id
+    || operation.release.version !== pointer.release_version
+    || operation.release.digest !== pointer.release_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "completed operation record does not match the pointer");
+  }
+  return {
+    pointer,
+    operation,
+    directory: join(rootDir, "versions", pointer.release_id, String(pointer.release_version), operation.manifest_digest)
+  };
+}
+
 export async function readActiveManifestDirectory(rootDir: string): Promise<{
   pointer: CurrentPointer;
   operation: OperationRecord;
@@ -277,20 +313,7 @@ export async function readActiveManifestDirectory(rootDir: string): Promise<{
   if (!pointer) {
     throw new PublishError("STALE_DEPLOYMENT", "current.json is not a valid pointer");
   }
-  const operation = await readOperation(rootDir, pointer.deployment_id);
-  if (!operation) {
-    throw new PublishError("STALE_DEPLOYMENT", "active pointer has no operation record");
-  }
-  if (operation.release.record_id !== pointer.release_id
-    || operation.release.version !== pointer.release_version
-    || operation.release.digest !== pointer.release_digest) {
-    throw new PublishError("STALE_DEPLOYMENT", "operation record does not match the active pointer");
-  }
-  return {
-    pointer,
-    operation,
-    directory: join(rootDir, "versions", pointer.release_id, String(pointer.release_version), operation.manifest_digest)
-  };
+  return readManifestDirectoryForPointer(rootDir, pointer);
 }
 
 /** Reproduce the digest over the currently materialized target state. Files
@@ -502,9 +525,19 @@ async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | nul
   }
   if (input.plan.action === "rollback") {
     const directory = await versionDirectory(input.root, input.plan);
-    await readFile(join(directory, VERSION_MARKER), "utf8").catch(() => {
+    const markerRaw = await readFile(join(directory, VERSION_MARKER), "utf8").catch(() => {
       throw new PublishError("STALE_DEPLOYMENT", "rollback target version directory is missing");
     });
+    const marker = parseVersionMarker(markerRaw);
+    if (!marker
+      || marker.action !== "publish"
+      || marker.manifest_digest !== input.plan.preview_manifest_digest
+      || marker.release.record_id !== input.plan.release.record_id
+      || marker.release.version !== input.plan.release.version
+      || marker.release.digest !== input.plan.release.digest) {
+      throw new PublishError("STALE_DEPLOYMENT", "rollback target marker does not match the approved release");
+    }
+    await verifyVersionDirectory(input.root, directory.slice(input.root.root.length + 1), marker);
   }
   return actual;
 }

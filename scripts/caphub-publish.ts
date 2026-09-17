@@ -1,16 +1,19 @@
 import type { ExportRuntime } from "../lib/caphub/exports/runtime";
 import type { RegistryVersion } from "../lib/caphub/registry/types";
+import type { ReviewStore } from "../lib/caphub/registry/contracts";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { digestCanonicalJson } from "../lib/caphub/analysis/digest";
+import { derivePlanRecordId } from "../lib/caphub/deployments/plan";
 import { confirmationFor } from "../lib/caphub/registry/confirmations";
 import { consoleIo, parseFlags, rejectForbiddenArgs, reportError, type CliIo } from "./caphub-cli";
 
 export interface PublishAuthorityDeps {
   releaseRecord: RegistryVersion;
-  reviews: {
-    listDecisionsForSubject(subjectId: string): Promise<import("../lib/caphub/registry/types").ReviewDecision[]>;
-    getConsumption(decisionId: string): Promise<{ consumer_id: string } | null>;
-  };
+  planRecord: Pick<RegistryVersion, "record_id" | "version" | "payload_digest">;
+  planApprovalDecisionId: string;
+  deploymentRecordId: string;
+  reviews: Pick<ReviewStore, "getDecision" | "getRequest" | "listDecisionsForSubject" | "getConsumption">;
   targetRootDir: string;
   renderAdapter: () => import("../lib/caphub/adapters/contracts").AdapterRenderResult;
   assertEnabled: (target: "codex" | "claude" | "hermes") => void;
@@ -34,12 +37,45 @@ export function createPublishAuthority(deps: PublishAuthorityDeps) {
     }
     const decisions = await deps.reviews.listDecisionsForSubject(expected.release.record_id);
     let finalized = false;
-    for (const candidate of decisions.filter((d) => d.action === "approve" && d.review_kind === "release")) {
+    for (const candidate of decisions.filter((d) => d.action === "approve"
+      && d.review_kind === "release"
+      && d.subject_id === expected.release.record_id
+      && d.subject_version === expected.release.version
+      && d.subject_digest === expected.release.digest)) {
       const consumed = await deps.reviews.getConsumption(candidate.id);
       if (consumed?.consumer_id === expected.release.record_id) finalized = true;
     }
     if (!finalized) {
       throw authorityError("DEPLOYMENT_NOT_APPROVED", "release approval is not finalized");
+    }
+    const expectedPlanId = derivePlanRecordId(expected);
+    const expectedPlanDigest = digestCanonicalJson(expected);
+    if (deps.planRecord.record_id !== expectedPlanId
+      || deps.planRecord.version !== 1
+      || deps.planRecord.payload_digest !== expectedPlanDigest) {
+      throw authorityError("STALE_DEPLOYMENT", "deployment plan record no longer matches the approved plan");
+    }
+    const deploymentDecision = await deps.reviews.getDecision(deps.planApprovalDecisionId);
+    if (!deploymentDecision
+      || deploymentDecision.action !== "approve"
+      || deploymentDecision.review_kind !== "deployment"
+      || deploymentDecision.subject_id !== expectedPlanId
+      || deploymentDecision.subject_version !== deps.planRecord.version
+      || deploymentDecision.subject_digest !== expectedPlanDigest) {
+      throw authorityError("STALE_DEPLOYMENT", "deployment decision is not bound to the exact plan");
+    }
+    const deploymentRequest = await deps.reviews.getRequest(deploymentDecision.request_id);
+    if (!deploymentRequest
+      || deploymentRequest.state !== "APPROVED"
+      || deploymentRequest.review_kind !== "deployment"
+      || deploymentRequest.subject_id !== expectedPlanId
+      || deploymentRequest.subject_version !== deps.planRecord.version
+      || deploymentRequest.subject_digest !== expectedPlanDigest) {
+      throw authorityError("DEPLOYMENT_NOT_APPROVED", "deployment approval is not currently valid for the exact plan");
+    }
+    const deploymentConsumption = await deps.reviews.getConsumption(deps.planApprovalDecisionId);
+    if (deploymentConsumption && deploymentConsumption.consumer_id !== deps.deploymentRecordId) {
+      throw authorityError("DECISION_ALREADY_CONSUMED", "deployment approval was consumed by another deployment");
     }
     const rendered = deps.renderAdapter();
     if (!rendered.ok) {
@@ -53,9 +89,11 @@ export function createPublishAuthority(deps: PublishAuthorityDeps) {
     if (rendered.result.output_manifest_digest !== expected.preview_manifest_digest) {
       throw authorityError("STALE_DEPLOYMENT", "adapter output manifest no longer matches the plan");
     }
-    const { readActiveAdapterFiles } = await import("./caphub-export");
+    const { readAdapterFilesForPointer } = await import("./caphub-export");
     const { diffPackageFiles } = await import("../lib/caphub/packages/diff");
-    const snapshot = await readActiveAdapterFiles(deps.targetRootDir);
+    const snapshot = expected.expected_current_pointer
+      ? await readAdapterFilesForPointer(deps.targetRootDir, expected.expected_current_pointer)
+      : [];
     const diff = diffPackageFiles({
       baseFiles: snapshot.map((file) => ({
         path: file.path,
@@ -115,7 +153,6 @@ async function loadPublishDeps(): Promise<PublishCliDeps> {
   const { deploymentPlanSchema, capabilityPackageSchema } = await import("../lib/caphub/packages/schemas");
   const { validateTargetRoot } = await import("../lib/caphub/projection/paths");
   const { publishToTarget } = await import("../lib/caphub/deployments/publisher");
-  const { digestCanonicalJson } = await import("../lib/caphub/analysis/digest");
   const { renderCodexPreview } = await import("../lib/caphub/adapters/codex");
   const { renderClaudePreview } = await import("../lib/caphub/adapters/claude");
   const { renderHermesPreview } = await import("../lib/caphub/adapters/hermes");
@@ -171,6 +208,9 @@ async function loadPublishDeps(): Promise<PublishCliDeps> {
         planApprovalDecisionId: approval.id,
         assertAuthority: createPublishAuthority({
           releaseRecord,
+          planRecord,
+          planApprovalDecisionId: approval.id,
+          deploymentRecordId: deploymentId,
           reviews,
           targetRootDir: root.root,
           renderAdapter: () => rendered,

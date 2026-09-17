@@ -1,4 +1,5 @@
 import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -6,6 +7,7 @@ import type { CapabilityPackage } from "../lib/caphub/packages/types";
 import { testCapabilityPackage } from "../lib/caphub/packages/fixtures";
 import type { RegistryVersion } from "../lib/caphub/registry/types";
 import { ExportRuntime, ExportRuntimeError } from "../lib/caphub/exports/runtime";
+import { digestCanonicalJson } from "../lib/caphub/analysis/digest";
 import { controlHostConfigSchema } from "../lib/planning/config";
 import { caphubExportMain } from "./caphub-export";
 import { caphubProjectMain } from "./caphub-project";
@@ -207,7 +209,9 @@ describe("readActiveAdapterFiles (acceptance fix 6)", () => {
     };
     const pointer = {
       ...pointerBase,
-      pointer_digest: "f".repeat(64)
+      pointer_digest: createHash("sha256")
+        .update(digestCanonicalJson({ schema_version: 1, pointer: pointerBase }), "utf8")
+        .digest("hex")
     };
     const manifestA = "a1".repeat(32);
     const manifestB = "b2".repeat(32);
