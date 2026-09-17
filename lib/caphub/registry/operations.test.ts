@@ -9,6 +9,7 @@ import { registryMigrationManifest } from "./migration-manifest";
 import {
   checkRegistryReadiness,
   bootstrapLocalRegistry,
+  isSupportedRegistryPostgresVersion,
   migrateRegistry,
   prepareRegistryBootstrapDirectories
 } from "./operations";
@@ -26,6 +27,16 @@ function privateHome(): string {
 
 afterEach(() => {
   for (const root of tempRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+describe("Registry PostgreSQL compatibility policy", () => {
+  it("accepts PostgreSQL 17 locally and PostgreSQL 17 or 18 through managed TLS only", () => {
+    expect(isSupportedRegistryPostgresVersion("17.6", "local_socket")).toBe(true);
+    expect(isSupportedRegistryPostgresVersion("18.0", "local_socket")).toBe(false);
+    expect(isSupportedRegistryPostgresVersion("17.6", "tls_verify_full")).toBe(true);
+    expect(isSupportedRegistryPostgresVersion("18.0", "tls_verify_full")).toBe(true);
+    expect(isSupportedRegistryPostgresVersion("19.0", "tls_verify_full")).toBe(false);
+  });
 });
 
 describe("local Registry bootstrap paths", () => {

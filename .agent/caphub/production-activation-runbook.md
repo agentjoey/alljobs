@@ -1,186 +1,123 @@
-# Caphub P1–P4 Production activation runbook
+# Caphub P1–P4 Neon Production activation runbook
 
 Date: 2026-09-17
 
 This is an operator checklist, not standing authorization. Run from the exact
-accepted checkout. Replace only typed IDs/digests returned by the preceding
-command. Never paste or record secret values, database URLs, absolute state
-paths, object keys, prompts, raw provider responses, or Capture bytes.
+accepted checkout. Record aliases, digests, counts, migration checksums, and
+pass/fail states only. Never record secret values, database URLs, hostnames,
+absolute state paths, object keys, prompts, raw provider responses, or Capture
+bytes.
 
-## S0 — metadata-only inventory (authorized before PA-B)
+The application listener is already stopped in S1. It remains stopped through
+N1–N4. No command below authorizes a provider request, target write, push,
+merge, release, deletion, listener reload, or Production cutover.
+
+## S0 — metadata-only inventory
 
 ```bash
 git rev-parse HEAD
-node --version
-npm --version
-/opt/homebrew/opt/postgresql@17/bin/postgres --version
 npm run verify:deploy
 npm run caphub:preflight
 ```
 
-Expected: exact candidate SHA; Next `16.3.3`; loopback-only app; fixed migration
-IDs/checksums; `enabledTargets: []`; and `readyFor: "PA_B"`. The preflight is
-read-only, accepts no flags, and emits metadata only. Any unsafe configuration,
-enabled target, missing invariant, or `PREFLIGHT_*` error blocks progress.
+Expected: loopback-only application, fixed migration IDs/checksums, no enabled
+targets, redacted values only, and `readyFor: "PA_B"`. The preflight accepts no
+flags and performs no writes. A `PREFLIGHT_*` error or any unsafe configuration
+blocks progress.
 
-Record aliases such as `<CAPHUB_HOME>`, `<CAPHUB_SOCKET>`, and
-`<BACKUP_GENERATION>` in operator notes. Do not record their absolute values.
+## N1 — Neon provisioning (fresh Human authorization required)
 
-## S1 — stop writer and preserve the source (requires PA-B plus an explicit safe-off action)
+Obtain a new authorization immediately before any Production Neon write. It
+must name the accepted build and allow only the required actions: private
+`caphub-objects` bucket creation, Registry database/least-privilege role setup,
+pooling/network posture, credential issuance, or private environment-reference
+installation.
 
-1. Obtain PA-B authorization naming the accepted SHA and intended local-only
-   changes. PA-B alone does not authorize stopping or reloading the Production
-   application.
-2. In the same grant or a separate grant, obtain explicit authorization to
-   stop the `com.agentjoey.alljobs` listener for safe-off maintenance. Stop it;
-   do not restart it or transition the running application to S3/S4 before
-   PA-D. If the listener is already stopped, record that fact instead of
-   changing it.
-3. Confirm the listener is stopped, then inspect its final application log for
-   no in-flight Caphub writer. Do not prove this with a live POST or expect a
-   disabled UI from a stopped listener.
-4. Create an immutable whole-tree source backup using the approved Control Host
-   backup facility. Verify the source remains owner-only, canonical, non-symlink,
-   and unchanged. Off-host/Time Machine coverage is required for the RPO.
+Before a write, verify the existing `alljobs` Production branch and its Object
+Storage capability in the Neon control plane. Create no public bucket. Keep
+object storage private; do not expose S3 credentials or public URLs. A missing
+TLS verify-full connection, approved host, egress policy, or credential boundary
+is a hard stop.
 
-If writer state or custody is uncertain, remain safe-off. Do not repair,
-delete, move, or rewrite Capture files.
+## N2 — object-first source preservation
 
-## PA-B — local Registry bootstrap and migration
-
-Resolve and install the reviewed LaunchAgent template with its fixed Control
-Host placeholder, but do not load it yet. Confirm the label is not already
-registered, then run only:
+Keep the listener stopped. First produce the immutable source manifest, then
+copy the exact manifest and independently prove every remote object:
 
 ```bash
-npm run caphub:postgres -- --bootstrap --confirm BOOTSTRAP-CAPHUB-POSTGRES
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agentjoey.alljobs-caphub-postgres.plist
-launchctl print gui/$(id -u)/com.agentjoey.alljobs-caphub-postgres
-# Substitute the exact pid reported by launchctl; expected parent is 1.
-ps -p <LAUNCHD_POSTMASTER_PID> -o ppid=,command=
-npm run caphub:postgres -- --migrate --confirm APPLY-CAPHUB-MIGRATIONS
-npm run caphub:postgres -- --check
-npm run verify:deploy
-```
-
-Expected: bootstrap exits with `serviceRunning: false`; `launchctl bootstrap`
-starts exactly one launchd-owned postmaster from the fixed template; PostgreSQL
-17; database `caphub`; roles `caphub_app` and
-`caphub_migrator`; no TCP listener; one private Unix socket; migrations
-`001_registry`, `002_read_models`, and `003_exports` at committed checksums;
-`appCanMigrate: false`; `appCanUpdateAppendOnly: false`; `ready: true`.
-
-Place only the named environment references into the installed listener:
-`CAPHUB_DATABASE_URL`, `CAPHUB_MIGRATION_DATABASE_URL`, and, when separately
-needed for PA-C, `KIMI_CODE_API_KEY`. Never print, commit, screenshot, or copy
-their values into evidence.
-
-## Capture import and verified backup (still under PA-B)
-
-Keep the application writer stopped.
-
-```bash
-npm run caphub:registry-import -- --dry-run
-npm run caphub:registry-import -- --apply --digest <SOURCE_SHA256> --confirm IMPORT-CAPHUB-CAPTURES
-npm run caphub:registry-import -- --dry-run
-npm run caphub:backup -- --create
-npm run caphub:backup -- --verify <BACKUP_GENERATION>
+npm run caphub:object-transfer -- --dry-run
+npm run caphub:object-transfer -- --apply --digest <SOURCE_SHA256> --confirm COPY-CAPHUB-OBJECTS
+npm run caphub:object-transfer -- --dry-run
+npm run caphub:activation-attest -- object-transfer --source-digest <SOURCE_SHA256> --object-count <OBJECT_COUNT> --matches-remote --confirm RECORD-CAPHUB-OBJECT-TRANSFER
 npm run caphub:preflight
 ```
 
-Expected: apply uses the exact dry-run digest; source bytes/digest do not
-change; Registry Capture count and digests match the filesystem inventory;
-backup creation returns one immutable generation; isolated restore matches
-Registry counts and migration checksums. Preserve the backup even if verify
-fails. `caphub:preflight` does not itself perform or attest the restore drill;
-the operator binds the successful verify output to PA-D evidence.
+The apply result must have the exact source digest and matching object and
+verified-object counts. The attestation command is local-only: it records only
+the digest/count/boolean once in a private owner-only file and refuses an
+overwrite. It does not contact Neon. A mismatch, existing-key disagreement,
+incomplete remote listing, or source mutation stops the migration. Preserve the
+local tree and all remote evidence; do not delete, move, or rewrite objects.
 
-This backup command is intentionally local-socket-only. It fails closed for
-`tls_verify_full`; a future managed database requires a separately reviewed
-verify-full `pg_dump` contract before it can be activated.
+## N3 — Registry migration and Capture import
 
-## S2 — Registry-only operator verification (application remains stopped)
+With remote-object attestation recorded and still no listener, provision and
+migrate only through the direct migrator identity. Use the exact Capture import
+digest from a dry run; Registry records must resolve only to the verified remote
+object keys. Verify migration checksums, IDs, idempotency keys, Capture
+digests/counts, audit/lineage records, and least application privileges. The
+managed readiness report must say `managed_tls`, not disclose an endpoint.
 
-Prepare an exact configuration diff with outer Caphub safe-off, Registry
-configured, analysis off, exports off, and every target disabled/unconfigured.
-While the application listener remains stopped, verify the migrated Registry
-only through the bounded operator commands (`caphub:postgres -- --check`,
-`caphub:registry-import -- --dry-run`, and `caphub:preflight`). Do not claim
-browser-route evidence in S2.
+Record the redacted Registry/import result, then run:
 
-PA-D must name the accepted commit/build, migration checksums, verified backup
-generation, import digest/count, intended LaunchAgent/config diff, and rollback
-build. Only after approval may the operator rebuild/reload
-`com.agentjoey.alljobs` and enter S3. Do not restart the refresh worker,
-Tunnel, Access, or domain.
-
-## S3 — Capture + Review + P4 preview
-
-Under the same PA-D authorization, enable outer Caphub, Registry, and exports
-master while keeping analysis disabled and every target switch false with no
-root or alias. Verify through the final build:
-
-```text
-/caphub                         200; Capture ready
-/reviews                       200; Registry ready
-/captures/<MIGRATED_CAPTURE>   200; exact migrated metadata
-/capabilities/<CANDIDATE>      disabled/no-release or read-only preview state
+```bash
+npm run caphub:preflight
 ```
 
-Expected: no Deployment plan, target directory, current pointer, publish,
-install, rollback, provider request, or Git action. S3 is a valid terminal state.
+Any migration checksum drift, missing record, privilege mismatch, or object
+reference mismatch leaves Caphub safe-off and blocks cutover.
 
-## PA-C — one Kimi compatibility canary
+## N4 — recovery proof
 
-Fresh authorization is required immediately before the request. Use model
-`k3-256k`, the approved coding API endpoint, synthetic non-sensitive input,
-strict structured output, no tools, and no retry. Record only timestamp,
-provider/model, request count, latency/tokens when available, schema result,
-and safe error code.
+Create a Neon recovery point/branch consistent with the Production Registry and
+private bucket, restore it into an owned validation branch, and prove migration
+checksums, Registry counts, Capture object hashes, and private bucket access.
+This is a Production Neon operation and requires the specific authorization
+covering the recovery resources. Do not use a public bucket or retain secrets
+in evidence.
 
-If the result fails or is uncertain, set/keep analysis disabled, remain at S3,
-and stop. Do not retry, fall back, or send a real Capture.
+After the restore proof succeeds, record only its boolean completion:
 
-## S4 — one third-party Capability pilot
+```bash
+npm run caphub:activation-attest -- recovery --verified --confirm RECORD-CAPHUB-RECOVERY
+npm run caphub:preflight
+```
 
-Only after PA-C passes, the Human supplies one exact official HTTPS source URL
-and approves its exact origin. The origin is runtime input and has no default.
-Enable analysis and reload only the app listener. Then:
+The preflight cannot advance beyond `PA_D` until both immutable-object and
+recovery attestations agree with the Capture-import digest. The local source
+tree and recovery branch remain preserved.
 
-1. Human creates one new Capture under that exact origin.
-2. Operator starts analysis once; no automatic retry/fallback.
-3. Human reviews the exact Candidate in `/reviews` and records one disposition.
-4. For `adopt`, `adapt`, or `learn`, compose one Release with the Candidate
-   approval decision; `learn` also supplies `experience_card` or `reference`.
-5. Human separately approves the exact Release; operator finalizes it once.
-6. Verify the neutral package and Codex/Claude/Hermes read-only previews.
+## PA-D — application cutover (separate final Human Gate)
 
-No target may be enabled and no Deployment plan may be created.
+PA-D must name the accepted commit/build, migration checksums, object digest and
+count, recovery proof, intended private environment-reference/config diff, and
+rollback build. Only then may the operator install the private Neon environment
+references, rebuild/reload `com.agentjoey.alljobs`, and enter S3. Do not restart
+the refresh worker, Tunnel, Access, or domain.
 
-## Failure containment
+## S3 / PA-C / S4
 
-- Registry unavailable, checksum drift, import mismatch, or backup/restore
-  failure: keep Caphub safe-off; preserve filesystem, database, backup, and logs.
-- Provider failure/uncertainty: do not retry; disable analysis; remain at S3.
-- Review/finalization conflict: refresh exact versions; never synthesize or
-  overwrite authority.
-- Target/export anomaly: disable exports master and preserve evidence. No
-  target cleanup is authorized.
-- Any unexpected external write, TCP listener, secret exposure, or source
-  mutation is a hard stop.
+S3 permits Capture, Review, and P4 read-only previews only. PA-C remains the
+separate one-request Kimi compatibility canary (`k3-256k`, synthetic input, no
+tools/retry). S4 still requires a separately approved official third-party
+Capability source and keeps every target write, install, publish, code-execution,
+shell, Git, and deployment capability closed.
 
-## Non-destructive rollback
+## Failure containment and rollback
 
-1. Disable analysis, exports, Registry, then outer Caphub in the approved
-   configuration and reload only `com.agentjoey.alljobs`.
-2. Restore the previously approved application build and verify the mandatory
-   `127.0.0.1:3456` listener.
-3. Leave the local Registry cluster stopped or isolated as directed; do not run
-   down migrations or delete its data.
-4. Preserve every filesystem Capture, object, audit record, database directory,
-   backup generation, and provider evidence item.
-5. If database recovery is required, restore the latest verified generation
-   into a separate owned cluster/root and seek a new cutover decision.
-
-Rollback does not authorize push, merge, release, data deletion, retention
-pruning, Tunnel/Access/domain changes, target writes, or Neon provisioning.
+Any unsafe endpoint, public bucket, credential exposure, source/remote mismatch,
+Registry drift, recovery mismatch, unexpected writer, or provider uncertainty
+keeps Caphub safe-off. Preserve local captures, Neon database/bucket/recovery
+branch, and redacted evidence without deletion. Rollback restores the prior
+approved filesystem-only build and loopback listener only after a new Human
+decision; it never deletes or down-migrates Neon resources.

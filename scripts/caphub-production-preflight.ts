@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9,8 +9,7 @@ import type { RegistryReadinessReport } from "../lib/caphub/registry/operations"
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const BUILD_SHA_PATTERN = /^[a-f0-9]{40,64}$/;
 const MIGRATION_ID_PATTERN = /^\d{3}_[a-z][a-z0-9_]*$/;
-const GENERATION_ID_PATTERN = /^\d{8}T\d{9}Z-[a-z0-9][a-z0-9-]{3,63}$/;
-const SAFE_POSTGRES_VERSION_PATTERN = /^(?:17\.\d+(?:\.\d+)?|unknown|unavailable)$/;
+const SAFE_POSTGRES_VERSION_PATTERN = /^(?:17|18)\.\d+(?:\.\d+)?|unknown|unavailable$/;
 const ZERO_DIGEST = "0".repeat(64);
 const TARGETS = ["obsidian", "packageRepository", "codex", "claude", "hermes"] as const;
 
@@ -23,7 +22,8 @@ export interface ProductionPreflightReport {
   appLoopbackOnly: boolean;
   postgres: RegistryReadinessReport;
   captureImport: { sourceDigest: string; captureCount: number; matchesRegistry: boolean };
-  backup: { generationId: string | null; verified: boolean };
+  objectTransfer: { sourceDigest: string; objectCount: number; matchesRemote: boolean };
+  recovery: { verified: boolean };
   providers: {
     minimaxConfigured: boolean;
     kimiConfigured: boolean;
@@ -64,7 +64,12 @@ function assertCount(value: unknown): asserts value is number {
 function assertPostgres(report: RegistryReadinessReport): RegistryReadinessReport {
   if (!SAFE_POSTGRES_VERSION_PATTERN.test(report.postgresVersion)
     || !["local_socket", "tls_verify_full"].includes(report.connectionMode)
-    || !["", "unavailable"].includes(report.tcpListenAddresses)
+    || !["", "managed_tls", "unavailable"].includes(report.tcpListenAddresses)
+    || (report.postgresVersion !== "unavailable" && report.connectionMode === "local_socket"
+      && !/^17\./.test(report.postgresVersion))
+    || (report.postgresVersion !== "unavailable" && report.connectionMode === "tls_verify_full"
+      && report.tcpListenAddresses !== "managed_tls"
+      && report.tcpListenAddresses !== "unavailable")
     || report.database !== "caphub"
     || report.appRole !== "caphub_app"
     || report.migratorRole !== "caphub_migrator") unsafe();
@@ -92,7 +97,9 @@ function assertPostgres(report: RegistryReadinessReport): RegistryReadinessRepor
 
 function deriveReadyFor(snapshot: ProductionPreflightSnapshot): ReadyFor {
   if (!snapshot.postgres.ready) return "PA_B";
-  if (!snapshot.captureImport.matchesRegistry || !snapshot.backup.verified) return "PA_B";
+  if (!snapshot.captureImport.matchesRegistry || !snapshot.objectTransfer.matchesRemote
+    || snapshot.objectTransfer.sourceDigest !== snapshot.captureImport.sourceDigest
+    || !snapshot.recovery.verified) return "PA_B";
   if (!snapshot.postCutoverVerified) return "PA_D";
   if (!snapshot.runtime.registryEnabled || snapshot.runtime.analysisEnabled) return "PA_D";
   if (snapshot.providers.kimiLiveCompatibility === "pending") return "PA_C";
@@ -106,8 +113,10 @@ export function createProductionPreflightReport(snapshot: ProductionPreflightSna
   if (!SHA256_PATTERN.test(snapshot.captureImport.sourceDigest)) unsafe();
   assertCount(snapshot.captureImport.captureCount);
   assertBoolean(snapshot.captureImport.matchesRegistry);
-  if (snapshot.backup.generationId !== null && !GENERATION_ID_PATTERN.test(snapshot.backup.generationId)) unsafe();
-  assertBoolean(snapshot.backup.verified);
+  if (!SHA256_PATTERN.test(snapshot.objectTransfer.sourceDigest)) unsafe();
+  assertCount(snapshot.objectTransfer.objectCount);
+  assertBoolean(snapshot.objectTransfer.matchesRemote);
+  assertBoolean(snapshot.recovery.verified);
   assertBoolean(snapshot.providers.minimaxConfigured);
   assertBoolean(snapshot.providers.kimiConfigured);
   if (!["pending", "passed", "failed"].includes(snapshot.providers.kimiLiveCompatibility)) unsafe();
@@ -129,7 +138,12 @@ export function createProductionPreflightReport(snapshot: ProductionPreflightSna
       captureCount: snapshot.captureImport.captureCount,
       matchesRegistry: snapshot.captureImport.matchesRegistry
     },
-    backup: { generationId: snapshot.backup.generationId, verified: snapshot.backup.verified },
+    objectTransfer: {
+      sourceDigest: snapshot.objectTransfer.sourceDigest,
+      objectCount: snapshot.objectTransfer.objectCount,
+      matchesRemote: snapshot.objectTransfer.matchesRemote
+    },
+    recovery: { verified: snapshot.recovery.verified },
     providers: {
       minimaxConfigured: snapshot.providers.minimaxConfigured,
       kimiConfigured: snapshot.providers.kimiConfigured,
@@ -157,14 +171,54 @@ function unavailableRegistry(connectionMode: "local_socket" | "tls_verify_full")
   };
 }
 
-function latestBackupGeneration(homeDir: string): string | null {
-  const root = join(homeDir, "backups", "caphub");
-  if (!existsSync(root)) return null;
-  const generations = readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && GENERATION_ID_PATTERN.test(entry.name))
-    .map((entry) => entry.name)
-    .sort();
-  return generations.at(-1) ?? null;
+function isPrivateCanonicalPath(path: string, expectedType: "directory" | "file"): boolean {
+  try {
+    const metadata = lstatSync(path);
+    const currentUid = typeof process.getuid === "function" ? process.getuid() : metadata.uid;
+    return !metadata.isSymbolicLink()
+      && (expectedType === "directory" ? metadata.isDirectory() : metadata.isFile())
+      && metadata.uid === currentUid
+      && (metadata.mode & 0o077) === 0
+      && realpathSync(path) === path;
+  } catch {
+    return false;
+  }
+}
+
+function readActivationAttestation(homeDir: string, name: "object-transfer" | "recovery"): unknown {
+  const activationDir = join(homeDir, "state", "caphub", "activation");
+  const file = join(activationDir, `${name}.json`);
+  if (!existsSync(file) || !isPrivateCanonicalPath(activationDir, "directory")
+    || !isPrivateCanonicalPath(file, "file")) return undefined;
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+export function readObjectTransferEvidence(homeDir: string): ProductionPreflightSnapshot["objectTransfer"] {
+  const candidate = readActivationAttestation(homeDir, "object-transfer");
+  if (!candidate || typeof candidate !== "object") {
+    return { sourceDigest: ZERO_DIGEST, objectCount: 0, matchesRemote: false };
+  }
+  const value = candidate as { schema?: unknown; sourceDigest?: unknown; objectCount?: unknown; matchesRemote?: unknown };
+  if (value.schema !== "caphub.neon-object-transfer.v1" || typeof value.sourceDigest !== "string"
+    || !SHA256_PATTERN.test(value.sourceDigest) || typeof value.objectCount !== "number"
+    || !Number.isSafeInteger(value.objectCount)
+    || value.objectCount < 0 || typeof value.matchesRemote !== "boolean") {
+    return { sourceDigest: ZERO_DIGEST, objectCount: 0, matchesRemote: false };
+  }
+  return { sourceDigest: value.sourceDigest, objectCount: value.objectCount, matchesRemote: value.matchesRemote };
+}
+
+export function readRecoveryEvidence(homeDir: string): ProductionPreflightSnapshot["recovery"] {
+  const candidate = readActivationAttestation(homeDir, "recovery");
+  if (!candidate || typeof candidate !== "object") return { verified: false };
+  const value = candidate as { schema?: unknown; verified?: unknown };
+  return value.schema === "caphub.neon-recovery.v1" && typeof value.verified === "boolean"
+    ? { verified: value.verified }
+    : { verified: false };
 }
 
 function configuredTargets(config: {
@@ -305,7 +359,8 @@ async function collectFixedSnapshot(): Promise<ProductionPreflightSnapshot> {
     appLoopbackOnly,
     postgres: registryState.report,
     captureImport: { sourceDigest, captureCount, matchesRegistry: registryState.matches },
-    backup: { generationId: latestBackupGeneration(homeDir), verified: false },
+    objectTransfer: readObjectTransferEvidence(homeDir),
+    recovery: readRecoveryEvidence(homeDir),
     providers: {
       minimaxConfigured: Boolean(process.env[miniMaxEnv]),
       kimiConfigured: Boolean(process.env[kimiEnv]),

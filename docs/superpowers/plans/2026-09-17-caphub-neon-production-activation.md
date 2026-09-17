@@ -279,29 +279,29 @@
 - `checkRegistryReadiness` accepts PostgreSQL 17 or 18 for `tls_verify_full`, reports `managed_tls` instead of an internal listener address, and retains exact role/privilege/migration checks.
 - Preflight adds `{ objectTransfer: { sourceDigest, objectCount, matchesRemote }, recovery: { verified: boolean } }` and requires both fields before `PA_D`.
 
-- [ ] **Step 1: Write failing readiness/preflight tests.**
+- [x] **Step 1: Write failing readiness/preflight tests.**
 
   Make a `tls_verify_full` fixture with PostgreSQL `18.x`, exact roles, migrations, and privileges pass without exposing an endpoint. Make `18.x` in local socket mode fail. Make `readyFor` remain `PA_B` if remote objects are incomplete and remain `PA_D` until recovery proof is recorded. Assert serialized reports do not include bucket names, keys, hostnames, paths, URLs, access keys, or secret values.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/operations.test.ts scripts/caphub-production-preflight.test.ts`
 
   Expected: FAIL because readiness is pinned to PostgreSQL 17/local listener details and preflight knows only local backups.
 
-- [ ] **Step 3: Implement managed evidence semantics.**
+- [x] **Step 3: Implement managed evidence semantics.**
 
   Branch readiness on `connectionMode`: local mode stays PostgreSQL 17 plus private Unix-socket proof; managed TLS accepts `17.` or `18.`, never publishes `SHOW listen_addresses`, and still requires both identities, no role membership, migration checksums, append-only protections, and least application privileges. Replace the obsolete local-backup gate in this Neon plan with an immutable remote-object transfer attestation and recovery-branch restore attestation. Store those attestations as private, canonical, owner-only JSON under `ALLJOBS_HOME/state/caphub/activation/`; preflight emits only boolean/count/digest fields.
 
   The runbook must name N1 as a hard authorization boundary, N2 as object-first migration, N3 as database import, and N4 as a Console-created recovery branch restored and checked in an owned validation branch. It must specify stop-on-mismatch and no-delete behavior. Keep the S1 launchd-stop evidence append-only in the cutover record.
 
-- [ ] **Step 4: Run GREEN checks.**
+- [x] **Step 4: Run GREEN checks.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/operations.test.ts scripts/caphub-production-preflight.test.ts && pnpm typecheck && pnpm lint -- lib/caphub/registry/operations.ts scripts/caphub-production-preflight.ts`
 
   Expected: PASS; preflight remains read-only and reports no sensitive values.
 
-- [ ] **Step 5: Commit the managed readiness gate.**
+- [x] **Step 5: Commit the managed readiness gate.**
 
   ```bash
   git add lib/caphub/registry/operations.ts lib/caphub/registry/operations.test.ts scripts/caphub-production-preflight.ts scripts/caphub-production-preflight.test.ts .agent/caphub/production-activation-runbook.md .agent/caphub/production-activation-cutover.md

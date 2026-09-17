@@ -50,6 +50,14 @@ export interface RegistryReadinessReport {
   ready: boolean;
 }
 
+export function isSupportedRegistryPostgresVersion(
+  version: string,
+  connectionMode: RegistryConnectionMode
+): boolean {
+  if (version.startsWith("17.")) return true;
+  return connectionMode === "tls_verify_full" && version.startsWith("18.");
+}
+
 function assertPrivateOwnedCanonicalDirectory(path: string): void {
   const metadata = lstatSync(path);
   const currentUid = typeof process.getuid === "function" ? process.getuid() : metadata.uid;
@@ -208,13 +216,16 @@ export async function checkRegistryReadiness(input: {
     && migratorIdentity.rows[0]?.database_name === "caphub";
   const noRoleInheritance = membership.rows[0]?.app_is_migrator === false
     && membership.rows[0]?.migrator_is_app === false;
-  const tcpListenAddresses = listen.rows[0]?.listen_addresses ?? "";
+  const actualTcpListenAddresses = listen.rows[0]?.listen_addresses ?? "";
   const transportReady = input.connectionMode === "local_socket"
-    ? tcpListenAddresses === "" && transport.rows[0]?.unix_socket === true
+    ? actualTcpListenAddresses === "" && transport.rows[0]?.unix_socket === true
       && input.appPool.options.host === input.expectedSocketDir
       && input.migrationPool.options.host === input.expectedSocketDir
     : true;
-  const ready = (version.rows[0]?.server_version ?? "").startsWith("17.")
+  const ready = isSupportedRegistryPostgresVersion(
+    version.rows[0]?.server_version ?? "",
+    input.connectionMode
+  )
     && transportReady && exactIdentities && exactRoles && noRoleInheritance
     && databaseOwner.rows[0]?.owner === "caphub_migrator"
     && appliedExact && pendingMigrations.length === 0
@@ -224,7 +235,9 @@ export async function checkRegistryReadiness(input: {
   return {
     postgresVersion: version.rows[0]?.server_version ?? "unknown",
     connectionMode: input.connectionMode,
-    tcpListenAddresses,
+    tcpListenAddresses: input.connectionMode === "local_socket"
+      ? actualTcpListenAddresses
+      : "managed_tls",
     database: "caphub",
     appRole: "caphub_app",
     migratorRole: "caphub_migrator",

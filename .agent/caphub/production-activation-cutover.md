@@ -1,4 +1,4 @@
-# Caphub P1–P4 Production activation — PA-B execution record
+# Caphub P1–P4 Production activation — S1 / Neon transition record
 
 Date: 2026-09-17
 
@@ -21,20 +21,21 @@ The Human authorized PA-B and explicitly authorized stopping
 - The filesystem Capture inventory remains 2 records at source digest
   `e00ec5b4aeef4b8a1e876b5145c42e062ac983627ac9fdb56379c830ee0f0725`.
 
-## Stop condition
+## Transition decision
 
-S1 source backup has **not** been created. `tmutil destinationinfo` reports no
-configured destination; no mounted backup volume or configured restic, borg,
-or rclone backup facility was found. A same-disk ad-hoc copy is not accepted as
-the required off-host/Time Machine RPO evidence.
+The local-first source-backup prerequisite could not be met because no approved
+off-host or Time Machine destination was configured. The approved Neon revision
+replaces that unavailable prerequisite with N2 immutable private remote-object
+transfer and N4 recovery-branch proof. This record preserves the S1 evidence;
+it is not proof of either Neon operation.
 
-No PostgreSQL cluster, database role, migration, LaunchAgent, application
-configuration, secret reference, Capture import, Registry backup, provider
-call, target, push, merge, build, reload, or deployment action has occurred.
-The application listener remains stopped and Caphub is safe-off.
+No local PostgreSQL cluster, database role, migration, LaunchAgent, application
+configuration, secret reference, Capture import, provider call, target, push,
+merge, build, reload, deployment, or Neon resource change has occurred in this
+record. The application listener remains stopped and Caphub is safe-off.
 
 ## Next safe action
 
-Provide or authorize configuration of one approved off-host or Time Machine
-backup destination. With the listener still stopped, create and verify one
-whole-tree source backup before resuming the remaining PA-B steps.
+Obtain the fresh N1 Production Neon provisioning authorization. With the
+listener still stopped, first create the private Object Storage/database
+resources, then complete N2 object transfer before any Registry import.
