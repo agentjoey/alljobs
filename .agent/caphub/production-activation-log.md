@@ -329,3 +329,22 @@ and one independent Verification occur only after the implementation tasks.
 - No `--apply` transfer or remote-object attestation has run. The next action
   requires private Object Storage credentials and a separate authorization for
   the irreversible external object copy.
+
+## N2 remote preservation — 2026-09-18
+
+- Under explicit Human authorization, an independent `caphub-object-store`
+  credential was created with only `storage:read` and `storage:write` scopes.
+  Its access material, plus the endpoint and region references, exist only in
+  the mode-`600` private LaunchAgent environment. No secret value is retained
+  here and no existing default credential was modified.
+- The stopped Control Host config now names the exact managed Neon database and
+  Object Storage hosts, TLS Registry mode, and private `neon_s3` storage mode;
+  analysis remains disabled and no service reload occurred.
+- `caphub:object-transfer -- --apply` accepted the recorded source digest and
+  returned object count `1` with verified-object count `1`. A separate S3
+  client independently listed, read, and SHA-256-verified the same one-object
+  immutable set, including byte count and stored digest metadata.
+- The owner-only N2 attestation was recorded after tightening the existing
+  Control Host and state directories to mode `700`; the attestation file is
+  mode `600`. No database migration, Registry import, recovery proof, provider
+  request, service restart, deployment, push, merge, or release occurred.
