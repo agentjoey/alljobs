@@ -187,7 +187,7 @@
 - Consumes `ReadableCaptureObjectStore` and the existing exact filesystem Capture manifest.
 - Produces `{ sourceDigest, objectCount, verifiedObjectCount }` only; it never prints a path, key, byte content, endpoint, or credential.
 
-- [ ] **Step 1: Add RED transfer and CLI tests.**
+- [x] **Step 1: Add RED transfer and CLI tests.**
 
   Seed two local Capture objects and a fake remote readable store. Require a deterministic source digest, sorted unique object refs, remote reread/hash for every object, a second no-op run, failure before any Registry write when a source file changes, failure on remote mismatch, and rejection of extra CLI arguments/incorrect confirmation. Assert that the fake delete operation count remains zero.
 
@@ -197,25 +197,25 @@
   })).resolves.toEqual({ sourceDigest: plan.sourceDigest, objectCount: 2, verifiedObjectCount: 2 });
   ```
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
   Run: `pnpm exec vitest run lib/caphub/storage/transfer.test.ts scripts/caphub-object-transfer.test.ts`
 
   Expected: FAIL because the transfer port and bounded CLI do not exist.
 
-- [ ] **Step 3: Implement object-first transfer.**
+- [x] **Step 3: Implement object-first transfer.**
 
   Derive refs solely from `planFilesystemCaptureImport`; reject duplicate digest/byte inconsistencies. Replan before the first transfer and after the final remote verification; both manifests must equal `expectedSourceDigest`. For each sorted ref, read from the local readable store, call remote `putImmutable`, read it back, and validate bytes/digest. Finally list exactly under `sha256/`, reject an unknown/missing object key, and require the remote key set to equal the planned refs. Never invoke filesystem `unlink`, S3 delete, database operations, or import operations.
 
   The CLI loads only disabled/approved config, refuses `storage.mode !== "neon_s3"`, and emits one redacted JSON result. `--dry-run` performs planning only; `--apply` is still an N1-gated production operation and must not be run without the written Human authorization.
 
-- [ ] **Step 4: Run GREEN checks.**
+- [x] **Step 4: Run GREEN checks.**
 
   Run: `pnpm exec vitest run lib/caphub/storage/transfer.test.ts scripts/caphub-object-transfer.test.ts lib/caphub/registry/filesystem-import.test.ts && pnpm typecheck && pnpm lint -- lib/caphub/storage/transfer.ts scripts/caphub-object-transfer.ts`
 
   Expected: PASS; transfer tests use fakes and temporary owned fixtures only.
 
-- [ ] **Step 5: Commit the transfer boundary.**
+- [x] **Step 5: Commit the transfer boundary.**
 
   ```bash
   git add lib/caphub/storage/transfer.ts lib/caphub/storage/transfer.test.ts scripts/caphub-object-transfer.ts scripts/caphub-object-transfer.test.ts package.json lib/caphub/registry/filesystem-import.ts lib/caphub/registry/filesystem-import.test.ts

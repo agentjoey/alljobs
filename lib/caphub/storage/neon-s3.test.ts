@@ -47,6 +47,11 @@ class FakeS3Port implements S3ImmutableCommandPort {
     if (value === undefined) throw new Error("not found");
     return Uint8Array.from(value.bytes);
   }
+
+  async list(prefix: string) {
+    this.operations.push("list");
+    return [...this.objects.keys()].filter((key) => key.startsWith(prefix)).sort();
+  }
 }
 
 function digest(bytes: Uint8Array): string {
@@ -119,6 +124,15 @@ describe("NeonS3CaptureObjectStore", () => {
     await expect(store.putImmutable({ bytes: expected, mimeType: "image/png" }))
       .rejects.toBeInstanceOf(ImmutableObjectMismatchError);
     expect(port.operations).toEqual(["head", "get"]);
+  });
+
+  it("lists only the immutable sha256 key namespace for migration verification", async () => {
+    const port = new FakeS3Port();
+    const bytes = new TextEncoder().encode("catalogued object");
+    const store = new NeonS3CaptureObjectStore({ port });
+    const ref = await store.putImmutable({ bytes, mimeType: "image/png" });
+
+    await expect(store.listImmutableKeys("sha256/")).resolves.toEqual([ref.key]);
   });
 
   it("accepts only explicit HTTPS S3 environment values and never uses an ambient credential chain", () => {

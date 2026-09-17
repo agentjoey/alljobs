@@ -23,6 +23,7 @@
     "caphub:publish": "tsx --conditions=react-server scripts/caphub-publish.ts",
     "caphub:postgres": "tsx --conditions=react-server scripts/caphub-postgres.ts",
     "caphub:registry-import": "tsx --conditions=react-server scripts/caphub-registry-import.ts",
+    "caphub:object-transfer": "tsx --conditions=react-server scripts/caphub-object-transfer.ts",
     "caphub:backup": "tsx --conditions=react-server scripts/caphub-backup.ts",
     "caphub:release": "tsx --conditions=react-server scripts/caphub-release.ts",
     "caphub:preflight": "tsx --conditions=react-server scripts/caphub-production-preflight.ts",

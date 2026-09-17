@@ -37,6 +37,7 @@ export interface CaptureImportManifestV1 {
     event_id: string;
     object_digest: string;
     object_bytes: number;
+    object_mime_type: CaptureRecord["mime_type"];
   }>;
   counts: { captures: number; events: number; objects: number };
 }
@@ -217,7 +218,8 @@ async function scanCaptureInventory(rawRoot: string): Promise<CaptureInventory> 
       capture_digest: digestCanonicalJson(capture),
       event_id: event.event_id,
       object_digest: capture.object.digest,
-      object_bytes: capture.object.bytes
+      object_bytes: capture.object.bytes,
+      object_mime_type: capture.mime_type
     };
   });
   if (events.size !== captures.length) throw new Error("Capture audit log contains an unindexed event");

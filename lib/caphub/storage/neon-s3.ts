@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import {
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type S3ClientConfig
@@ -15,6 +16,7 @@ export interface S3ImmutableCommandPort {
   head(key: string): Promise<{ bytes: number; metadata: Record<string, string> } | null>;
   putIfAbsent(input: { key: string; bytes: Uint8Array; mimeType: CaptureMimeType; digest: string }): Promise<void>;
   get(key: string): Promise<Uint8Array>;
+  list(prefix: string): Promise<string[]>;
 }
 
 export interface NeonS3EnvironmentRefs {
@@ -146,6 +148,26 @@ export function createNeonS3CommandPort(
         throw new ImmutableObjectMismatchError();
       }
       return Uint8Array.from(await result.Body.transformToByteArray());
+    },
+    async list(prefix) {
+      const keys: string[] = [];
+      let continuationToken: string | undefined;
+      do {
+        const result = await client.send(new ListObjectsV2Command({
+          Bucket: environment.bucket,
+          Prefix: prefix,
+          ...(continuationToken === undefined ? {} : { ContinuationToken: continuationToken })
+        }));
+        for (const entry of result.Contents ?? []) {
+          if (typeof entry.Key !== "string" || !entry.Key.startsWith(prefix)) {
+            throw new ImmutableObjectMismatchError();
+          }
+          keys.push(entry.Key);
+        }
+        continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+        if (result.IsTruncated && !continuationToken) throw new ImmutableObjectMismatchError();
+      } while (continuationToken !== undefined);
+      return [...new Set(keys)].sort();
     }
   };
 }
@@ -190,5 +212,14 @@ export class NeonS3CaptureObjectStore implements ReadableCaptureObjectStore {
   async readImmutable(rawRef: ObjectRef): Promise<Uint8Array> {
     const ref = objectRefSchema.parse(rawRef);
     return Uint8Array.from(await this.verifyRemote(ref));
+  }
+
+  async listImmutableKeys(prefix: "sha256/"): Promise<string[]> {
+    if (prefix !== "sha256/") throw new ImmutableObjectMismatchError();
+    const keys = await this.dependencies.port.list(prefix);
+    if (keys.some((key) => !/^sha256\/[a-f0-9]{2}\/[a-f0-9]{64}$/.test(key))) {
+      throw new ImmutableObjectMismatchError();
+    }
+    return keys;
   }
 }
