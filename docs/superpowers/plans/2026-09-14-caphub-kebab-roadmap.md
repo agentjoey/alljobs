@@ -232,7 +232,7 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - 实现负责人：KimiCode（`k3-256k`）；实现完成后由 Codex 独立验收。
 - 当前仅完成规划，不代表 P4 implementation、P4-A、P4-B 或 P4-C 通过。真实 Vault/Agent root、dry-run、publish 与 rollback 仍须对应 Human Gate。
 
-**2026-09-17 implementation evidence（KimiCode，base 4b373dd）：**P4 已在 `codex/caphub-p4-implementation` 完成实现，提交链 8261209 → docs closeout（逐任务窄提交）。最终门禁：150 files / 1335 tests PASS、typecheck PASS、lint 0 errors、production build PASS、deploy invariants PASS、P4 focused E2E 8/8（fixture PostgreSQL + sentinel-owned 临时根）。独立 Review/Verification 记录见 `.agent/caphub/p4-review.md`、`p4-verification.md`；截屏在 `.agent/caphub/p4-screenshots/`。未发生 push/merge/deploy/release/provider 调用/真实 root 配置。当前为 **ready for independent Codex acceptance**；Codex 验收通过前不得提议任何 Human gate。
+**2026-09-17 implementation evidence（KimiCode，base 4b373dd）：**P4 已在 `codex/caphub-p4-implementation` 完成实现，提交链 8261209 → docs closeout（逐任务窄提交）。最终门禁：150 files / 1335 tests PASS、typecheck PASS、lint 0 errors、production build PASS、deploy invariants PASS、P4 focused E2E 8/8（fixture PostgreSQL + sentinel-owned 临时根）。独立 Review/Verification 记录见 `.agent/caphub/p4-review.md`、`p4-verification.md`；截屏在 `.agent/caphub/p4-screenshots/`。未发生 push/merge/deploy/release/provider 调用/真实 root 配置。Codex 首轮验收为 changes requested；7 项边界发现已在 `3b167b3..1bda3ba` 修复（6 commits，含 scoped 独立 Review 1H/4M/2L 全部处置与独立 Verification 10/10 PASS，绑定 `1bda3ba`）。当前为 **ready for Codex re-acceptance**；重新验收通过前不得提议任何 Human gate，不得声称生产就绪。
 
 **目标**
 

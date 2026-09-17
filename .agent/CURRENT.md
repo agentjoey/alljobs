@@ -60,7 +60,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 - **Branch / worktree:** `codex/caphub-p4-implementation` · `.worktrees/caphub-p4-implementation`
 - **Scope:** Capability Package contracts, deterministic renderers, Obsidian projection with byte-preserved human regions, Codex/Claude/Hermes preview adapters, exact Deployment plans, fixture publish/rollback, disabled-by-default export runtime, safe CLIs, read-only P4 UI.
-- **Status:** implementation complete; 1335 unit/behavior tests, production build, deploy invariants, and 8/8 focused P4 E2E pass; independent Review and Verification records live in `.agent/caphub/p4-{review,verification}.md`.
+- **Status:** Codex acceptance fixes implemented (`3b167b3..1bda3ba`, 6 commits) — forged-pointer fail-closed publish, mandatory §9.2 authority revalidation, full version-byte verification, lease-based recovery locks, complete durability, exact dry-run manifest binding, unified page lifecycle states. Full suite 152 files / 1361 tests PASS; P4 E2E 11/11; scoped independent Review (1H/4M/2L, all fixed) and Verification PASS 10/10 bound to `1bda3ba`. Records: `p4-{review,verification,acceptance-review,acceptance-verification}.md`.
 - **Boundary:** no real Vault/Agent root, production database, provider call, push, merge, deploy, or release occurred. Gates P4-A/P4-B/P4-C remain open Human gates. Codex acceptance is the next step before any Human gate is proposed.
 - **Evidence:** `.agent/caphub/p4-implementation-log.md` · `p4-threat-model.md` · `p4-verification.md` · `p4-screenshots/`
 
