@@ -57,7 +57,7 @@
 - Produces `parseRegistryConnection({ databaseUrl, mode, role, resolvedHome, managedHosts })`.
 - Consumed by registry runtime, migration CLI, backup/preflight command paths.
 
-- [ ] **Step 1: Add failing policy tests.**
+- [x] **Step 1: Add failing policy tests.**
 
   Add a `tls_verify_full` test matrix for an approved pooled host and direct host. It must accept only the expected role/database and optional `sslmode=require|verify-full` plus `channel_binding=require`; it must reject an unlisted Neon-looking host, IP/loopback host, credential-less URL, `sslmode=disable`, an unknown query key, a wrong role, or `/postgres`.
 
@@ -69,13 +69,13 @@
   })).toThrow("approved managed host");
   ```
 
-- [ ] **Step 2: Run the focused RED test.**
+- [x] **Step 2: Run the focused RED test.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/connection.test.ts lib/planning/config.test.ts`
 
   Expected: FAIL because `managedHosts` and Object Storage config do not exist and arbitrary DNS is still accepted.
 
-- [ ] **Step 3: Implement the narrow config and parser.**
+- [x] **Step 3: Implement the narrow config and parser.**
 
   Add this configuration shape, retaining local mode for fixtures and rollback:
 
@@ -95,13 +95,13 @@
 
   In TLS mode require a normalized host to be one of `managedHosts`; preserve `{ rejectUnauthorized: true }` and construct `Pool` options rather than passing a raw connection string. Pass `managedHosts` through every current `parseRegistryConnection` call. Do not relax local-socket assertions.
 
-- [ ] **Step 4: Run the focused GREEN tests and static checks.**
+- [x] **Step 4: Run the focused GREEN tests and static checks.**
 
   Run: `pnpm exec vitest run lib/caphub/registry/connection.test.ts lib/planning/config.test.ts && pnpm typecheck && pnpm lint -- lib/planning/config.ts lib/caphub/registry/connection.ts`
 
   Expected: PASS; no test reads a secret value from an emitted report.
 
-- [ ] **Step 5: Commit the bounded contract.**
+- [x] **Step 5: Commit the bounded contract.**
 
   ```bash
   git add lib/planning/config.ts lib/planning/config.test.ts lib/caphub/registry/connection.ts lib/caphub/registry/connection.test.ts config/alljobs.example.json

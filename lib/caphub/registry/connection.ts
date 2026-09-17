@@ -97,15 +97,38 @@ function assertManagedDnsHostname(hostname: string): void {
   }
 }
 
+function assertApprovedManagedHost(hostname: string, managedHosts: readonly string[] | undefined): void {
+  assertManagedDnsHostname(hostname);
+  const allowed = new Set((managedHosts ?? []).map((host) => host.toLowerCase()));
+  if (!allowed.has(hostname.toLowerCase())) {
+    throw new Error("Registry TLS URL host is not an approved managed host");
+  }
+}
+
+function hasApprovedTlsParameters(parsed: URL): boolean {
+  const entries = [...parsed.searchParams.entries()];
+  if (entries.length > 2) return false;
+  const seen = new Set<string>();
+  for (const [key, value] of entries) {
+    if (seen.has(key)) return false;
+    seen.add(key);
+    if (key === "sslmode" && (value === "require" || value === "verify-full")) continue;
+    if (key === "channel_binding" && value === "require") continue;
+    return false;
+  }
+  return true;
+}
+
 function parseTlsConnection(input: {
   parsed: URL;
   role: RegistryConnectionRole;
+  managedHosts?: readonly string[];
 }): ParsedRegistryConnection {
   const user = expectedUser(input.role);
-  assertManagedDnsHostname(input.parsed.hostname);
+  assertApprovedManagedHost(input.parsed.hostname, input.managedHosts);
   if (input.parsed.username !== user || input.parsed.password === ""
     || input.parsed.pathname !== "/caphub" || input.parsed.hash !== ""
-    || [...input.parsed.searchParams.keys()].length !== 0) {
+    || !hasApprovedTlsParameters(input.parsed)) {
     throw new Error("Registry TLS URL does not match the bounded managed-database contract");
   }
 
@@ -129,9 +152,10 @@ export function parseRegistryConnection(input: {
   mode: RegistryConnectionMode;
   role: RegistryConnectionRole;
   resolvedHome: string;
+  managedHosts?: readonly string[];
 }): ParsedRegistryConnection {
   const parsed = parsePostgresUrl(input.databaseUrl);
   return input.mode === "local_socket"
     ? parseLocalSocketConnection({ parsed, role: input.role, resolvedHome: input.resolvedHome })
-    : parseTlsConnection({ parsed, role: input.role });
+    : parseTlsConnection({ parsed, role: input.role, managedHosts: input.managedHosts });
 }

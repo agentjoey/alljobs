@@ -428,6 +428,7 @@ describe("control host Caphub Registry config", () => {
       databaseUrlEnv: "CAPHUB_DATABASE_URL",
       migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
       connectionMode: "tls_verify_full",
+      managedHosts: ["registry.example.test"],
       maxConnections: 4,
       statementTimeoutMs: 5_000
     });
@@ -438,6 +439,7 @@ describe("control host Caphub Registry config", () => {
       databaseUrlEnv: "CAPHUB_DATABASE_URL",
       migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
       connectionMode: "tls_verify_full",
+      managedHosts: ["registry.example.test"],
       maxConnections: 4,
       statementTimeoutMs: 5_000
     });
@@ -448,12 +450,14 @@ describe("control host Caphub Registry config", () => {
       databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
       migrationDatabaseUrlEnv: "CAPHUB_TEST_MIGRATION_DATABASE_URL",
       connectionMode: "local_socket",
+      managedHosts: ["registry.example.test"],
       maxConnections: 1,
       statementTimeoutMs: 100
     })).toMatchObject({
       databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
       migrationDatabaseUrlEnv: "CAPHUB_TEST_MIGRATION_DATABASE_URL",
       connectionMode: "local_socket",
+      managedHosts: ["registry.example.test"],
       maxConnections: 1,
       statementTimeoutMs: 100
     });
@@ -464,6 +468,8 @@ describe("control host Caphub Registry config", () => {
       { databaseUrl: "postgres://user:secret@example.test/db" },
       { sslMode: "disable" },
       { connectionMode: "disable" },
+      { managedHosts: [] },
+      { managedHosts: ["registry.example.test", "other.example.test", "third.example.test"] },
       { maxConnections: 0 },
       { maxConnections: 17 },
       { statementTimeoutMs: 99 },
@@ -471,6 +477,41 @@ describe("control host Caphub Registry config", () => {
       { provider: "managed-postgres" }
     ]) {
       expect(() => controlHostCaphubRegistryConfigSchema.parse(mutation)).toThrow();
+    }
+  });
+});
+
+describe("control host Caphub Object Storage config", () => {
+  it("defaults to local storage and accepts only the fixed private Neon S3 contract", () => {
+    const local = controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub: {} });
+    expect(local.caphub?.storage).toEqual({ mode: "local" });
+
+    const neon = controlHostConfigSchema.parse({
+      trustedCodeRoots: ["/workspace"],
+      caphub: {
+        enabled: true,
+        registry: { enabled: true },
+        storage: {
+          mode: "neon_s3",
+          bucket: "caphub-objects",
+          accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
+          secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
+          endpointEnv: "CAPHUB_S3_ENDPOINT",
+          regionEnv: "CAPHUB_S3_REGION"
+        }
+      }
+    });
+    expect(neon.caphub?.storage).toMatchObject({ mode: "neon_s3", bucket: "caphub-objects" });
+  });
+
+  it("rejects an unbounded or prematurely enabled Neon S3 configuration", () => {
+    for (const caphub of [
+      { storage: { mode: "neon_s3" } },
+      { enabled: true, storage: { mode: "neon_s3" } },
+      { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", bucket: "public-assets" } },
+      { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", endpoint: "https://secret.example.test" } }
+    ]) {
+      expect(() => controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub })).toThrow();
     }
   });
 });

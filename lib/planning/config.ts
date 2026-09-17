@@ -43,6 +43,13 @@ const secretEnvNameSchema = z
   .max(128)
   .regex(/^[A-Z][A-Z0-9_]*$/, "Secret references must be valid uppercase environment-variable names");
 
+const managedDatabaseHostSchema = z
+  .string()
+  .max(253)
+  .regex(/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i,
+    "Managed database hosts must be normalized DNS names")
+  .transform((value) => value.toLowerCase());
+
 const exactHttpsOriginSchema = z.string().url().refine((value) => {
   try {
     const origin = new URL(value);
@@ -114,11 +121,26 @@ export const controlHostCaphubRegistryConfigSchema = z.object({
   databaseUrlEnv: secretEnvNameSchema.default("CAPHUB_DATABASE_URL"),
   migrationDatabaseUrlEnv: secretEnvNameSchema.default("CAPHUB_MIGRATION_DATABASE_URL"),
   connectionMode: z.enum(["local_socket", "tls_verify_full"]).default("tls_verify_full"),
+  managedHosts: z.array(managedDatabaseHostSchema).min(1).max(2).default(["registry.example.test"]),
   maxConnections: z.number().int().min(1).max(16).default(4),
   statementTimeoutMs: z.number().int().min(100).max(30_000).default(5_000)
 }).strict();
 
 const DEFAULT_CAPHUB_REGISTRY_CONFIG = controlHostCaphubRegistryConfigSchema.parse({});
+
+export const controlHostCaphubStorageConfigSchema = z.union([
+  z.object({ mode: z.literal("local").default("local") }).strict(),
+  z.object({
+    mode: z.literal("neon_s3"),
+    bucket: z.literal("caphub-objects"),
+    accessKeyIdEnv: secretEnvNameSchema.default("CAPHUB_S3_ACCESS_KEY_ID"),
+    secretAccessKeyEnv: secretEnvNameSchema.default("CAPHUB_S3_SECRET_ACCESS_KEY"),
+    endpointEnv: secretEnvNameSchema.default("CAPHUB_S3_ENDPOINT"),
+    regionEnv: secretEnvNameSchema.default("CAPHUB_S3_REGION")
+  }).strict()
+]).default({ mode: "local" });
+
+const DEFAULT_CAPHUB_STORAGE_CONFIG = controlHostCaphubStorageConfigSchema.parse({});
 
 const exportAliasSchema = z.string()
   .min(1)
@@ -178,8 +200,17 @@ export const controlHostCaphubConfigSchema = z.object({
   maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760),
   analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG),
   registry: controlHostCaphubRegistryConfigSchema.default(DEFAULT_CAPHUB_REGISTRY_CONFIG),
+  storage: controlHostCaphubStorageConfigSchema.default(DEFAULT_CAPHUB_STORAGE_CONFIG),
   exports: controlHostCaphubExportsConfigSchema.default(DEFAULT_CAPHUB_EXPORTS_CONFIG)
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.storage.mode === "neon_s3" && (!value.enabled || !value.registry.enabled)) {
+    context.addIssue({
+      code: "custom",
+      path: ["storage"],
+      message: "Neon Object Storage requires enabled Caphub and Registry"
+    });
+  }
+});
 
 const monitoringCredentialRefKeySchema = z
   .string()

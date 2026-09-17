@@ -57,7 +57,8 @@ async function loadFixedDependencies(): Promise<CaphubBackupDependencies> {
     databaseUrl,
     mode: registry.connectionMode,
     role: "migration",
-    resolvedHome: resolved.homeDir
+    resolvedHome: resolved.homeDir,
+    managedHosts: registry.managedHosts
   });
   return {
     create: async () => {

@@ -189,6 +189,7 @@ async function collectRegistry(input: {
     databaseUrlEnv: string;
     migrationDatabaseUrlEnv: string;
     connectionMode: "local_socket" | "tls_verify_full";
+    managedHosts: string[];
     maxConnections: number;
     statementTimeoutMs: number;
   };
@@ -211,13 +212,15 @@ async function collectRegistry(input: {
       databaseUrl: appUrl,
       mode: input.registry.connectionMode,
       role: "application",
-      resolvedHome: input.homeDir
+      resolvedHome: input.homeDir,
+      managedHosts: input.registry.managedHosts
     });
     const migrationConnection = connection.parseRegistryConnection({
       databaseUrl: migrationUrl,
       mode: input.registry.connectionMode,
       role: "migration",
-      resolvedHome: input.homeDir
+      resolvedHome: input.homeDir,
+      managedHosts: input.registry.managedHosts
     });
     const shared = {
       max: input.registry.maxConnections,
@@ -286,6 +289,7 @@ async function collectFixedSnapshot(): Promise<ProductionPreflightSnapshot> {
     databaseUrlEnv: "CAPHUB_DATABASE_URL",
     migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
     connectionMode: "tls_verify_full" as const,
+    managedHosts: ["registry.example.test"],
     maxConnections: 4,
     statementTimeoutMs: 5_000
   };

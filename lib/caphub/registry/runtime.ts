@@ -164,7 +164,8 @@ function registryPoolOptions(
       databaseUrl,
       mode: registry.connectionMode,
       role: "application",
-      resolvedHome
+      resolvedHome,
+      managedHosts: registry.managedHosts
     });
   return {
     ...connection,

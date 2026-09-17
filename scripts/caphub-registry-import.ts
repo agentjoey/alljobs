@@ -16,6 +16,7 @@ export interface RegistryImportConfig {
   databaseUrlEnv: string;
   migrationDatabaseUrlEnv: string;
   connectionMode: "local_socket" | "tls_verify_full";
+  managedHosts: string[];
   maxConnections: number;
   statementTimeoutMs: number;
 }
@@ -71,7 +72,8 @@ async function loadFixedDependencies(): Promise<CaphubRegistryImportDependencies
           databaseUrl,
           mode: registry.connectionMode,
           role: "application",
-          resolvedHome: resolved.homeDir
+          resolvedHome: resolved.homeDir,
+          managedHosts: registry.managedHosts
         }),
         max: registry.maxConnections,
         statement_timeout: registry.statementTimeoutMs,

@@ -65,13 +65,15 @@ async function loadFixedDependencies(): Promise<CaphubPostgresDependencies> {
       databaseUrl: appUrl,
       mode: registry.connectionMode,
       role: "application",
-      resolvedHome: resolved.homeDir
+      resolvedHome: resolved.homeDir,
+      managedHosts: registry.managedHosts
     });
     const migrationConnection = connection.parseRegistryConnection({
       databaseUrl: migrationUrl,
       mode: registry.connectionMode,
       role: "migration",
-      resolvedHome: resolved.homeDir
+      resolvedHome: resolved.homeDir,
+      managedHosts: registry.managedHosts
     });
     const shared = {
       max: registry.maxConnections,

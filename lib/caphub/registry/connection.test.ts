@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseRegistryConnection } from "./connection";
 
 const roots: string[] = [];
+const MANAGED_HOSTS = ["registry.example.test", "registry-pooler.example.test"];
 
 function createPrivateHome(): { home: string; socketDir: string } {
   const root = realpathSync(mkdtempSync(join(realpathSync(tmpdir()), "caphub-registry-connection-")));
@@ -113,7 +114,8 @@ describe("parseRegistryConnection", () => {
       databaseUrl: "postgresql://caphub_app:p%40ssword@registry.example.test:6543/caphub",
       mode: "tls_verify_full",
       role: "application",
-      resolvedHome: home
+      resolvedHome: home,
+      managedHosts: MANAGED_HOSTS
     })).toEqual({
       host: "registry.example.test",
       port: 6_543,
@@ -122,6 +124,29 @@ describe("parseRegistryConnection", () => {
       password: "p@ssword",
       ssl: { rejectUnauthorized: true }
     });
+  });
+
+  it("accepts only an explicitly approved managed host and TLS query parameters", () => {
+    const { home } = createPrivateHome();
+    expect(parseRegistryConnection({
+      databaseUrl: "postgresql://caphub_app:secret@registry-pooler.example.test:6543/caphub?sslmode=require&channel_binding=require",
+      mode: "tls_verify_full",
+      role: "application",
+      resolvedHome: home,
+      managedHosts: MANAGED_HOSTS
+    })).toMatchObject({
+      host: "registry-pooler.example.test",
+      port: 6543,
+      ssl: { rejectUnauthorized: true }
+    });
+
+    expect(() => parseRegistryConnection({
+      databaseUrl: "postgresql://caphub_app:secret@unapproved.neon.tech/caphub?sslmode=require",
+      mode: "tls_verify_full",
+      role: "application",
+      resolvedHome: home,
+      managedHosts: MANAGED_HOSTS
+    })).toThrow("approved managed host");
   });
 
   it.each([
@@ -139,7 +164,8 @@ describe("parseRegistryConnection", () => {
       databaseUrl,
       mode: "tls_verify_full",
       role: "application",
-      resolvedHome: home
+      resolvedHome: home,
+      managedHosts: MANAGED_HOSTS
     })).toThrow();
   });
 });

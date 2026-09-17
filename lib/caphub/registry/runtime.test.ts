@@ -12,6 +12,7 @@ const registryConfig = {
   databaseUrlEnv: "CAPHUB_DATABASE_URL",
   migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
   connectionMode: "tls_verify_full" as const,
+  managedHosts: ["registry.example.test"],
   maxConnections: 4,
   statementTimeoutMs: 5_000
 };

@@ -38,6 +38,7 @@ describe("caphub-registry-import command boundary", () => {
           databaseUrlEnv: "CAPHUB_DATABASE_URL",
           migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
           connectionMode: "local_socket",
+          managedHosts: ["registry.example.test"],
           maxConnections: 2,
           statementTimeoutMs: 5_000
         }
