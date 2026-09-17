@@ -55,3 +55,30 @@ and one independent Verification occur only after the implementation tasks.
   zero errors and one pre-existing `no-explicit-any` warning in
   `lib/planning/config.ts:306`.
 - No Production or external runtime state changed.
+
+## Task 2 — local PostgreSQL operations and readiness
+
+- Added a fixed `caphub:postgres` boundary with read-only `--check` plus exact
+  confirmation strings for bootstrap and migration. Raw URL, path, root, and
+  SQL arguments are rejected.
+- Bootstrap derives only the approved data/socket paths, requires private
+  owned canonical empty targets, invokes fixed PostgreSQL 17 binaries with
+  argument arrays, retains partial state for inspection, disables TCP, and
+  creates the fixed database and non-privileged app/migrator roles.
+- Added peer-auth/default-reject PostgreSQL templates and a loopback-independent
+  LaunchAgent template whose logs stay below `~/Library/Logs/alljobs/`.
+- Readiness verifies PostgreSQL 17, Unix-socket transport, role/database
+  identity and separation, exact migration checksums, required application
+  grants, absence of app migration/append-only update authority, and all
+  append-only triggers. Migrations reject any caller other than
+  `caphub_migrator` on database `caphub`.
+- TDD evidence: missing operations/CLI/templates produced the expected RED;
+  an initial GREEN attempt exposed PostgreSQL 17's restriction on examining
+  `unix_socket_directories`, so readiness was corrected to combine the
+  validated pool host with `inet_server_addr() IS NULL` without privileged
+  settings access.
+- Final focused gate: 4 files / 22 tests PASS against sentinel-owned temporary
+  PostgreSQL 17 clusters; typecheck PASS; scoped lint PASS; deployment
+  invariants PASS; LaunchAgent plist lint PASS.
+- No Production database, LaunchAgent, configuration, secret, or service was
+  created, installed, started, or changed.

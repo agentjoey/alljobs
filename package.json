@@ -20,6 +20,7 @@
     "caphub:project": "tsx --conditions=react-server scripts/caphub-project.ts",
     "caphub:export": "tsx --conditions=react-server scripts/caphub-export.ts",
     "caphub:publish": "tsx --conditions=react-server scripts/caphub-publish.ts",
+    "caphub:postgres": "tsx --conditions=react-server scripts/caphub-postgres.ts",
     "planning:refresh": "tsx scripts/planning-refresh.ts",
     "monitoring:refresh": "tsx scripts/monitoring-refresh.ts --once",
     "planning:skill:validate": "node scripts/validate-planning-skill.mjs",

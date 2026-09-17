@@ -1,0 +1,3 @@
+# MAPNAME     SYSTEM-USERNAME       PG-USERNAME
+caphub_map    __CONTROL_HOST_USER__ caphub_app
+caphub_map    __CONTROL_HOST_USER__ caphub_migrator

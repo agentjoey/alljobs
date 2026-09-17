@@ -1,0 +1,13 @@
+# Caphub local Registry — rendered by the fixed bootstrap command.
+listen_addresses = ''
+port = 54329
+unix_socket_directories = '__SOCKET_DIR__'
+unix_socket_permissions = 0700
+password_encryption = 'scram-sha-256'
+ssl = off
+
+# Keep process and diagnostic output bounded for this personal Control Host.
+max_connections = 16
+log_connections = on
+log_disconnections = on
+log_line_prefix = '%m [%p] %q%u@%d '

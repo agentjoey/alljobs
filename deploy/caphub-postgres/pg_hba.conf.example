@@ -1,0 +1,7 @@
+# TYPE  DATABASE  USER                 ADDRESS  METHOD
+local   postgres  __CONTROL_HOST_USER__         peer
+local   caphub    caphub_app                     peer map=caphub_map
+local   caphub    caphub_migrator                peer map=caphub_map
+local   all       all                            reject
+host    all       all                  0.0.0.0/0 reject
+host    all       all                  ::0/0     reject
