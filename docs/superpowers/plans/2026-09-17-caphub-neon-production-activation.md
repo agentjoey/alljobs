@@ -123,7 +123,7 @@
 - Produces `NeonS3CaptureObjectStore` and `createNeonS3CommandPort({ bucket, endpoint, region, credentials })`.
 - Consumed by runtime composition and transfer task.
 
-- [ ] **Step 1: Add focused failing adapter tests.**
+- [x] **Step 1: Add focused failing adapter tests.**
 
   Build an injected fake `S3ImmutableCommandPort` that records only key, byte count, SHA-256 metadata, and operation names. Test all of: first write sends `IfNoneMatch: "*"`, response is reread and hashed, an existing matching key deduplicates, an existing mismatched byte stream rejects with `ImmutableObjectMismatchError`, a missing/incorrect metadata digest rejects, read verifies byte count and digest, endpoint must be HTTPS, and the adapter contains no `DeleteObject` method/call.
 
@@ -134,13 +134,13 @@
   expect(fake.operations).toEqual(["head", "put-if-absent", "get"]);
   ```
 
-- [ ] **Step 2: Run the focused RED test.**
+- [x] **Step 2: Run the focused RED test.**
 
   Run: `pnpm exec vitest run lib/caphub/storage/neon-s3.test.ts lib/caphub/storage/local-objects.test.ts`
 
   Expected: FAIL because neither readable port nor Neon adapter exists.
 
-- [ ] **Step 3: Add the SDK and implement the adapter.**
+- [x] **Step 3: Add the SDK and implement the adapter.**
 
   Install only `@aws-sdk/client-s3`. Construct `S3Client` with explicit credentials, explicit HTTPS endpoint, explicit region, and `forcePathStyle: true`; do not use public URLs, presigning, default credential discovery, `CopyObject`, or delete APIs. Put metadata `{ "caphub-sha256": digest }` and the exact content type. Map S3 not-found/precondition errors into `null`/retry-read behavior; propagate all other errors as storage-unavailable errors at the service boundary.
 
@@ -157,13 +157,13 @@
 
   `verifyRemote` checks key, metadata digest, content length, `get`, and SHA-256 byte equality before returning `ref`. Make `LocalCaptureObjectStore` implement the new readable interface without changing its filesystem security semantics.
 
-- [ ] **Step 4: Run GREEN checks.**
+- [x] **Step 4: Run GREEN checks.**
 
   Run: `pnpm exec vitest run lib/caphub/storage/neon-s3.test.ts lib/caphub/storage/local-objects.test.ts lib/caphub/service/capture.test.ts && pnpm typecheck && pnpm lint -- lib/caphub/storage`
 
   Expected: PASS; no remote S3 endpoint is contacted.
 
-- [ ] **Step 5: Commit the adapter.**
+- [x] **Step 5: Commit the adapter.**
 
   ```bash
   git add package.json package-lock.json lib/caphub/storage/contracts.ts lib/caphub/storage/local-objects.ts lib/caphub/storage/local-objects.test.ts lib/caphub/storage/neon-s3.ts lib/caphub/storage/neon-s3.test.ts

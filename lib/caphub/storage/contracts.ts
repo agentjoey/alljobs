@@ -22,6 +22,10 @@ export interface CaptureObjectStore {
   putImmutable(input: { bytes: Uint8Array; mimeType: CaptureMimeType }): Promise<ObjectRef>;
 }
 
+export interface ReadableCaptureObjectStore extends CaptureObjectStore {
+  readImmutable(ref: ObjectRef): Promise<Uint8Array>;
+}
+
 export interface CaptureAuditLog {
   ensure(event: CaptureAuditEvent): Promise<"appended" | "existing">;
 }
