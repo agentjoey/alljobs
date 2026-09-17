@@ -319,3 +319,13 @@ and one independent Verification occur only after the implementation tasks.
   LaunchAgent environment. No credential value is retained here.
 - No migration, object transfer, Registry import, recovery proof, provider
   request, service restart, deployment, push, merge, or release occurred.
+
+## N2 local manifest — 2026-09-18
+
+- The accepted checkout's read-only `caphub:object-transfer -- --dry-run`
+  reported source digest
+  `e00ec5b4aeef4b8a1e876b5145c42e062ac983627ac9fdb56379c830ee0f0725`
+  with object count `1`.
+- No `--apply` transfer or remote-object attestation has run. The next action
+  requires private Object Storage credentials and a separate authorization for
+  the irreversible external object copy.
