@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { chmod, mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { P4ErrorCode, ProjectionEntry } from "../packages/types";
 import { parseObsidianDocument } from "./markers";
@@ -42,8 +42,15 @@ function sha256Hex(buffer: Buffer): string {
 }
 
 async function acquireLock(root: string, operationId: string, options?: import("../deployments/recovery").AcquireLeaseOptions): Promise<() => Promise<void>> {
-  const { acquireLeaseLock } = await import("../deployments/recovery");
-  return acquireLeaseLock(root, LOCK_DIRECTORY, operationId, options);
+  const { acquireLeaseLock, LockError } = await import("../deployments/recovery");
+  try {
+    return await acquireLeaseLock(root, LOCK_DIRECTORY, operationId, options);
+  } catch (error) {
+    if (error instanceof LockError) {
+      throw new ProjectionApplyError(error.code, error.message);
+    }
+    throw error;
+  }
 }
 
 async function readRecovery(root: string): Promise<unknown | null> {

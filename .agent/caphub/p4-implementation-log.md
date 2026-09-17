@@ -61,3 +61,32 @@ No push, PR, merge, tag, release, deploy, service restart, traffic switch, provi
 - **Review** (scoped, independent): 0 blocker / 0 high / 7 medium / 8 low. All 7 medium fixed (apply-time revalidation, approval selection, plan identity, cross-call idempotency, recovery convergence, partial version resume, export-CLI pointer validation) plus 3 low fixes; see `.agent/caphub/p4-review.md`. Re-verification: 78 files / 520 tests PASS; publisher 7/7 including two new regression tests; build + P4 E2E 8/8 PASS.
 - **Verification** (scoped, independent): criteria 1–8 PASS; 9–10 flagged process gaps (closeout pending, tree dirty mid-flight) which the closeout commit resolves; see `.agent/caphub/p4-verification.md`.
 - Per the bounded-review rule, the full suite was not re-run after the review fixes; the fixes are confined to the covered `lib/caphub`, CLI, and component suites listed above.
+
+## Codex acceptance fix batch (2026-09-17, reviewed base 3b167b3)
+
+Codex acceptance at 3b167b3 was **changes requested** (7 boundary findings). Fixes, in order, each with RED→GREEN focused tests:
+
+| # | Finding | Fix commit | Key changes | Regression tests |
+|---|---|---|---|---|
+| 1 | Forged-pointer publish bypass | `5939156` | `alreadyApplied` removed; idempotent success anchored on validated completed operation + pointer + fully verified version bytes; target JSON parsed/validated (`parsePointerJson`); forged pointer fails STALE before any write | `publisher.acceptance.test.ts` (7 tests incl. forged-pointer no-write proof) |
+| 2 | §9.2 revalidation optional | `5939156` | `assertAuthority` mandatory; strict `fullRevalidate` order: authority → manifest reproduction → pointer equality → preimage reproduction → rollback dir | omitted-checker + preimage-mismatch tests |
+| 3 | Version bytes trusted via marker | `5939156` | `verifyVersionDirectory`: exact file set/paths/bytes/SHA-256, no missing/extra/symlink; resume-safe materialization fails closed on unexpected files | tampered/missing/marker-only/unexpected/symlink tests |
+| 4 | Recovery deleted live locks | `728c1a7` | `acquireLeaseLock` in recovery.ts: takeover only for same operation + provably dead pid + staleness bound; wired into publisher + projection apply/reconcile | 3 recovery lease tests + 2 publisher + 2 projection tests |
+| 5 | Durability gaps | `4996f8b` | `writeFileDurable` (same-dir exclusive temp + fsync + atomic rename) applied to current.json, operation records, version marker/files, projection recovery record, lease owner.json | covered by existing injected-failure reconciles |
+| 6 | Dry-run walked mixed manifests | `4996f8b` | `readActiveManifestDirectory` binds pointer→operation→exact manifest dir; CLI normalizes adapter-relative paths | two-manifest CLI regression test |
+| 7 | Contradictory lifecycle copy | `628b553` | `CapabilityRegistryDetail` takes `exportView`; one combined state (candidate-only / release-bound / deployed); aside cards driven by release/deployment truth | 3 component tests + 3 whole-page E2E assertions |
+
+### Final gates for the fix batch (at `628b553`)
+
+- Combined focused suite (`lib/caphub` + `components/caphub` + CLI): **79 files / 538 tests PASS**.
+- Full unit/component suite (closeout, clean env): **151 files / 1355 tests PASS** (+20 vs previous gate).
+- `npm run typecheck` PASS; `npm run lint` **0 errors / 89 warnings**.
+- `npm run build` PASS (final screenshots bound to this build); `npm run verify:deploy` PASS.
+- P4 E2E: **11/11 PASS** (8 prior scenarios + 3 whole-page lifecycle assertions).
+
+### Evidence corrections (per acceptance handoff)
+
+- Base (`4b373dd`) → reviewed head (`3b167b3`) history is **14 commits** (earlier handoff miscounted 15).
+- `.pact/seat` is a **tracked** file with a local seat-binding modification (opencode→kimi); preserved, never staged/restored/committed in any fix commit.
+- The earlier independent verification evaluated pre-fix evidence; a fresh independent verification is bound to the final fix SHA (see `.agent/caphub/p4-acceptance-verification.md`).
+- Lint warnings reconciled from fresh output: 89 (was recorded as 81/82 mid-batch before the fix batch grew the test surface).

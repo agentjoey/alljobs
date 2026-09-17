@@ -88,10 +88,7 @@ async function loadExportCliDeps(): Promise<ExportCliDeps> {
   const { renderClaudePreview } = await import("../lib/caphub/adapters/claude");
   const { renderHermesPreview } = await import("../lib/caphub/adapters/hermes");
   const { diffPackageFiles } = await import("../lib/caphub/packages/diff");
-  const { readdir } = await import("node:fs/promises");
-  const { join } = await import("node:path");
   const { createHash } = await import("node:crypto");
-  const { readFile } = await import("node:fs/promises");
   const context = await loadControlHostExportContext();
   const adapters = { codex: renderCodexPreview, claude: renderClaudePreview, hermes: renderHermesPreview } as const;
 

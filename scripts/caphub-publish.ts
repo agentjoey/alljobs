@@ -1,7 +1,77 @@
 import type { ExportRuntime } from "../lib/caphub/exports/runtime";
+import type { RegistryVersion } from "../lib/caphub/registry/types";
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { confirmationFor } from "../lib/caphub/registry/confirmations";
 import { consoleIo, parseFlags, rejectForbiddenArgs, reportError, type CliIo } from "./caphub-cli";
+
+export interface PublishAuthorityDeps {
+  releaseRecord: RegistryVersion;
+  reviews: {
+    listDecisionsForSubject(subjectId: string): Promise<import("../lib/caphub/registry/types").ReviewDecision[]>;
+    getConsumption(decisionId: string): Promise<{ consumer_id: string } | null>;
+  };
+  targetRootDir: string;
+  renderAdapter: () => import("../lib/caphub/adapters/contracts").AdapterRenderResult;
+  assertEnabled: (target: "codex" | "claude" | "hermes") => void;
+}
+
+function authorityError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
+/** Spec §9.2 apply-time authority revalidation, wired for the publish CLI.
+ * Every reproduction failure throws a coded P4 error before any side effect. */
+export function createPublishAuthority(deps: PublishAuthorityDeps) {
+  return async (
+    expected: import("../lib/caphub/packages/types").DeploymentPlan,
+    _evidence?: import("../lib/caphub/deployments/publisher").ApplyEvidence
+  ): Promise<void> => {
+    deps.assertEnabled(expected.target as "codex" | "claude" | "hermes");
+    if (deps.releaseRecord.version !== expected.release.version
+      || deps.releaseRecord.payload_digest !== expected.release.digest) {
+      throw authorityError("STALE_DEPLOYMENT", "release record no longer matches the plan");
+    }
+    const decisions = await deps.reviews.listDecisionsForSubject(expected.release.record_id);
+    let finalized = false;
+    for (const candidate of decisions.filter((d) => d.action === "approve" && d.review_kind === "release")) {
+      const consumed = await deps.reviews.getConsumption(candidate.id);
+      if (consumed?.consumer_id === expected.release.record_id) finalized = true;
+    }
+    if (!finalized) {
+      throw authorityError("DEPLOYMENT_NOT_APPROVED", "release approval is not finalized");
+    }
+    const rendered = deps.renderAdapter();
+    if (!rendered.ok) {
+      throw authorityError("ADAPTER_UNSUPPORTED", rendered.diagnostics.join("; "));
+    }
+    if (rendered.result.adapter !== expected.adapter.name
+      || rendered.result.adapter_version !== expected.adapter.version
+      || rendered.result.source_digest !== expected.adapter.digest) {
+      throw authorityError("STALE_DEPLOYMENT", "adapter identity, version, or source digest no longer matches the plan");
+    }
+    if (rendered.result.output_manifest_digest !== expected.preview_manifest_digest) {
+      throw authorityError("STALE_DEPLOYMENT", "adapter output manifest no longer matches the plan");
+    }
+    const { readActiveAdapterFiles } = await import("./caphub-export");
+    const { diffPackageFiles } = await import("../lib/caphub/packages/diff");
+    const snapshot = await readActiveAdapterFiles(deps.targetRootDir);
+    const diff = diffPackageFiles({
+      baseFiles: snapshot.map((file) => ({
+        path: file.path,
+        media_type: "text/markdown" as const,
+        content: file.content,
+        sha256: createHash("sha256").update(file.content, "utf8").digest("hex"),
+        bytes: Buffer.byteLength(file.content, "utf8")
+      })),
+      nextFiles: rendered.result.files,
+      redactRoots: [deps.targetRootDir]
+    });
+    if (diff.digest !== expected.preview_diff_digest) {
+      throw authorityError("STALE_DEPLOYMENT", "preview diff no longer reproduces the approved digest");
+    }
+  };
+}
 
 export interface PublishCliDeps {
   loadRuntime(): ExportRuntime;
@@ -99,26 +169,13 @@ async function loadPublishDeps(): Promise<PublishCliDeps> {
         exports: new PostgresExportStore(registry.pool),
         deploymentRecordId: deploymentId,
         planApprovalDecisionId: approval.id,
-        assertAuthority: async (expected) => {
-          // Spec §9.2 apply-time revalidation: exact release version/digest and
-          // the current adapter source digest must reproduce the plan.
-          if (releaseRecord.version !== expected.release.version
-            || releaseRecord.payload_digest !== expected.release.digest) {
-            throw new Error("STALE_DEPLOYMENT: release record no longer matches the plan");
-          }
-          const decisionsForRelease = await reviews.listDecisionsForSubject(expected.release.record_id);
-          const finalized = [];
-          for (const candidate of decisionsForRelease.filter((d) => d.action === "approve" && d.review_kind === "release")) {
-            const consumed = await reviews.getConsumption(candidate.id);
-            if (consumed?.consumer_id === expected.release.record_id) finalized.push(candidate);
-          }
-          if (finalized.length === 0) {
-            throw new Error("DEPLOYMENT_NOT_APPROVED: release approval is not finalized");
-          }
-          if (rendered.result.source_digest !== expected.adapter.digest) {
-            throw new Error("STALE_DEPLOYMENT: adapter output digest no longer matches the plan");
-          }
-        }
+        assertAuthority: createPublishAuthority({
+          releaseRecord,
+          reviews,
+          targetRootDir: root.root,
+          renderAdapter: () => rendered,
+          assertEnabled: (target) => context.runtime.assertEnabled(target)
+        })
       });
     }
   };

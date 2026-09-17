@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 export const DEPLOYMENT_LOCK_DIRECTORY = ".caphub-deployment.lock";
@@ -18,12 +18,36 @@ export interface OperationRecord {
   created_at: string;
 }
 
+function isHex64(value: unknown): boolean {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+
+/** Parse target-controlled operation JSON; malformed or inconsistent records
+ * are unreadable rather than trusted. */
 export async function readOperation(root: string, deploymentId: string): Promise<OperationRecord | null> {
+  let value: unknown;
   try {
-    return JSON.parse(await readFile(join(root, "operations", `${deploymentId}.json`), "utf8")) as OperationRecord;
+    value = JSON.parse(await readFile(join(root, "operations", `${deploymentId}.json`), "utf8"));
   } catch {
     return null;
   }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const release = record.release as Record<string, unknown> | undefined;
+  if (record.schema_version !== 1
+    || typeof record.deployment_id !== "string" || !/^dep_[a-f0-9]{32}$/.test(record.deployment_id)
+    || !isHex64(record.plan_digest)
+    || (record.action !== "publish" && record.action !== "rollback")
+    || (record.stage !== "versioned" && record.stage !== "realized" && record.stage !== "completed")
+    || !release
+    || typeof release.record_id !== "string" || !/^rel_[a-f0-9]{32}$/.test(release.record_id)
+    || !Number.isInteger(release.version) || (release.version as number) <= 0
+    || !isHex64(release.digest)
+    || !isHex64(record.manifest_digest)
+    || typeof record.created_at !== "string") {
+    return null;
+  }
+  return record as unknown as OperationRecord;
 }
 
 export async function writeOperation(root: string, record: OperationRecord): Promise<void> {
@@ -97,7 +121,7 @@ async function writeLease(root: string, lockName: string, operationId: string, n
     acquired_at: new Date(nowMs).toISOString()
   };
   const path = join(root, lockName, "owner.json");
-  const temporary = join(root, lockName, `.owner.json.tmp-${process.pid}`);
+  const temporary = join(root, lockName, `.owner.json.tmp-${process.pid}-${Math.random().toString(16).slice(2)}`);
   const handle = await open(temporary, "wx", 0o600);
   try {
     await handle.writeFile(`${JSON.stringify(lease, null, 2)}\n`, "utf8");

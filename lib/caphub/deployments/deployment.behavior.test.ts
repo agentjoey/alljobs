@@ -8,7 +8,7 @@ import { renderCodexPreview } from "../adapters/codex";
 import { capabilityCandidateSchema, reviewPacketSchema } from "../analysis/schemas";
 import { digestCanonicalJson } from "../analysis/digest";
 import { capabilityPackageSchema } from "../packages/schemas";
-import type { CapabilityPackage, PackageFile } from "../packages/types";
+import type { PackageFile } from "../packages/types";
 import type { CaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import { startCaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import { applyRegistryMigrations } from "../registry/migrate";

@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { Pool } from "pg";
 import { renderCodexPreview } from "../adapters/codex";
 import { digestCanonicalJson } from "../analysis/digest";
 import { testCapabilityPackage } from "../packages/fixtures";
@@ -334,5 +333,71 @@ describe.sequential("Codex acceptance fix 4 (recovery lock lease)", () => {
     await expect(readFile(join(target.root, LOCK_DIR, "owner.json"), "utf8")).rejects.toThrow();
     const completed = JSON.parse(await readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8"));
     expect(completed.stage).toBe("completed");
+  });
+});
+
+describe.sequential("Codex acceptance review regressions", () => {
+  it("rejects a forged pointer paired with a stage-versioned operation (no realize, no writes)", async () => {
+    const seed = nextSeed() + 4000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    const realize = vi.fn(async () => "created" as const);
+    input.exports = {
+      composeRelease: async () => "created",
+      finalizeRelease: async () => "finalized",
+      composeDeploymentPlan: async () => "created",
+      realizeDeployment: realize
+    } satisfies RegistryExportStore;
+    const { writeOperation } = await import("./recovery");
+    await writeOperation(target.root, {
+      schema_version: 1,
+      deployment_id: deploymentId,
+      plan_digest: digestCanonicalJson(plan),
+      action: "publish",
+      stage: "versioned",
+      release: plan.release,
+      manifest_digest: plan.preview_manifest_digest,
+      created_at: NOW
+    });
+    await writeFile(join(target.root, "current.json"), `${JSON.stringify(forgePointer(deploymentId, plan), null, 2)}\n`, "utf8");
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
+    expect(realize).not.toHaveBeenCalled();
+    const operation = JSON.parse(await readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8"));
+    expect(operation.stage).toBe("versioned");
+  });
+
+  it("replays a completed rollback idempotently from its publish-created version directory", async () => {
+    const seed = nextSeed() + 4000;
+    const pkg = adapterPackage(seed);
+    const publishPlan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, publishPlan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const publishInput = makeInput(pkg, publishPlan, decisionId, deploymentId, target);
+    const v1 = await publishToTarget(publishInput);
+
+    const marker = JSON.parse(await readFile(join(target.root, "versions", publishPlan.release.record_id, "1", publishPlan.preview_manifest_digest, ".caphub-version.json"), "utf8"));
+    const preimage = digestCanonicalJson({
+      schema_version: 1,
+      pointer: v1.pointer,
+      files: marker.files.map((f: { path: string; sha256: string; bytes: number }) => ({ path: f.path, sha256: f.sha256, bytes: f.bytes }))
+    });
+    const rollbackPlan: DeploymentPlan = {
+      ...publishPlan,
+      action: "rollback",
+      expected_current_pointer: v1.pointer,
+      target_preimage_digest: preimage,
+      created_at: NOW
+    };
+    const rollbackDecisionId = await seedApprovedPlan(seed + 1, rollbackPlan);
+    const rollbackInput = makeInput(pkg, rollbackPlan, rollbackDecisionId, hexId("dep_", seed + 5001), target);
+    const rolledBack = await publishToTarget(rollbackInput);
+    expect(rolledBack.pointer.release_id).toBe(publishPlan.release.record_id);
+    const replay = await publishToTarget(rollbackInput);
+    expect(replay.pointer).toEqual(rolledBack.pointer);
   });
 });

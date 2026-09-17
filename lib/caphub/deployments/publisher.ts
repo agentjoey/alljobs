@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, open, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { digestCanonicalJson } from "../analysis/digest";
 import type { DeploymentPlan, PackageFile, P4ErrorCode } from "../packages/types";
@@ -34,14 +34,6 @@ const VERSION_MARKER = ".caphub-version.json";
 
 function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
-}
-
-interface PointerJson {
-  deployment_id: string;
-  release_id: string;
-  release_version: number;
-  release_digest: string;
-  pointer_digest: string;
 }
 
 /** Parse target-controlled pointer JSON instead of casting to trusted types. */
@@ -261,7 +253,7 @@ async function verifiedManifestState(
   const marker = parseVersionMarker(markerRaw);
   if (!marker
     || marker.manifest_digest !== operation.manifest_digest
-    || marker.action !== operation.action
+    || marker.action !== "publish"
     || marker.release.record_id !== pointer.release_id
     || marker.release.version !== pointer.release_version
     || marker.release.digest !== pointer.release_digest) {
@@ -394,8 +386,10 @@ export interface PublishInput {
   deploymentRecordId: string;
   planApprovalDecisionId: string;
   /** Mandatory spec §9.2 apply-time authority revalidation. Must throw a P4
-   * coded error on any mismatch; the publish fails closed when absent. */
-  assertAuthority: (plan: DeploymentPlan) => Promise<void>;
+   * coded error on any mismatch; the publish fails closed when absent. The
+   * implementation must reproduce the preview diff digest and adapter
+   * identity/digests; the publisher passes its own reproduced evidence. */
+  assertAuthority: (plan: DeploymentPlan, evidence: ApplyEvidence) => Promise<void>;
   /** Injectable lease liveness/staleness for recovery tests. */
   lock?: AcquireLeaseOptions;
   hooks?: {
@@ -469,12 +463,18 @@ function lineageFor(input: PublishInput): RegistryLineageEdge[] {
   ];
 }
 
-async function runAuthority(input: PublishInput): Promise<void> {
+export interface ApplyEvidence {
+  manifestDigest: string;
+  /** Null while the target preimage is still being reproduced. */
+  preimageDigest: string | null;
+}
+
+async function runAuthority(input: PublishInput, evidence: ApplyEvidence): Promise<void> {
   if (typeof input.assertAuthority !== "function") {
     throw new PublishError("DEPLOYMENT_NOT_APPROVED", "apply-time authority revalidation is mandatory");
   }
   try {
-    await input.assertAuthority(input.plan);
+    await input.assertAuthority(input.plan, evidence);
   } catch (error) {
     if (error instanceof PublishError) throw error;
     const code = error && typeof error === "object" && "code" in error
@@ -488,10 +488,10 @@ async function runAuthority(input: PublishInput): Promise<void> {
 /** Strict pre-state revalidation: authority, pointer shape + expectation,
  * target preimage reproduction, and preview manifest reproduction. */
 async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | null> {
-  await runAuthority(input);
   if (manifestDigestFor(input.files) !== input.plan.preview_manifest_digest) {
     throw new PublishError("STALE_DEPLOYMENT", "preview files no longer reproduce the approved manifest digest");
   }
+  await runAuthority(input, { manifestDigest: input.plan.preview_manifest_digest, preimageDigest: null });
   const actual = await readTargetPointer(input.root);
   if (!samePointer(actual, input.plan.expected_current_pointer)) {
     throw new PublishError("STALE_DEPLOYMENT", "current target pointer does not match the approved plan");
@@ -528,7 +528,10 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
       throw new PublishError("STALE_DEPLOYMENT", "completed operation no longer matches the materialized pointer");
     }
     await verifiedManifestState(input.root, pointer!, existingOperation);
-    await runAuthority(input);
+    await runAuthority(input, {
+      manifestDigest: existingOperation.manifest_digest,
+      preimageDigest: input.plan.target_preimage_digest
+    });
     return { pointer: pointer! };
   }
 
@@ -539,10 +542,13 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     // Crash-after-pointer convergence: a realized operation for this exact
     // plan plus the resulting pointer plus verified versions may complete.
     if (existingOperation && existingOperation.plan_digest === planDigest
-      && existingOperation.stage !== "completed"
+      && existingOperation.stage === "realized"
       && samePointer(currentPointer, resultPointer)) {
       await verifiedManifestState(input.root, currentPointer!, existingOperation);
-      await runAuthority(input);
+      await runAuthority(input, {
+        manifestDigest: existingOperation.manifest_digest,
+        preimageDigest: input.plan.target_preimage_digest
+      });
       await writeOperation(input.root.root, {
         schema_version: 1,
         deployment_id: input.deploymentRecordId,

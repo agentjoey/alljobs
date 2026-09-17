@@ -77,6 +77,7 @@ describe("combined lifecycle states (acceptance fix 7)", () => {
     expect(text).not.toContain("not a released capability");
     expect(text).not.toContain("No Release");
     expect(text).not.toContain("No Deployment or Usage");
+    expect(text).not.toContain("Candidate only");
   });
 
   it("deployed state shows the active pointer and no missing-artifact copy", () => {
@@ -109,6 +110,7 @@ describe("combined lifecycle states (acceptance fix 7)", () => {
     expect(text).not.toContain("No Release");
     expect(text).not.toContain("No Deployment or Usage");
     expect(text).not.toContain("No deployment recorded yet");
+    expect(text).not.toContain("Candidate only");
   });
 
   it("candidate-only state keeps the honest P3 copy when no export state exists", () => {
