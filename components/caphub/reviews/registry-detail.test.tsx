@@ -43,3 +43,77 @@ describe("Registry detail surfaces", () => {
     expect(screen.getByText("Capability Candidate not found")).toBeInTheDocument();
   });
 });
+
+describe("combined lifecycle states (acceptance fix 7)", () => {
+  function exportViewFixture(overrides: Record<string, unknown> = {}) {
+    return {
+      kind: "ready",
+      candidateId: capabilityDetail.kind === "found" ? capabilityDetail.candidateId : `cand_${"2".repeat(32)}`,
+      release: {
+        recordId: `rel_${"1".repeat(32)}`,
+        version: 1,
+        digest: "a".repeat(64),
+        packageDigest: "b".repeat(64),
+        slug: "browser-use-safety",
+        title: "Browser Use Safety Layer",
+        semver: "1.0.0",
+        state: "waiting",
+        reviewState: "WAITING_FOR_REVIEW"
+      },
+      packageManifest: { fileCount: 5, manifestDigest: "c".repeat(64) },
+      adapters: [],
+      obsidian: { state: "unavailable", conflicts: [] },
+      deployment: { plans: [], history: [], activePointer: null },
+      ...overrides
+    } as never;
+  }
+
+  it("release-bound state shows no candidate-only or deployment contradictions", () => {
+    const { container } = render(<CapabilityRegistryDetail view={capabilityDetail} exportView={exportViewFixture()} />);
+    expect(screen.getByRole("heading", { name: "A Release candidate binds this capability." })).toBeInTheDocument();
+    expect(screen.getByText("No deployment recorded yet")).toBeInTheDocument();
+    expect(screen.getByText(/browser-use-safety · v1.0.0/)).toBeInTheDocument();
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("not a released capability");
+    expect(text).not.toContain("No Release");
+    expect(text).not.toContain("No Deployment or Usage");
+  });
+
+  it("deployed state shows the active pointer and no missing-artifact copy", () => {
+    const base = exportViewFixture() as { release: Record<string, unknown> } & Record<string, unknown>;
+    const deployedView = {
+      ...base,
+      release: { ...base.release, state: "approved_finalized" },
+      deployment: {
+        plans: [],
+        history: [{
+          deploymentId: `dep_${"4".repeat(32)}`,
+          action: "publish",
+          targetAlias: "codex-primary",
+          releaseVersion: 1,
+          createdAt: "2026-09-16T13:00:00.000Z"
+        }],
+        activePointer: {
+          deploymentId: `dep_${"4".repeat(32)}`,
+          releaseId: `rel_${"1".repeat(32)}`,
+          releaseVersion: 1,
+          pointerDigest: "a1".repeat(32)
+        }
+      }
+    };
+    const { container } = render(<CapabilityRegistryDetail view={capabilityDetail} exportView={deployedView as never} />);
+    expect(screen.getByRole("heading", { name: "Deployed and reviewable end to end." })).toBeInTheDocument();
+    expect(screen.getByText("Active deployment")).toBeInTheDocument();
+    const text = container.textContent ?? "";
+    expect(text).not.toContain("not a released capability");
+    expect(text).not.toContain("No Release");
+    expect(text).not.toContain("No Deployment or Usage");
+    expect(text).not.toContain("No deployment recorded yet");
+  });
+
+  it("candidate-only state keeps the honest P3 copy when no export state exists", () => {
+    render(<CapabilityRegistryDetail view={capabilityDetail} />);
+    expect(screen.getByRole("heading", { name: /not a released capability/i })).toBeInTheDocument();
+    expect(screen.getByText("No Release")).toBeInTheDocument();
+  });
+});

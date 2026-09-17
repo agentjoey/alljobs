@@ -43,6 +43,7 @@ export interface P4FixtureState {
   port: number;
   candidates: Record<string, string>;
   releaseWaiting: string;
+  releaseApproved: string;
   releaseDeployed: string;
   releaseUnsupported: string;
   deploymentRequestWaiting: string;
@@ -421,6 +422,19 @@ export async function seedP4Matrix(pool: Pool, fixture: P4Fixture): Promise<P4Fi
   writeFileSync(join(versionDir, "$CODEX_HOME", "skills", pkgC.slug, "SKILL.md"), "# Deployed Release\n", { mode: 0o600 });
   writeFileSync(join(codexRoot, "current.json"), `${JSON.stringify(pointer, null, 2)}\n`, { mode: 0o600 });
 
+  // E: approved-but-not-deployed release.
+  const e = await seedCandidate("approved", "Approved Release");
+  const pkgE = testCapabilityPackage({
+    release_id: `rel_${digest("approved:release").slice(0, 32)}`,
+    package_id: `pkg_${digest("approved:package").slice(0, 32)}`,
+    slug: "approved-release",
+    title: "Approved Release",
+    dependencies: []
+  });
+  const releaseE = await seedRelease("approved", e.candidateId, e.candidateDigest, pkgE);
+  const requestE = `rev_${digest("approved:request").slice(0, 32)}`;
+  await insertRequest(requestE, "release", releaseE.releaseId, "release", releaseE.releaseDigest, "APPROVED", 2);
+
   // D: unsupported adapter via copyleft license.
   const d = await seedCandidate("unsupported", "Unsupported License Release");
   const pkgD = testCapabilityPackage({
@@ -445,6 +459,7 @@ export async function seedP4Matrix(pool: Pool, fixture: P4Fixture): Promise<P4Fi
     port: 0,
     candidates,
     releaseWaiting: b.candidateId,
+    releaseApproved: e.candidateId,
     releaseDeployed: c.candidateId,
     releaseUnsupported: d.candidateId,
     deploymentRequestWaiting: planBRequest

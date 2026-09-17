@@ -66,7 +66,7 @@ test.describe.serial("Caphub P4 package export browser journeys", () => {
 
   test("Capability detail shows waiting release, adapter previews, projection conflict, and unconsumed plan", async ({ page }) => {
     await page.goto(`/capabilities/${state.releaseWaiting}`);
-    await expect(page.getByRole("heading", { name: "Release candidate" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Release candidate", exact: true })).toBeVisible();
     await expect(page.getByText(/waiting for its own exact-version human review/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Adapter previews" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Obsidian projection" })).toBeVisible();
@@ -100,7 +100,7 @@ test.describe.serial("Caphub P4 package export browser journeys", () => {
     await expect(page.getByRole("heading", { name: "Exports are safe-off" })).toBeVisible();
     setP4ExportsEnabled(fixture, true);
     await page.goto(`/capabilities/${state.releaseWaiting}`);
-    await expect(page.getByRole("heading", { name: "Release candidate" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Release candidate", exact: true })).toBeVisible();
   });
 
   test("390px viewport keeps the export states readable without horizontal overflow", async ({ page }) => {
@@ -118,5 +118,44 @@ test.describe.serial("Caphub P4 package export browser journeys", () => {
     expect(["A", "BUTTON", "SELECT", "INPUT", "H1", "H2"]).toContain(focused ?? "");
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
     expect(results.violations).toEqual([]);
+  });
+});
+
+test.describe.serial("whole-page lifecycle states (acceptance fix 7)", () => {
+  let state: P4FixtureState;
+
+  test.beforeAll(() => {
+    state = readP4FixtureState();
+  });
+
+  test("waiting state binds the release and contradicts nothing", async ({ page }) => {
+    await page.goto(`/capabilities/${state.releaseWaiting}`);
+    await expect(page.getByRole("heading", { name: "A Release candidate binds this capability." })).toBeVisible();
+    await expect(page.getByText("No deployment recorded yet")).toBeVisible();
+    const body = await page.evaluate(() => document.body.innerText);
+    expect(body).not.toContain("not a released capability");
+    expect(body).not.toContain("No Release");
+    expect(body).not.toContain("No Deployment or Usage");
+  });
+
+  test("released-not-deployed state binds the release without deployed copy", async ({ page }) => {
+    await page.goto(`/capabilities/${state.releaseApproved}`);
+    await expect(page.getByRole("heading", { name: "A Release candidate binds this capability." })).toBeVisible();
+    await expect(page.getByText("approved unfinalized")).toBeVisible();
+    const body = await page.evaluate(() => document.body.innerText);
+    expect(body).not.toContain("not a released capability");
+    expect(body).not.toContain("No Release");
+    expect(body).not.toContain("Deployed and reviewable");
+  });
+
+  test("deployed state shows the pointer and contradicts nothing", async ({ page }) => {
+    await page.goto(`/capabilities/${state.releaseDeployed}`);
+    await expect(page.getByRole("heading", { name: "Deployed and reviewable end to end." })).toBeVisible();
+    await expect(page.getByText("Active deployment")).toBeVisible();
+    await expect(page.getByText(/Active pointer: deployment/)).toBeVisible();
+    const body = await page.evaluate(() => document.body.innerText);
+    expect(body).not.toContain("not a released capability");
+    expect(body).not.toContain("No Release");
+    expect(body).not.toContain("No Deployment or Usage");
   });
 });

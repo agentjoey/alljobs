@@ -90,7 +90,7 @@ export default async function CapabilityPage({ params }: { params: Promise<{ id:
   } catch {}
   if (!view) return <section className="registry-state" role="alert"><h1>Capability Registry is unavailable.</h1><p>Safe error <code>REGISTRY_UNAVAILABLE</code>.</p></section>;
   return <>
-    <CapabilityRegistryDetail view={view} />
+    <CapabilityRegistryDetail view={view} exportView={exportView} />
     <div className="registry-detail-page"><div className="registry-detail-grid"><main><CapabilityExportPanel view={exportView} /></main></div></div>
   </>;
 }
