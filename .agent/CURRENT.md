@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-17 by Codex after local P4 implementation acceptance
+Last Updated:   2026-09-17 by Codex during P1–P4 Production activation implementation
 
 ## Current decision
 
@@ -66,11 +66,10 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Implement the approved P1–P4 Production activation spec and plan from the
-isolated `codex/caphub-production-activation` branch. Use local PostgreSQL 17,
-keep the design Neon-ready, and stop before PA-B/PA-C/PA-D. Any real P4 target
-configuration, dry run, adapter enablement, publish, or rollback still requires
-the corresponding P4-A/P4-B/P4-C authorization.
+Run the single PA-A implementation phase gate plus scoped independent Review
+and Verification on `codex/caphub-production-activation`, then stop before
+PA-B. Any real local cluster/LaunchAgent/config/secret/import/backup action,
+provider call, application cutover, or P4 target remains Human-gated.
 
 ## Caphub development status — 2026-09-16
 
@@ -95,9 +94,12 @@ the corresponding P4-A/P4-B/P4-C authorization.
   decisions, and read-only neutral/adapter previews.
 - P5 self-development and P6 automation are deferred. Real export targets,
   publish/install/rollback, and every P4-A/P4-B/P4-C gate remain untouched.
-- No activation implementation, database/bootstrap/migration, config/secret
+- Activation Tasks 0–7 are implemented on the isolated branch, including the
+  fixture-only P1–P4 pilot, final-build screenshots, metadata-only preflight,
+  threat model, and operator runbook. The single PA-A final gate remains.
+- No real database/bootstrap/migration/import/backup, LaunchAgent, config/secret
   change, provider call, service reload, push, merge, deploy, or release has
-  occurred from this planning branch.
+  occurred from this implementation branch.
 
 ## P0 Backlog retirement (live)
 

@@ -187,3 +187,30 @@ and one independent Verification occur only after the implementation tasks.
   an environment limitation, not a passing Turbopack result.
 - No Production database, config, LaunchAgent, service, provider, source URL,
   target, Git remote, or deployment state was used or changed.
+
+## Task 7 — metadata-only preflight and operator evidence
+
+- Added `caphub:preflight`, a read-only/no-argument command whose report is
+  constructed from a strict field whitelist: commit/version, booleans, counts,
+  digests, fixed role/database/migration IDs, backup generation ID, and safe
+  stage enums only. Extra dependency fields are discarded; unsafe public
+  strings and enabled pilot targets fail closed.
+- RED evidence: the focused suite failed because the preflight module was
+  absent. GREEN evidence: preflight plus deployment verifier tests 2 files / 5
+  tests PASS; scoped ESLint PASS; typecheck PASS; deployment invariants PASS.
+- Read-only Control Host execution reports build `d1f2986`, Next.js `16.3.3`,
+  loopback-only application, 2 filesystem Captures at one source digest,
+  Registry unavailable/unmigrated, no backup generation, both provider secret
+  references present, exports master false, zero enabled targets, and
+  `readyFor: PA_B`. No values, paths, URLs, bytes, prompts, responses, or target
+  roots were emitted.
+- Added the S0–S4/rollback runbook and activation threat model, and synchronized
+  architecture, operations, deployment, Caphub custody, roadmap, and current
+  status documents. The official source URL and exact origin remain runtime
+  Human inputs with no default.
+- The first direct `tsx` CLI attempt was blocked by the execution sandbox's IPC
+  socket policy (`EPERM`); the same read-only command passed outside that
+  sandbox. This did not change Production state.
+- PA-B/PA-C/PA-D and P4-A/P4-B/P4-C remain closed. No real database,
+  LaunchAgent, configuration, secret, provider, service, target, push, merge,
+  deployment, or release action occurred.

@@ -363,17 +363,37 @@ P1 depends on ports rather than a database-specific service:
 - `CaptureObjectStore` owns immutable object bytes.
 - `CaptureAuditLog` ensures the deterministic receipt event.
 
-A future PostgreSQL metadata implementation must be a separately planned and
-approved `PostgresCaptureStore` implementing the existing `CaptureStore`
-contract. Metadata migration, consistency checks, cutover, and rollback must
-be designed and approved independently. Object bytes remain behind
-`CaptureObjectStore`; introducing a metadata adapter does not move or expose
-them automatically.
+The implemented PostgreSQL metadata adapter remains disabled by default and
+implements the existing `CaptureStore` contract. Its Production activation,
+source-digest-bound migration, consistency checks, backup/restore drill,
+cutover, and rollback are governed by the separately approved
+[activation spec](superpowers/specs/2026-09-17-caphub-production-activation-design.md)
+and [runbook](../.agent/caphub/production-activation-runbook.md). Object bytes
+remain behind `CaptureObjectStore`; activating the metadata adapter does not
+move or expose them.
 
-Obsidian is absent from P1. A future separately approved integration may
-consume approved Registry exports only; it must not read the P1 custody tree as
-an alternate source of truth. PostgreSQL and Obsidian are future
-adapter/integration boundaries, not installed or active P1 runtime features.
+Obsidian remains absent from the pilot. Any later separately approved
+integration may consume approved Registry exports only; it must not read the P1
+custody tree as an alternate source of truth. All P4 target roots and write
+paths stay disabled and unconfigured.
+
+## Production activation stages
+
+- S0 is metadata-only inventory. No Production mutation or provider call.
+- S1 stops Capture writes and preserves the complete filesystem source.
+- S2 enables only the checksum-verified Registry after exact import and a
+  verified backup/isolated restore.
+- S3 enables Capture, Review, and read-only package/adapter preview while
+  analysis and every export target remain disabled. This is a valid terminal
+  state.
+- S4 adds one Human-selected official source and one Human-gated third-party
+  Capability analysis only after a PA-C Kimi `k3-256k` compatibility pass.
+
+PA-B controls the real database, LaunchAgent, configuration, secrets,
+migrations, import, and backup. PA-D controls application cutover. PA-C controls
+each real provider call. A provider failure is not retried and leaves the
+system at S3. Code rollback restores the prior approved build and safe-off
+configuration without deleting or migrating down database/filesystem evidence.
 
 ## Explicit P1/P2/P3 negative capabilities
 

@@ -270,13 +270,14 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 ## P1–P4 Production activation：第三方 Capability 受控试运行
 
-**规划状态（2026-09-17）**
+**实现状态（2026-09-17）**
 
 - Spec：`docs/superpowers/specs/2026-09-17-caphub-production-activation-design.md`
 - 开发计划：`docs/superpowers/plans/2026-09-17-caphub-production-activation.md`
 - 数据库决策：方案 A，Control Host 本地 PostgreSQL 17；保持 Neon-ready，P6 前复评。
 - 范围：Capture → operator-started analysis → Review Center → Candidate/Release 审批 → neutral package 与 Codex/Claude/Hermes adapter preview。
 - P5/P6、自研能力、真实 Obsidian/Agent root、Deployment plan、publish/install/rollback 均不进入本轮。
+- Tasks 0–7 已在隔离分支完成：Next.js `16.3.3`、Unix-socket PostgreSQL contracts、checksum migrations、filesystem Capture import、备份/隔离恢复、Registry-native analysis import、Release compose/finalize、单条 P1–P4 fixture pilot、最终 build 截图、metadata-only preflight、threat model 与 runbook。PA-A 最终 phase gate、scoped Review/Verification 尚待完成。
 
 **执行边界**
 
@@ -285,6 +286,7 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - PA-B 继续控制真实数据库/LaunchAgent/config/secret；PA-C 控制每次真实 provider request；PA-D 控制 push/merge/release/rebuild/reload/cutover。
 - Kimi `k3-256k` direct-HTTP structured output 未证明；失败时可停在 S3（Capture + Registry + Review + read-only P4 preview），不得自动重试或降级。
 - P4 exports master 只用于 read-only package/adapter preview；所有 target switches 保持 false 且无 root/alias，因此 P4-A/P4-B/P4-C 继续关闭。
+- 当前停点仍在 Production mutation 之前；PA-B/PA-C/PA-D 均未执行，真实数据库、LaunchAgent、config/secret、provider、service、push/merge/deploy/release 均未改变。
 
 ## P5：自研能力人工移交闭环
 

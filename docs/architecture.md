@@ -7,9 +7,10 @@
    - Business initiatives own their planning in AllJobs-native storage (`data/roadmaps/`, `data/tasks/`).
    - Linear owns Backlog management. During the transition, AllJobs may ingest a repository's `docs/BACKLOG.md` only as read-only planning evidence; it cannot reorder, propose, regenerate, or write Backlog content.
 
-2. **Projections & No Database**:
+2. **Planning projections & bounded database use**:
    - External projections are computed by a safe background Git runner (`-c core.hooksPath=/dev/null`) synchronizing local bare mirrors.
-   - Route views read native Markdown and cached mirror projections in-memory without secondary database persistence.
+   - Planning route views read native Markdown and cached mirror projections in-memory without secondary database persistence.
+   - Caphub has a separate, disabled-by-default PostgreSQL Registry for versioned capability metadata; it never becomes the source of truth for Planning Core documents.
 
 3. **Concurrency & Digest Protection**:
    - Native storage uses exclusive `.lock` files and SHA-256 Expected Digests to prevent stale writes (`STALE_WRITE`).
@@ -39,6 +40,33 @@ active Control Host process; it is not multi-writer coordination, and recovery
 preserves and escalates interrupted pre-index state. P1 contains no analysis,
 provider, approval, publication, installation, execution, or deployment
 capability.
+
+## Caphub P1–P4 local-first activation boundary
+
+The approved initial Registry is PostgreSQL 17 on the single Control Host. It
+accepts only a private Unix socket and separates `caphub_app` from
+`caphub_migrator`; forward-only migrations are checksum-bound and append-only
+evidence is protected by grants plus triggers. Filesystem Capture objects stay
+in their existing immutable custody tree. A source-digest-bound importer copies
+only Capture metadata and deterministic audit evidence into the Registry and
+never removes or rewrites its source.
+
+Analysis is operator-started. MiniMax M3 and Kimi `k3-256k` adapters are
+server-only, bounded, tool-free, and non-retrying. ReviewPacket import produces
+Human-reviewable Candidate records. Candidate approval may authorize Release
+composition, but a distinct exact Release approval is required before
+finalization. Neither approval authorizes publication.
+
+P4 generates a neutral Capability Package and deterministic read-only adapter
+previews. During the pilot the exports master may support those previews, but
+all Obsidian/package/Codex/Claude/Hermes targets remain disabled and have no
+configured root. Deployment plans, external writes, publish, install, rollback
+writes, Git, code execution, and P5/P6 automation remain outside this boundary.
+
+The code remains Neon-ready through standard PostgreSQL SQL, roles,
+transactions, and connection configuration. Neon is not provisioned for the
+initial pilot and is reviewed before P6 or earlier if RPO/PITR, multi-host,
+growth, or operations burden requires it.
 
 ## Retired R1 Backlog Control
 

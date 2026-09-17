@@ -73,6 +73,23 @@ Internet → Cloudflare Access (Email OTP) → Cloudflare Tunnel (cloudflared)
 - Ingress: `alljobs.agentjoey.ai` → `http://localhost:3456`
 - Catch-all: `http_status:404`
 
+### Caphub local Registry (`com.agentjoey.alljobs-caphub-postgres`)
+
+The committed plist is a reviewed template, not an installed service. The
+initial P1–P4 activation uses PostgreSQL 17 with a private Control Host Unix
+socket, `listen_addresses = ''`, `0700` socket permissions, peer mapping, and
+separate application/migration roles. PA-B is required before resolving the
+template, creating or starting the real cluster, installing/reloading the
+LaunchAgent, changing the installed config, or placing database/provider secret
+references into the application environment.
+
+Run `npm run verify:deploy` and `npm run caphub:preflight` from the exact
+accepted build before requesting PA-B. PA-D is separately required before
+rebuilding/reloading the application into S2/S3/S4. The Caphub rollout must not
+restart or modify the refresh worker, Tunnel, Access policy, domain, or the
+mandatory `127.0.0.1:3456` listener. Full commands and rollback behavior are in
+the [Production activation runbook](../.agent/caphub/production-activation-runbook.md).
+
 ## 4. Operational Recovery & Rollback
 
 - **Non-destructive Update**:

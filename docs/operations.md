@@ -83,6 +83,29 @@ cleanup step.
    Capture JSON, idempotency indexes, object bytes, or audit lines, and do not
    expose secrets, raw bytes, idempotency keys, or host paths in reports.
 
+### P1–P4 Production activation
+
+The canonical operator checklist is
+[`.agent/caphub/production-activation-runbook.md`](../.agent/caphub/production-activation-runbook.md).
+Before PA-B, only the metadata-only inventory is permitted:
+
+```bash
+npm run verify:deploy
+npm run caphub:preflight
+```
+
+`caphub:preflight` accepts no flags and prints only allowlisted metadata. For
+the current pilot it must report `enabledTargets: []`. It does not mutate the
+configuration, filesystem Capture source, database, backup, provider, service,
+or target roots, and it does not replace the isolated backup restore drill.
+
+PA-B controls the real local PostgreSQL cluster, LaunchAgent, configuration,
+secret environment, migrations, Capture import, and backup. PA-D controls the
+application rebuild/reload and S2/S3/S4 cutover. PA-C controls the one real Kimi
+canary and first real analysis; it permits no retry. P4 target gates remain
+closed. On failure, return/keep Caphub safe-off and preserve all database,
+filesystem, backup, and provider evidence without deletion.
+
 ## Backlog Retirement Operations
 
 Linear owns Backlog management. During the transition, AllJobs may ingest a registered repository's `docs/BACKLOG.md` only as read-only planning evidence. Local working-tree, remote-commit, and cached projections may expose document health, provenance, diagnostics, counts, citations, and assistant context, but they must never create an ordering, proposal, handoff, conversion, or write path.
