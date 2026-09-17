@@ -274,7 +274,7 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 - Spec：`docs/superpowers/specs/2026-09-17-caphub-neon-production-activation-design.md`
 - 开发计划：`docs/superpowers/plans/2026-09-17-caphub-production-activation.md`
-- 数据库/对象树决策：既有 Neon `alljobs` Production branch 的 TLS Registry 与 private Object Storage；本地 Capture tree 保留为只读回滚源。N1 已创建 private `caphub-objects` bucket、`caphub_migrator`/`caphub_app` roles，并启用 transaction pooler；尚未创建 Caphub database、安装私有凭证、迁移或传输对象。
+- 数据库/对象树决策：既有 Neon `alljobs` Production branch 的 TLS Registry 与 private Object Storage；本地 Capture tree 保留为只读回滚源。N1 已创建 private `caphub-objects` bucket、`caphub_migrator`/`caphub_app` `NOLOGIN` roles，并启用 transaction pooler；尚未创建 Caphub database、安装私有凭证、迁移或传输对象。
 - 范围：Capture → operator-started analysis → Review Center → Candidate/Release 审批 → neutral package 与 Codex/Claude/Hermes adapter preview。
 - P5/P6、自研能力、真实 Obsidian/Agent root、Deployment plan、publish/install/rollback 均不进入本轮。
 - Tasks 0–8 已在隔离分支完成并通过 PA-A：Next.js `16.3.3`、Unix-socket PostgreSQL contracts、checksum migrations、filesystem Capture import、备份/隔离恢复、Registry-native analysis import、Release compose/finalize、单条 P1–P4 fixture pilot、最终 build 截图、metadata-only preflight、threat model 与 runbook。最终门禁为 167 files / 1430 tests、typecheck PASS、lint 0 errors / 79 warnings、webpack Production build PASS、deployment invariants PASS、pilot E2E 1/1；三项 scoped Review finding 已在 `5b434f4` 修复，fix-only Review 与独立 Verification 均 PASS。Linear 因 workspace free-plan issue limit 未能更新，不声明 Linear 完成。

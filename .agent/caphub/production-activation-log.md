@@ -307,6 +307,11 @@ and one independent Verification occur only after the implementation tasks.
   deployment. No network-source restriction is claimed as activation evidence.
 - The separately authorized `ALTER ROLE ... NOLOGIN` attempt was refused by the
   Neon SQL execution identity; no role containment change succeeded.
+- Under the subsequent explicit deletion authorization, both target roles were
+  deleted after the dependency check and recreated as `no_login`. Independent
+  role inventory confirms `caphub_migrator` and `caphub_app` use
+  `authentication_method: no_login`; no replacement secret was issued or
+  retained.
 - No Caphub database creation, credential installation, migration, object
   transfer, Registry import, recovery proof, provider request, service restart,
   deployment, push, merge, or release occurred.
