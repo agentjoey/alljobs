@@ -66,10 +66,14 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Run the single PA-A implementation phase gate plus scoped independent Review
-and Verification on `codex/caphub-production-activation`, then stop before
-PA-B. Any real local cluster/LaunchAgent/config/secret/import/backup action,
-provider call, application cutover, or P4 target remains Human-gated.
+PA-A implementation acceptance is complete on
+`codex/caphub-production-activation`: full gate PASS, scoped independent Review
+PASS, and independent Verification PASS against final code candidate
+`5b434f4049eba40dab71c3d96f1cacf364115e7a`. Stop before PA-B. The next action
+requires fresh PA-B authorization for the exact local database/LaunchAgent/
+config/secret/import/backup changes and a separately explicit authorization to
+stop the Production listener for S1. Provider calls, application cutover, and
+P4 targets remain separately Human-gated.
 
 ## Caphub development status — 2026-09-16
 
@@ -94,9 +98,11 @@ provider call, application cutover, or P4 target remains Human-gated.
   decisions, and read-only neutral/adapter previews.
 - P5 self-development and P6 automation are deferred. Real export targets,
   publish/install/rollback, and every P4-A/P4-B/P4-C gate remain untouched.
-- Activation Tasks 0–7 are implemented on the isolated branch, including the
-  fixture-only P1–P4 pilot, final-build screenshots, metadata-only preflight,
-  threat model, and operator runbook. The single PA-A final gate remains.
+- Activation Tasks 0–8 are implemented and accepted on the isolated branch,
+  including the fixture-only P1–P4 pilot, final-build screenshots,
+  metadata-only preflight, threat model, and operator runbook. PA-A Review and
+  Verification PASS; the next hard stop is PA-B plus the explicit S1
+  listener-stop action.
 - No real database/bootstrap/migration/import/backup, LaunchAgent, config/secret
   change, provider call, service reload, push, merge, deploy, or release has
   occurred from this implementation branch.

@@ -33,10 +33,12 @@ Record aliases such as `<CAPHUB_HOME>`, `<CAPHUB_SOCKET>`, and
    application.
 2. In the same grant or a separate grant, obtain explicit authorization to
    stop the `com.agentjoey.alljobs` listener for safe-off maintenance. Stop it;
-   do not rebuild, reload, or transition it to S2/S3/S4 before PA-D. If the
-   listener is already stopped, record that fact instead of changing it.
-3. Confirm the public Capture action is disabled and inspect the application
-   log for no in-flight Caphub writer. Do not prove this with a live POST.
+   do not restart it or transition the running application to S3/S4 before
+   PA-D. If the listener is already stopped, record that fact instead of
+   changing it.
+3. Confirm the listener is stopped, then inspect its final application log for
+   no in-flight Caphub writer. Do not prove this with a live POST or expect a
+   disabled UI from a stopped listener.
 4. Create an immutable whole-tree source backup using the approved Control Host
    backup facility. Verify the source remains owner-only, canonical, non-symlink,
    and unchanged. Off-host/Time Machine coverage is required for the RPO.

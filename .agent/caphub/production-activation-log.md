@@ -214,3 +214,46 @@ and one independent Verification occur only after the implementation tasks.
 - PA-B/PA-C/PA-D and P4-A/P4-B/P4-C remain closed. No real database,
   LaunchAgent, configuration, secret, provider, service, target, push, merge,
   deployment, or release action occurred.
+
+## Task 8 — final implementation gate and acceptance
+
+- The single full phase gate passed with exact incremental provenance: full
+  tests at `a82aa07` (167 files / 1430 tests in 26.65 s); webpack Production
+  build and pilot E2E at `7a3f7e928dc91f823d1c4de73c3e8cf6e0f8c9bf`;
+  and final screenshot evidence at
+  `5820732cc8048a1952b91759684e42dbd4267eeb`. The intervening commits only
+  bound test concurrency, selected the supported webpack build command, and
+  refreshed committed evidence.
+- Typecheck PASS; lint 0 errors / 79 existing warnings; Next.js 16.3.3 webpack
+  Production build PASS; deployment invariants PASS; pilot E2E 1/1 in 3.6 s.
+  Build ID is `FK3UGN3cYhfExekMHoAp3`. Node.js is `v24.14.0`, npm is `11.9.0`,
+  and PostgreSQL is `17.11`.
+- Migration checksums are `001_registry`
+  `d48b33929743342b2fcfe11726a45653e06c0cc39a84949dcbf1ae9ec80e5fa8`,
+  `002_read_models`
+  `fa8fefdef331966fdcb67db911ace73eca2d2f54702028acaa6735de1e8716c7`,
+  and `003_exports`
+  `e9df0d799318069fa4d1e09438043a16666df695e6ccdf28ad0474a2121922e4`.
+- Final-build screenshots remain bound to the unchanged browser bundle:
+  `reviews-1440.png` is 1440×1515 at
+  `80188420640ddd123ad7aad1277c71b680e6a21c1d6d7e496ccc25166423202c`;
+  `capability-390.png` is 390×2189 at
+  `b1bd2e6349e9b5ad74945d6a3c633a916c8d96eb5d04bce3bf99851168c2a86d`.
+- Scoped independent Review found three issues: safe-off import was blocked by
+  the outer application gate, bootstrap did not stop before launchd handoff,
+  and managed backup lacked a complete verify-full `pg_dump` contract.
+  `5b434f4049eba40dab71c3d96f1cacf364115e7a` fixed all three. Fix-only
+  evidence passed 2 CLI files / 6 tests, 3 temporary-PostgreSQL files / 9
+  tests, typecheck, scoped lint, deployment invariants, and diff check.
+- Fix-only independent Review PASS and independent Verification PASS. The
+  verifier reused the full build/E2E evidence because review fixes changed no
+  Next route, React component, browser runtime, dependency, or rendered asset.
+- Metadata-only preflight reports 2 filesystem Captures at source digest
+  `e00ec5b4aeef4b8a1e876b5145c42e062ac983627ac9fdb56379c830ee0f0725`,
+  Registry unavailable/unmigrated, no Production backup generation, exports
+  master false, zero enabled targets, and `readyFor: PA_B`.
+- Linear could not be updated because the workspace free-plan issue limit was
+  reached. No duplicate issue was created and no Linear completion is claimed.
+- PA-A is complete. Production smoke is intentionally unrun. PA-B plus a
+  separately explicit S1 listener-stop action is the next hard stop; PA-C,
+  PA-D, P4 targets, P5/P6, push, merge, deploy, and release remain closed.
