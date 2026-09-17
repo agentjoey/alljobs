@@ -132,7 +132,7 @@ export class ExportRuntime {
   }
 
   private validateRoot(candidate: string): string {
-    if (candidate === "/" || candidate === homedir() || candidate === resolve(process.cwd())) {
+    if (candidate === "/" || candidate === homedir() || candidate === process.cwd()) {
       throw new ExportRuntimeError("UNSAFE_TARGET_ROOT", "export roots must not be broad, home, or workspace roots");
     }
     const metadata = lstatSyncSafe(candidate);
