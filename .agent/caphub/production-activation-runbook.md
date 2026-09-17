@@ -39,6 +39,12 @@ object storage private; do not expose S3 credentials or public URLs. A missing
 TLS verify-full connection, approved host, egress policy, or credential boundary
 is a hard stop.
 
+For the optional non-Production BDD, authorization must separately name exact
+source and recovery branch aliases plus their exact database and Object Storage
+hosts. The fixture requires those host references to match the supplied URLs
+before constructing a pool or S3 client; it never reads Production environment
+names or accepts an alias as resource identity proof.
+
 ## N2 — object-first source preservation
 
 Keep the listener stopped. First produce the immutable source manifest, then

@@ -16,8 +16,8 @@ interface NeonValidationSideFixture {
 }
 
 export interface NeonValidationFixtureReferences {
-  source: { alias: string; databaseUrl: string; storage: Record<string, string | undefined> };
-  recovery: { alias: string; databaseUrl: string; storage: Record<string, string | undefined> };
+  source: { alias: string; databaseUrl: string; databaseHost: string; storageHost: string; storage: Record<string, string | undefined> };
+  recovery: { alias: string; databaseUrl: string; databaseHost: string; storageHost: string; storage: Record<string, string | undefined> };
 }
 
 export interface NeonValidationFixture {
@@ -28,15 +28,19 @@ export interface NeonValidationFixture {
 const requiredNames = [
   "CAPHUB_NEON_VALIDATION_BRANCH_ALIAS",
   "CAPHUB_NEON_VALIDATION_DATABASE_URL",
+  "CAPHUB_NEON_VALIDATION_DATABASE_HOST",
   "CAPHUB_NEON_VALIDATION_S3_ACCESS_KEY_ID",
   "CAPHUB_NEON_VALIDATION_S3_SECRET_ACCESS_KEY",
   "CAPHUB_NEON_VALIDATION_S3_ENDPOINT",
+  "CAPHUB_NEON_VALIDATION_S3_HOST",
   "CAPHUB_NEON_VALIDATION_S3_REGION",
   "CAPHUB_NEON_RECOVERY_BRANCH_ALIAS",
   "CAPHUB_NEON_RECOVERY_DATABASE_URL",
+  "CAPHUB_NEON_RECOVERY_DATABASE_HOST",
   "CAPHUB_NEON_RECOVERY_S3_ACCESS_KEY_ID",
   "CAPHUB_NEON_RECOVERY_S3_SECRET_ACCESS_KEY",
   "CAPHUB_NEON_RECOVERY_S3_ENDPOINT",
+  "CAPHUB_NEON_RECOVERY_S3_HOST",
   "CAPHUB_NEON_RECOVERY_S3_REGION"
 ] as const;
 
@@ -50,17 +54,18 @@ function isSafeNonProductionAlias(value: string): boolean {
   return /^[a-z][a-z0-9-]{2,63}$/i.test(value) && !["production", "prod", "main", "default"].includes(value.toLowerCase());
 }
 
-function storageRefs(side: ValidationSide): NeonS3EnvironmentRefs {
+function storageRefs(side: ValidationSide, storageHost: string): NeonS3EnvironmentRefs {
   const prefix = side === "source" ? "CAPHUB_NEON_VALIDATION" : "CAPHUB_NEON_RECOVERY";
   return {
     accessKeyIdEnv: `${prefix}_S3_ACCESS_KEY_ID`,
     secretAccessKeyEnv: `${prefix}_S3_SECRET_ACCESS_KEY`,
     endpointEnv: `${prefix}_S3_ENDPOINT`,
-    regionEnv: `${prefix}_S3_REGION`
+    regionEnv: `${prefix}_S3_REGION`,
+    managedEndpointHosts: [storageHost]
   };
 }
 
-function openValidationPool(databaseUrl: string): Pool {
+function openValidationPool(databaseUrl: string, databaseHost: string): Pool {
   let parsed: URL;
   try {
     parsed = new URL(databaseUrl);
@@ -71,6 +76,7 @@ function openValidationPool(databaseUrl: string): Pool {
   if (!['postgres:', 'postgresql:'].includes(parsed.protocol)
     || parsed.username !== "caphub_app" || parsed.password === "" || parsed.pathname !== "/caphub"
     || !parsed.hostname.endsWith(".neon.tech") || isIP(parsed.hostname) !== 0 || parsed.hash !== ""
+    || parsed.hostname.toLowerCase() !== databaseHost.toLowerCase()
     || [...parsed.searchParams.keys()].some((key) => !allowedParameters.has(key))) {
     throw new Error("Validation database URL does not meet the non-Production TLS contract");
   }
@@ -91,13 +97,15 @@ function openValidationPool(databaseUrl: string): Pool {
 
 function sideFixture(
   side: ValidationSide,
-  input: { alias: string; databaseUrl: string; storage: Record<string, string | undefined> }
+  input: { alias: string; databaseUrl: string; databaseHost: string; storageHost: string; storage: Record<string, string | undefined> }
 ): NeonValidationSideFixture {
   if (!isSafeNonProductionAlias(input.alias)) throw new Error("Validation branch alias must name a non-Production branch");
-  const environment = parseNeonS3Environment({ bucket: "caphub-objects", refs: storageRefs(side), env: input.storage });
+  const environment = parseNeonS3Environment({
+    bucket: "caphub-objects", refs: storageRefs(side, input.storageHost), env: input.storage
+  });
   return {
     alias: input.alias,
-    pool: openValidationPool(input.databaseUrl),
+    pool: openValidationPool(input.databaseUrl, input.databaseHost),
     objectPort: createNeonS3CommandPort(environment)
   };
 }
@@ -113,11 +121,15 @@ export function readNeonValidationFixture(
     source: {
       alias: sourceAlias,
       databaseUrl: required(env, "CAPHUB_NEON_VALIDATION_DATABASE_URL"),
+      databaseHost: required(env, "CAPHUB_NEON_VALIDATION_DATABASE_HOST"),
+      storageHost: required(env, "CAPHUB_NEON_VALIDATION_S3_HOST"),
       storage: { ...env }
     },
     recovery: {
       alias: recoveryAlias,
       databaseUrl: required(env, "CAPHUB_NEON_RECOVERY_DATABASE_URL"),
+      databaseHost: required(env, "CAPHUB_NEON_RECOVERY_DATABASE_HOST"),
+      storageHost: required(env, "CAPHUB_NEON_RECOVERY_S3_HOST"),
       storage: { ...env }
     }
   };

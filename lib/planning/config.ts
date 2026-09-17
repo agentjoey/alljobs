@@ -136,7 +136,8 @@ export const controlHostCaphubStorageConfigSchema = z.union([
     accessKeyIdEnv: secretEnvNameSchema.default("CAPHUB_S3_ACCESS_KEY_ID"),
     secretAccessKeyEnv: secretEnvNameSchema.default("CAPHUB_S3_SECRET_ACCESS_KEY"),
     endpointEnv: secretEnvNameSchema.default("CAPHUB_S3_ENDPOINT"),
-    regionEnv: secretEnvNameSchema.default("CAPHUB_S3_REGION")
+    regionEnv: secretEnvNameSchema.default("CAPHUB_S3_REGION"),
+    managedEndpointHosts: z.array(managedDatabaseHostSchema).min(1).max(2).default(["objects.example.test"])
   }).strict()
 ]).default({ mode: "local" });
 

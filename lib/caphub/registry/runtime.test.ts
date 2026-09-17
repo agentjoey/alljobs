@@ -104,7 +104,8 @@ describe.sequential("Control Host Registry runtime", () => {
           accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
           secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
           endpointEnv: "CAPHUB_S3_ENDPOINT",
-          regionEnv: "CAPHUB_S3_REGION"
+          regionEnv: "CAPHUB_S3_REGION",
+          managedEndpointHosts: ["storage.example.test"]
         }
       },
       homeDir: join(root, "home"),
@@ -144,7 +145,8 @@ describe.sequential("Control Host Registry runtime", () => {
           accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
           secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
           endpointEnv: "CAPHUB_S3_ENDPOINT",
-          regionEnv: "CAPHUB_S3_REGION"
+          regionEnv: "CAPHUB_S3_REGION",
+          managedEndpointHosts: ["storage.example.test"]
         }
       },
       homeDir: join(root, "home"),

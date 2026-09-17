@@ -282,3 +282,10 @@ and one independent Verification occur only after the implementation tasks.
   N4 recovery proof; PA-D application rebuild/reload; PA-C one real Kimi
   canary. No provider call, service restart, deployment, push, merge, or
   release occurred.
+- Fix-only review closure: S3 credentials are now gated by an exact configured
+  endpoint-host allowlist; SDK-shaped `412 PreconditionFailed` races re-read the
+  immutable object; the non-Production BDD binds each supplied URL/endpoint to
+  a separate exact resource-host reference before constructing a client; and
+  the preflight PostgreSQL version whitelist is fully anchored. Focused
+  regression: 5 files / 65 tests PASS; typecheck PASS; scoped lint 0 errors
+  (one pre-existing warning in `lib/planning/config.ts`).

@@ -59,6 +59,29 @@ function digest(bytes: Uint8Array): string {
 }
 
 describe("NeonS3CaptureObjectStore", () => {
+  it("accepts only an exact configured Object Storage hostname before credentials reach the client", () => {
+    const refs = {
+      accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
+      secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
+      endpointEnv: "CAPHUB_S3_ENDPOINT",
+      regionEnv: "CAPHUB_S3_REGION",
+      managedEndpointHosts: ["storage.example.test"]
+    } as never;
+    const env = {
+      CAPHUB_S3_ACCESS_KEY_ID: "test-access-key",
+      CAPHUB_S3_SECRET_ACCESS_KEY: "test-secret-key",
+      CAPHUB_S3_ENDPOINT: "https://storage.example.test",
+      CAPHUB_S3_REGION: "aws-ap-southeast-1"
+    };
+    expect(parseNeonS3Environment({ bucket: "caphub-objects", refs, env }).endpoint)
+      .toBe("https://storage.example.test");
+    expect(() => parseNeonS3Environment({
+      bucket: "caphub-objects",
+      refs,
+      env: { ...env, CAPHUB_S3_ENDPOINT: "https://attacker.example.test" }
+    })).toThrow(/approved/i);
+  });
+
   it("constructs an explicit path-style S3 client rather than ambient credentials", () => {
     const options: Array<Record<string, unknown>> = [];
     const port = createNeonS3CommandPort({
@@ -110,6 +133,28 @@ describe("NeonS3CaptureObjectStore", () => {
     expect(port.operations).toEqual(["head", "get"]);
   });
 
+  it("re-reads a concurrent SDK-shaped 412 write instead of treating it as a failed upload", async () => {
+    const bytes = new TextEncoder().encode("sdk precondition race");
+    const valueDigest = digest(bytes);
+    const key = `sha256/${valueDigest.slice(0, 2)}/${valueDigest}`;
+    let present = false;
+    const port: S3ImmutableCommandPort = {
+      head: async () => present ? { bytes: bytes.byteLength, metadata: { "caphub-sha256": valueDigest } } : null,
+      putIfAbsent: async () => {
+        present = true;
+        const error = Object.assign(new Error("precondition failed"), {
+          name: "PreconditionFailed",
+          $metadata: { httpStatusCode: 412 }
+        });
+        throw error;
+      },
+      get: async () => Uint8Array.from(bytes),
+      list: async () => [key]
+    };
+    await expect(new NeonS3CaptureObjectStore({ port }).putImmutable({ bytes, mimeType: "image/png" }))
+      .resolves.toMatchObject({ digest: valueDigest, key });
+  });
+
   it("rejects a remote object whose bytes disagree with its immutable address", async () => {
     const port = new FakeS3Port();
     const expected = new TextEncoder().encode("expected bytes");
@@ -142,7 +187,8 @@ describe("NeonS3CaptureObjectStore", () => {
         accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
         secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
         endpointEnv: "CAPHUB_S3_ENDPOINT",
-        regionEnv: "CAPHUB_S3_REGION"
+        regionEnv: "CAPHUB_S3_REGION",
+        managedEndpointHosts: ["storage.example.test"]
       },
       env: {
         CAPHUB_S3_ACCESS_KEY_ID: "test-access-key",
@@ -164,7 +210,8 @@ describe("NeonS3CaptureObjectStore", () => {
         accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
         secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
         endpointEnv: "CAPHUB_S3_ENDPOINT",
-        regionEnv: "CAPHUB_S3_REGION"
+        regionEnv: "CAPHUB_S3_REGION",
+        managedEndpointHosts: ["storage.example.test"]
       },
       env: {
         CAPHUB_S3_ACCESS_KEY_ID: "test-access-key",

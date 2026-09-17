@@ -9,7 +9,7 @@ import type { RegistryReadinessReport } from "../lib/caphub/registry/operations"
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const BUILD_SHA_PATTERN = /^[a-f0-9]{40,64}$/;
 const MIGRATION_ID_PATTERN = /^\d{3}_[a-z][a-z0-9_]*$/;
-const SAFE_POSTGRES_VERSION_PATTERN = /^(?:17|18)\.\d+(?:\.\d+)?|unknown|unavailable$/;
+const SAFE_POSTGRES_VERSION_PATTERN = /^(?:(?:17|18)\.\d+(?:\.\d+)?|unknown|unavailable)$/;
 const ZERO_DIGEST = "0".repeat(64);
 const TARGETS = ["obsidian", "packageRepository", "codex", "claude", "hermes"] as const;
 

@@ -141,6 +141,15 @@ describe("Caphub Production preflight", () => {
     })).toThrow("PREFLIGHT_UNSAFE_REPORT");
   });
 
+  it("rejects PostgreSQL versions with any unallowlisted prefix or suffix", () => {
+    for (const postgresVersion of ["xunknowny", "xunavailable", "18.1 internal-host.example"]) {
+      expect(() => createProductionPreflightReport({
+        ...safeSnapshot(),
+        postgres: { ...safeSnapshot().postgres, postgresVersion }
+      })).toThrow("PREFLIGHT_UNSAFE_REPORT");
+    }
+  });
+
   it("advances only from verified Registry/import/remote-object/recovery evidence and never treats pending Kimi as S4", () => {
     const readyForCutover = safeSnapshot();
     readyForCutover.postgres = { ...readyForCutover.postgres, pendingMigrations: [], ready: true };

@@ -24,6 +24,7 @@ export interface NeonS3EnvironmentRefs {
   secretAccessKeyEnv: string;
   endpointEnv: string;
   regionEnv: string;
+  managedEndpointHosts: readonly string[];
 }
 
 export interface NeonS3Environment {
@@ -60,8 +61,10 @@ function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
 }
 
 function isPreconditionFailed(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error
-    && (error as { code?: unknown }).code === "PreconditionFailed";
+  if (typeof error !== "object" || error === null) return false;
+  const value = error as { code?: unknown; Code?: unknown; name?: unknown; $metadata?: { httpStatusCode?: unknown } };
+  return value.code === "PreconditionFailed" || value.Code === "PreconditionFailed"
+    || value.name === "PreconditionFailed" || value.$metadata?.httpStatusCode === 412;
 }
 
 function isNotFound(error: unknown): boolean {
@@ -98,6 +101,10 @@ export function parseNeonS3Environment(input: {
   if (parsed.protocol !== "https:" || parsed.origin !== endpoint || parsed.username || parsed.password
     || parsed.hostname.endsWith(".") || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test(parsed.hostname)) {
     throw new Error("Object Storage endpoint must be HTTPS");
+  }
+  const approvedHosts = new Set(input.refs.managedEndpointHosts.map((host) => host.toLowerCase()));
+  if (!approvedHosts.has(parsed.hostname.toLowerCase())) {
+    throw new Error("Object Storage endpoint host is not approved");
   }
   if (!/^[a-z]{2,16}(?:-[a-z0-9]{1,32}){1,4}$/.test(region)) {
     throw new Error("Object Storage region is invalid");

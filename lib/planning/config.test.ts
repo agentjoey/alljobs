@@ -497,11 +497,14 @@ describe("control host Caphub Object Storage config", () => {
           accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",
           secretAccessKeyEnv: "CAPHUB_S3_SECRET_ACCESS_KEY",
           endpointEnv: "CAPHUB_S3_ENDPOINT",
-          regionEnv: "CAPHUB_S3_REGION"
+          regionEnv: "CAPHUB_S3_REGION",
+          managedEndpointHosts: ["storage.example.test"]
         }
       }
     });
-    expect(neon.caphub?.storage).toMatchObject({ mode: "neon_s3", bucket: "caphub-objects" });
+    expect(neon.caphub?.storage).toMatchObject({
+      mode: "neon_s3", bucket: "caphub-objects", managedEndpointHosts: ["storage.example.test"]
+    });
   });
 
   it("rejects an unbounded or prematurely enabled Neon S3 configuration", () => {
@@ -509,7 +512,8 @@ describe("control host Caphub Object Storage config", () => {
       { storage: { mode: "neon_s3" } },
       { enabled: true, storage: { mode: "neon_s3" } },
       { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", bucket: "public-assets" } },
-      { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", endpoint: "https://secret.example.test" } }
+      { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", endpoint: "https://secret.example.test" } },
+      { enabled: true, registry: { enabled: true }, storage: { mode: "neon_s3", managedEndpointHosts: [] } }
     ]) {
       expect(() => controlHostConfigSchema.parse({ trustedCodeRoots: ["/workspace"], caphub })).toThrow();
     }
