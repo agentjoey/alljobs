@@ -27,12 +27,18 @@ export async function readOperation(root: string, deploymentId: string): Promise
 }
 
 export async function writeOperation(root: string, record: OperationRecord): Promise<void> {
-  const { mkdir, rename } = await import("node:fs/promises");
+  const { mkdir, open, rename } = await import("node:fs/promises");
   await mkdir(join(root, "operations"), { recursive: true, mode: 0o700 });
   const path = join(root, "operations", `${record.deployment_id}.json`);
-  const temporary = `${path}.tmp-${process.pid}`;
-  await writeFile(temporary, `${JSON.stringify(record, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  await rename(temporary, path);
+  const temporary = join("operations", `.${record.deployment_id}.json.tmp-${process.pid}-${Math.random().toString(16).slice(2)}`);
+  const handle = await open(join(root, temporary), "wx", 0o600);
+  try {
+    await handle.writeFile(`${JSON.stringify(record, null, 2)}\n`, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  await rename(join(root, temporary), path);
 }
 
 export async function listIncompleteOperations(root: string): Promise<OperationRecord[]> {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { digestCanonicalJson } from "../analysis/digest";
 import type { DeploymentPlan, PackageFile, P4ErrorCode } from "../packages/types";
@@ -8,6 +8,7 @@ import { PostgresExportStoreError } from "../registry/postgres/exports";
 import type { RegistryLineageEdge, RegistryVersion } from "../registry/types";
 import { ProjectionPathError, resolveSafeDescendant, type ValidatedTargetRoot } from "../projection/paths";
 import type { CurrentPointer } from "./plan";
+import { derivePlanRecordId } from "./plan";
 import {
   DEPLOYMENT_LOCK_DIRECTORY,
   listIncompleteOperations,
@@ -27,34 +28,87 @@ export class PublishError extends Error {
 }
 
 const CURRENT_POINTER_FILE = "current.json";
+const VERSION_MARKER = ".caphub-version.json";
 
 function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-export async function readTargetPointer(root: ValidatedTargetRoot): Promise<CurrentPointer | null> {
+interface PointerJson {
+  deployment_id: string;
+  release_id: string;
+  release_version: number;
+  release_digest: string;
+  pointer_digest: string;
+}
+
+/** Parse target-controlled pointer JSON instead of casting to trusted types. */
+function parsePointerJson(raw: string): CurrentPointer | null {
+  let value: unknown;
   try {
-    return JSON.parse(await readFile(join(root.root, CURRENT_POINTER_FILE), "utf8")) as CurrentPointer;
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.deployment_id !== "string" || !/^dep_[a-f0-9]{32}$/.test(record.deployment_id)
+    || typeof record.release_id !== "string" || !/^rel_[a-f0-9]{32}$/.test(record.release_id)
+    || !Number.isInteger(record.release_version) || (record.release_version as number) <= 0
+    || typeof record.release_digest !== "string" || !/^[a-f0-9]{64}$/.test(record.release_digest)
+    || typeof record.pointer_digest !== "string" || !/^[a-f0-9]{64}$/.test(record.pointer_digest)) {
+    return null;
+  }
+  return {
+    deployment_id: record.deployment_id,
+    release_id: record.release_id,
+    release_version: record.release_version as number,
+    release_digest: record.release_digest,
+    pointer_digest: record.pointer_digest
+  };
+}
+
+export async function readTargetPointer(root: ValidatedTargetRoot): Promise<CurrentPointer | null> {
+  let raw: string;
+  try {
+    raw = await readFile(join(root.root, CURRENT_POINTER_FILE), "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
   }
+  return parsePointerJson(raw);
 }
 
 async function writeCurrentPointer(root: ValidatedTargetRoot, pointer: CurrentPointer): Promise<void> {
-  const path = join(root.root, CURRENT_POINTER_FILE);
-  const temporary = `${path}.tmp-${process.pid}`;
-  await writeFile(temporary, `${JSON.stringify(pointer, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  await rename(temporary, path);
+  await writeFileDurable(join(root.root, CURRENT_POINTER_FILE), `${JSON.stringify(pointer, null, 2)}\n`, 0o600);
+  await fsyncDirectoryBestEffort(root.root);
+}
+
+/** Same-directory exclusive temp file, file fsync, atomic rename. Mandatory for
+ * every small durable record; directory fsync stays best-effort. */
+async function writeFileDurable(path: string, content: string, mode: number): Promise<void> {
+  const directory = dirname(path);
+  const temporary = join(directory, `.${path.split("/").pop() ?? "file"}.tmp-${process.pid}-${Math.random().toString(16).slice(2)}`);
+  const handle = await open(temporary, "wx", mode);
   try {
-    const handle = await open(root.root, "r");
+    await handle.writeFile(content, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  await rename(temporary, path);
+}
+
+async function fsyncDirectoryBestEffort(directory: string): Promise<void> {
+  try {
+    const handle = await open(directory, "r");
     try {
       await handle.sync();
     } finally {
       await handle.close();
     }
   } catch {
-    // Best-effort directory durability.
+    // Best effort durability for directory entries; file fsync is mandatory.
   }
 }
 
@@ -69,6 +123,15 @@ function pointerFor(deploymentId: string, plan: DeploymentPlan): CurrentPointer 
     ...base,
     pointer_digest: sha256Hex(digestCanonicalJson({ schema_version: 1, pointer: base }))
   };
+}
+
+function samePointer(left: CurrentPointer | null, right: CurrentPointer | null): boolean {
+  if (left === null || right === null) return left === right;
+  return left.deployment_id === right.deployment_id
+    && left.release_id === right.release_id
+    && left.release_version === right.release_version
+    && left.release_digest === right.release_digest
+    && left.pointer_digest === right.pointer_digest;
 }
 
 function manifestDigestFor(files: PackageFile[]): string {
@@ -95,9 +158,182 @@ async function acquireLock(root: string): Promise<() => Promise<void>> {
   };
 }
 
+interface VersionMarker {
+  schema_version: 1;
+  action: "publish" | "rollback";
+  release: DeploymentPlan["release"];
+  manifest_digest: string;
+  files: Array<{ path: string; sha256: string; bytes: number }>;
+}
+
+function parseVersionMarker(raw: string): VersionMarker | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const release = record.release as Record<string, unknown> | undefined;
+  if (record.schema_version !== 1
+    || (record.action !== "publish" && record.action !== "rollback")
+    || !release
+    || typeof release.record_id !== "string"
+    || !Number.isInteger(release.version)
+    || typeof release.digest !== "string"
+    || typeof record.manifest_digest !== "string"
+    || !/^[a-f0-9]{64}$/.test(record.manifest_digest)
+    || !Array.isArray(record.files)) {
+    return null;
+  }
+  for (const file of record.files as Array<Record<string, unknown>>) {
+    if (typeof file?.path !== "string" || typeof file.sha256 !== "string"
+      || !/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isInteger(file.bytes)) {
+      return null;
+    }
+  }
+  return record as unknown as VersionMarker;
+}
+
+/** Recursively list regular files below the version directory. Symlinks and
+ * any non-regular file fail closed. */
+async function listVersionFiles(directory: string, relative = ""): Promise<string[]> {
+  const output: string[] = [];
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    const full = join(directory, entry.name);
+    const rel = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isSymbolicLink()) {
+      throw new PublishError("UNSAFE_TARGET_ROOT", `version directory contains a symlink at ${JSON.stringify(rel)}`);
+    }
+    if (entry.isDirectory()) {
+      output.push(...await listVersionFiles(full, rel));
+    } else if (entry.isFile()) {
+      output.push(rel);
+    } else {
+      throw new PublishError("UNSAFE_TARGET_ROOT", `version directory contains a non-regular file at ${JSON.stringify(rel)}`);
+    }
+  }
+  return output;
+}
+
+/** Fully verify a materialized version directory against an exact expected
+ * file set: paths, byte counts, SHA-256 digests, no missing files, no
+ * unexpected files, no symlinks. Never repairs or overwrites. */
+async function verifyVersionDirectory(root: ValidatedTargetRoot, relativeDir: string, expected: VersionMarker): Promise<void> {
+  const expectedPaths = new Set(expected.files.map((file) => file.path));
+  const actualFiles = await listVersionFiles(join(root.root, relativeDir));
+  for (const actual of actualFiles) {
+    if (actual === VERSION_MARKER) continue;
+    if (!expectedPaths.has(actual)) {
+      throw new PublishError("PACKAGE_DIGEST_CONFLICT", `unexpected managed file ${JSON.stringify(actual)} in version directory`);
+    }
+  }
+  for (const file of expected.files) {
+    const targetPath = await resolveSafeDescendant(root, `${relativeDir}/${file.path}`);
+    const metadata = await lstat(targetPath).catch(() => null);
+    if (!metadata || metadata.isSymbolicLink() || !metadata.isFile()) {
+      throw new PublishError("PACKAGE_DIGEST_CONFLICT", `managed file ${JSON.stringify(file.path)} is missing or unsafe`);
+    }
+    const raw = await readFile(targetPath);
+    if (raw.byteLength !== file.bytes) {
+      throw new PublishError("PACKAGE_DIGEST_CONFLICT", `managed file ${JSON.stringify(file.path)} has ${raw.byteLength} bytes, expected ${file.bytes}`);
+    }
+    if (createHash("sha256").update(raw).digest("hex") !== file.sha256) {
+      throw new PublishError("PACKAGE_DIGEST_CONFLICT", `managed file ${JSON.stringify(file.path)} digest mismatch`);
+    }
+  }
+}
+
 async function versionDirectory(root: ValidatedTargetRoot, plan: DeploymentPlan): Promise<string> {
   const relative = `versions/${plan.release.record_id}/${plan.release.version}/${plan.preview_manifest_digest}`;
   return resolveSafeDescendant(root, relative);
+}
+
+/** Read and fully verify the active version directory named by a validated
+ * operation record, returning its preimage contribution. */
+async function verifiedManifestState(
+  root: ValidatedTargetRoot,
+  pointer: CurrentPointer,
+  operation: OperationRecord
+): Promise<{ marker: VersionMarker; relativeDir: string }> {
+  if (operation.release.record_id !== pointer.release_id
+    || operation.release.version !== pointer.release_version
+    || operation.release.digest !== pointer.release_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "operation record does not match the active pointer");
+  }
+  const relativeDir = `versions/${pointer.release_id}/${pointer.release_version}/${operation.manifest_digest}`;
+  const directory = await resolveSafeDescendant(root, relativeDir);
+  const markerRaw = await readFile(join(directory, VERSION_MARKER), "utf8").catch(() => null);
+  if (markerRaw === null) {
+    throw new PublishError("STALE_DEPLOYMENT", "active version directory has no marker");
+  }
+  const marker = parseVersionMarker(markerRaw);
+  if (!marker
+    || marker.manifest_digest !== operation.manifest_digest
+    || marker.action !== operation.action
+    || marker.release.record_id !== pointer.release_id
+    || marker.release.version !== pointer.release_version
+    || marker.release.digest !== pointer.release_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "active version marker does not match the operation record");
+  }
+  await verifyVersionDirectory(root, relativeDir, marker);
+  return { marker, relativeDir: directory };
+}
+
+/** Read and validate the active pointer and its operation record, returning
+ * the exact active manifest directory. Shared by publish revalidation, dry-run
+ * previews, and tests so the preimage path convention stays identical. */
+export async function readActiveManifestDirectory(rootDir: string): Promise<{
+  pointer: CurrentPointer;
+  operation: OperationRecord;
+  directory: string;
+} | null> {
+  const pointerRaw = await readFile(join(rootDir, CURRENT_POINTER_FILE), "utf8").catch(() => null);
+  if (pointerRaw === null) return null;
+  const pointer = parsePointerJson(pointerRaw);
+  if (!pointer) {
+    throw new PublishError("STALE_DEPLOYMENT", "current.json is not a valid pointer");
+  }
+  const operation = await readOperation(rootDir, pointer.deployment_id);
+  if (!operation) {
+    throw new PublishError("STALE_DEPLOYMENT", "active pointer has no operation record");
+  }
+  if (operation.release.record_id !== pointer.release_id
+    || operation.release.version !== pointer.release_version
+    || operation.release.digest !== pointer.release_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "operation record does not match the active pointer");
+  }
+  return {
+    pointer,
+    operation,
+    directory: join(rootDir, "versions", pointer.release_id, String(pointer.release_version), operation.manifest_digest)
+  };
+}
+
+/** Reproduce the digest over the currently materialized target state. Files
+ * are named relative to the active manifest directory. */
+export async function computeTargetPreimage(root: ValidatedTargetRoot): Promise<string> {
+  const active = await readActiveManifestDirectory(root.root);
+  if (active === null) {
+    return digestCanonicalJson({ schema_version: 1, pointer: null, files: [] });
+  }
+  const directory = await resolveSafeDescendant(root, active.directory.slice(root.root.length + 1));
+  const markerRaw = await readFile(join(directory, VERSION_MARKER), "utf8").catch(() => null);
+  if (markerRaw === null) {
+    throw new PublishError("STALE_DEPLOYMENT", "active version directory has no marker");
+  }
+  const marker = parseVersionMarker(markerRaw);
+  if (!marker || marker.manifest_digest !== active.operation.manifest_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "active version marker does not match the operation record");
+  }
+  await verifyVersionDirectory(root, active.directory.slice(root.root.length + 1), marker);
+  return digestCanonicalJson({
+    schema_version: 1,
+    pointer: active.pointer,
+    files: marker.files.map(({ path, sha256, bytes }) => ({ path, sha256, bytes }))
+  });
 }
 
 async function writeVersionFiles(
@@ -106,48 +342,58 @@ async function writeVersionFiles(
   files: PackageFile[]
 ): Promise<"written" | "existing"> {
   const directory = await versionDirectory(root, plan);
-  const marker = join(directory, ".caphub-version.json");
-  const existing = await readFile(marker).then((raw) => JSON.parse(raw.toString("utf8")), () => null);
-  if (existing) {
-    if (existing.manifest_digest !== plan.preview_manifest_digest || existing.action !== plan.action) {
+  const relativeDir = directory.slice(root.root.length + 1);
+  const markerPath = join(directory, VERSION_MARKER);
+  const markerRaw = await readFile(markerPath, "utf8").catch(() => null);
+  if (markerRaw !== null) {
+    const marker = parseVersionMarker(markerRaw);
+    if (!marker
+      || marker.manifest_digest !== plan.preview_manifest_digest
+      || marker.action !== plan.action
+      || marker.release.record_id !== plan.release.record_id
+      || marker.release.version !== plan.release.version
+      || marker.release.digest !== plan.release.digest) {
       throw new PublishError("PACKAGE_DIGEST_CONFLICT", "version directory already holds different content");
     }
+    // The marker is target state: verify the exact bytes it declares.
+    await verifyVersionDirectory(root, relativeDir, marker);
     return "existing";
   }
-  // Resume-safe writes: a crash mid-materialization leaves some files durable.
-  // Existing files are kept only when their bytes reproduce the planned
-  // digest; anything else is a hard conflict. Missing files are written.
+  // Resume-safe materialization. Any pre-existing file that is not part of
+  // the approved plan fails closed; matching planned files are verified.
+  const plannedPaths = new Set(files.map((file) => file.path));
+  const preexisting = await listVersionFiles(directory).catch(() => [] as string[]);
+  for (const actual of preexisting) {
+    if (!plannedPaths.has(actual)) {
+      throw new PublishError("PACKAGE_DIGEST_CONFLICT", `unexpected file ${JSON.stringify(actual)} in version directory`);
+    }
+  }
   for (const file of files) {
-    const targetPath = await resolveSafeDescendant(root, `${directory.slice(root.root.length + 1)}/${file.path}`);
+    const targetPath = await resolveSafeDescendant(root, `${relativeDir}/${file.path}`);
     const present = await readFile(targetPath).catch(() => null);
     if (present !== null) {
-      const digest = createHash("sha256").update(present.toString("utf8"), "utf8").digest("hex");
-      if (digest !== file.sha256) {
+      if (present.byteLength !== file.bytes
+        || createHash("sha256").update(present).digest("hex") !== file.sha256) {
         throw new PublishError("PACKAGE_DIGEST_CONFLICT", `file ${file.path} exists with different content`);
       }
       continue;
     }
     await mkdir(dirname(targetPath), { recursive: true, mode: 0o700 });
-    const handle = await open(targetPath, "wx", 0o600);
-    try {
-      await handle.writeFile(file.content, "utf8");
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
+    await writeFileDurable(targetPath, file.content, 0o600);
     const digest = createHash("sha256").update(file.content, "utf8").digest("hex");
     if (digest !== file.sha256) {
       throw new PublishError("PACKAGE_DIGEST_CONFLICT", `file ${file.path} failed digest verification during write`);
     }
   }
-  const manifest = {
+  const manifest: VersionMarker = {
     schema_version: 1,
     action: plan.action,
     release: plan.release,
     manifest_digest: plan.preview_manifest_digest,
     files: files.map(({ path, sha256, bytes }) => ({ path, sha256, bytes }))
   };
-  await writeFile(marker, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  await writeFileDurable(markerPath, `${JSON.stringify(manifest, null, 2)}\n`, 0o600);
+  await fsyncDirectoryBestEffort(directory);
   return "written";
 }
 
@@ -158,10 +404,9 @@ export interface PublishInput {
   exports: RegistryExportStore;
   deploymentRecordId: string;
   planApprovalDecisionId: string;
-  /** Apply-time authority revalidation (spec §9.2): the caller proves the
-   * Release approval is finalized for the exact plan release and that the
-   * adapter output still matches the planned adapter digest. */
-  assertAuthority?: (plan: DeploymentPlan) => Promise<void>;
+  /** Mandatory spec §9.2 apply-time authority revalidation. Must throw a P4
+   * coded error on any mismatch; the publish fails closed when absent. */
+  assertAuthority: (plan: DeploymentPlan) => Promise<void>;
   hooks?: {
     afterVersionFinalization?(): Promise<void>;
     afterRegistryDeployment?(): Promise<void>;
@@ -180,7 +425,7 @@ function deploymentRecord(input: PublishInput, priorPointer: CurrentPointer | nu
     target_alias: input.plan.target_alias,
     release: input.plan.release,
     plan: {
-      record_id: derivePlanId(input.plan),
+      record_id: derivePlanRecordId(input.plan),
       version: 1,
       digest: digestCanonicalJson(input.plan)
     },
@@ -199,14 +444,8 @@ function deploymentRecord(input: PublishInput, priorPointer: CurrentPointer | nu
   };
 }
 
-import { derivePlanRecordId } from "./plan";
-
-function derivePlanId(plan: DeploymentPlan): string {
-  return derivePlanRecordId(plan);
-}
-
 function lineageFor(input: PublishInput): RegistryLineageEdge[] {
-  const planId = derivePlanId(input.plan);
+  const planId = derivePlanRecordId(input.plan);
   const planDigest = digestCanonicalJson(input.plan);
   const deployment = deploymentRecord(input, input.plan.expected_current_pointer);
   return [
@@ -239,26 +478,40 @@ function lineageFor(input: PublishInput): RegistryLineageEdge[] {
   ];
 }
 
-async function revalidate(input: PublishInput): Promise<CurrentPointer | null> {
-  const actual = await readTargetPointer(input.root);
-  const expected = input.plan.expected_current_pointer;
-  const same = (left: CurrentPointer | null, right: CurrentPointer | null): boolean => {
-    if (left === null || right === null) return left === right;
-    return left.deployment_id === right.deployment_id
-      && left.release_id === right.release_id
-      && left.release_version === right.release_version
-      && left.release_digest === right.release_digest
-      && left.pointer_digest === right.pointer_digest;
-  };
-  if (!same(actual, expected)) {
-    throw new PublishError("STALE_DEPLOYMENT", "current target pointer does not match the approved plan");
+async function runAuthority(input: PublishInput): Promise<void> {
+  if (typeof input.assertAuthority !== "function") {
+    throw new PublishError("DEPLOYMENT_NOT_APPROVED", "apply-time authority revalidation is mandatory");
   }
+  try {
+    await input.assertAuthority(input.plan);
+  } catch (error) {
+    if (error instanceof PublishError) throw error;
+    const code = error && typeof error === "object" && "code" in error
+      && typeof (error as { code: unknown }).code === "string"
+      ? (error as { code: string }).code as P4ErrorCode
+      : "DEPLOYMENT_NOT_APPROVED";
+    throw new PublishError(code, error instanceof Error ? error.message : "authority revalidation failed");
+  }
+}
+
+/** Strict pre-state revalidation: authority, pointer shape + expectation,
+ * target preimage reproduction, and preview manifest reproduction. */
+async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | null> {
+  await runAuthority(input);
   if (manifestDigestFor(input.files) !== input.plan.preview_manifest_digest) {
     throw new PublishError("STALE_DEPLOYMENT", "preview files no longer reproduce the approved manifest digest");
   }
+  const actual = await readTargetPointer(input.root);
+  if (!samePointer(actual, input.plan.expected_current_pointer)) {
+    throw new PublishError("STALE_DEPLOYMENT", "current target pointer does not match the approved plan");
+  }
+  const preimage = await computeTargetPreimage(input.root);
+  if (preimage !== input.plan.target_preimage_digest) {
+    throw new PublishError("STALE_DEPLOYMENT", "target state no longer reproduces the approved preimage digest");
+  }
   if (input.plan.action === "rollback") {
     const directory = await versionDirectory(input.root, input.plan);
-    await readFile(join(directory, ".caphub-version.json")).catch(() => {
+    await readFile(join(directory, VERSION_MARKER), "utf8").catch(() => {
       throw new PublishError("STALE_DEPLOYMENT", "rollback target version directory is missing");
     });
   }
@@ -267,44 +520,57 @@ async function revalidate(input: PublishInput): Promise<CurrentPointer | null> {
 
 export async function publishToTarget(input: PublishInput): Promise<{ pointer: CurrentPointer }> {
   const planDigest = digestCanonicalJson(input.plan);
+  const resultPointer = pointerFor(input.deploymentRecordId, input.plan);
   const incomplete = (await listIncompleteOperations(input.root.root))
     .filter((operation) => operation.deployment_id !== input.deploymentRecordId);
   if (incomplete.length > 0) {
     throw new PublishError("PUBLISH_RECOVERY_REQUIRED", "an interrupted publish must be reconciled first");
   }
   const existingOperation = await readOperation(input.root.root, input.deploymentRecordId);
-  if (existingOperation?.stage === "completed" && existingOperation.plan_digest === planDigest) {
+
+  // Idempotent replay is anchored on a validated completed operation for this
+  // exact plan/deployment, a valid pointer, and fully verified durable
+  // version bytes — never on current.json alone.
+  if (existingOperation && existingOperation.stage === "completed" && existingOperation.plan_digest === planDigest) {
     const pointer = await readTargetPointer(input.root);
-    const matches = pointer !== null
-      && pointer.deployment_id === input.deploymentRecordId
-      && pointer.release_id === existingOperation.release.record_id
-      && pointer.release_version === existingOperation.release.version
-      && pointer.release_digest === existingOperation.release.digest;
-    if (!matches) {
+    if (!samePointer(pointer, resultPointer)) {
       throw new PublishError("STALE_DEPLOYMENT", "completed operation no longer matches the materialized pointer");
     }
-    return { pointer };
+    await verifiedManifestState(input.root, pointer!, existingOperation);
+    await runAuthority(input);
+    return { pointer: pointer! };
   }
+
   const releaseLock = await acquireLock(input.root.root);
   try {
-    const resultPointer = pointerFor(input.deploymentRecordId, input.plan);
     const currentPointer = await readTargetPointer(input.root);
-    const alreadyApplied = currentPointer !== null
-      && currentPointer.deployment_id === resultPointer.deployment_id
-      && currentPointer.release_id === resultPointer.release_id
-      && currentPointer.release_version === resultPointer.release_version
-      && currentPointer.release_digest === resultPointer.release_digest;
 
-    let priorPointer = currentPointer;
-    if (!alreadyApplied) {
-      priorPointer = await revalidate(input);
-      await input.assertAuthority?.(input.plan);
-
-      if (input.plan.action === "publish") {
-        await writeVersionFiles(input.root, input.plan, input.files);
-      }
-      await input.hooks?.afterVersionFinalization?.();
+    // Crash-after-pointer convergence: a realized operation for this exact
+    // plan plus the resulting pointer plus verified versions may complete.
+    if (existingOperation && existingOperation.plan_digest === planDigest
+      && existingOperation.stage !== "completed"
+      && samePointer(currentPointer, resultPointer)) {
+      await verifiedManifestState(input.root, currentPointer!, existingOperation);
+      await runAuthority(input);
+      await writeOperation(input.root.root, {
+        schema_version: 1,
+        deployment_id: input.deploymentRecordId,
+        plan_digest: planDigest,
+        action: input.plan.action,
+        stage: "completed",
+        release: input.plan.release,
+        manifest_digest: input.plan.preview_manifest_digest,
+        created_at: existingOperation.created_at
+      });
+      return { pointer: currentPointer! };
     }
+
+    const priorPointer = await fullRevalidate(input);
+
+    if (input.plan.action === "publish") {
+      await writeVersionFiles(input.root, input.plan, input.files);
+    }
+    await input.hooks?.afterVersionFinalization?.();
 
     const record = deploymentRecord(input, priorPointer);
     if (!existingOperation || existingOperation.stage === "versioned") {
@@ -347,11 +613,9 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     }
     await input.hooks?.afterRegistryDeployment?.();
 
-    if (!alreadyApplied) {
-      await input.hooks?.beforePointerReplace?.();
-      await writeCurrentPointer(input.root, resultPointer);
-      await input.hooks?.afterPointerReplace?.();
-    }
+    await input.hooks?.beforePointerReplace?.();
+    await writeCurrentPointer(input.root, resultPointer);
+    await input.hooks?.afterPointerReplace?.();
     await writeOperation(input.root.root, {
       schema_version: 1,
       deployment_id: input.deploymentRecordId,
@@ -387,6 +651,5 @@ export async function reconcileDeployment(input: PublishInput): Promise<{ pointe
   if (operation.plan_digest !== digestCanonicalJson(input.plan)) {
     throw new PublishError("PUBLISH_RECOVERY_REQUIRED", "recovery operation does not match the supplied plan");
   }
-  await rm(join(input.root.root, DEPLOYMENT_LOCK_DIRECTORY), { recursive: true, force: true });
   return publishToTarget(input);
 }

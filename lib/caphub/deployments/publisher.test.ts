@@ -12,7 +12,7 @@ import { applyRegistryMigrations } from "../registry/migrate";
 import { PostgresExportStore } from "../registry/postgres/exports";
 import { validateTargetRoot, writeTargetSentinel, type ValidatedTargetRoot } from "../projection/paths";
 import { derivePlanRecordId } from "./plan";
-import { publishToTarget, readTargetPointer, reconcileDeployment, type PublishInput } from "./publisher";
+import { computeTargetPreimage, publishToTarget, readTargetPointer, reconcileDeployment, type PublishInput } from "./publisher";
 
 const NOW = "2026-09-16T09:00:00.000Z";
 const ALIAS = "codex-fixture";
@@ -48,7 +48,9 @@ function adapterPackage(seed: number, overrides: Partial<CapabilityPackage> = {}
   });
 }
 
-function planFor(seed: number, pkg: CapabilityPackage, action: "publish" | "rollback", pointer: DeploymentPlan["expected_current_pointer"]): DeploymentPlan {
+const EMPTY_TARGET_PREIMAGE = digestCanonicalJson({ schema_version: 1, pointer: null, files: [] });
+
+function planFor(seed: number, pkg: CapabilityPackage, action: "publish" | "rollback", pointer: DeploymentPlan["expected_current_pointer"], preimageDigest: string = EMPTY_TARGET_PREIMAGE): DeploymentPlan {
   const rendered = renderCodexPreview(pkg);
   if (!rendered.ok) throw new Error("adapter fixture failed");
   return {
@@ -65,7 +67,7 @@ function planFor(seed: number, pkg: CapabilityPackage, action: "publish" | "roll
     preview_manifest_digest: rendered.result.output_manifest_digest,
     preview_diff_digest: DIGEST,
     expected_current_pointer: pointer,
-    target_preimage_digest: DIGEST,
+    target_preimage_digest: preimageDigest,
     created_at: NOW
   };
 }
@@ -143,6 +145,7 @@ function publishInput(pkg: CapabilityPackage, plan: DeploymentPlan, decisionId: 
       exports: new PostgresExportStore(fixture.appPool),
       deploymentRecordId: deploymentId,
       planApprovalDecisionId: decisionId,
+      assertAuthority: async () => undefined,
       clock: () => NOW
     } as PublishInput,
     files: rendered.result.files
@@ -276,14 +279,16 @@ describe.sequential("publishToTarget (real PostgreSQL + fixture root)", () => {
     const v1 = await publishToTarget(publishV1.input);
 
     const pkgV2 = adapterPackage(seed + 1, { version: "2.0.0" });
-    const planV2 = planFor(seed + 1, pkgV2, "publish", v1.pointer);
+    const preimageV2 = await computeTargetPreimage(target);
+    const planV2 = planFor(seed + 1, pkgV2, "publish", v1.pointer, preimageV2);
     const approvedV2 = await seedApprovedPlan(seed + 1, planV2);
     const publishV2 = publishInput(pkgV2, planV2, approvedV2.decisionId, hexId("dep_", seed + 5001));
     publishV2.input.root = target;
     const v2 = await publishToTarget(publishV2.input);
     expect(v2.pointer.release_id).toBe(pkgV2.release_id);
 
-    const rollbackPlan = planFor(seed, pkgV1, "rollback", v2.pointer);
+    const preimageRollback = await computeTargetPreimage(target);
+    const rollbackPlan = planFor(seed, pkgV1, "rollback", v2.pointer, preimageRollback);
     const approvedRollback = await seedApprovedPlan(seed + 2, rollbackPlan);
     const rollback = publishInput(pkgV1, rollbackPlan, approvedRollback.decisionId, hexId("dep_", seed + 5002));
     rollback.input.root = target;

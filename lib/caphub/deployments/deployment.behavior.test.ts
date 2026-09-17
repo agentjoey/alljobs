@@ -21,7 +21,7 @@ import { validateTargetRoot, writeTargetSentinel, type ValidatedTargetRoot } fro
 import { ReleaseService } from "../releases/service";
 import { FIXTURE_DIGEST, testCandidateVersion, testReviewPacket } from "../releases/fixtures";
 import { DeploymentService, type TargetState } from "./plan";
-import { publishToTarget, readTargetPointer } from "./publisher";
+import { publishToTarget, readActiveManifestDirectory, readTargetPointer } from "./publisher";
 
 const NOW = "2026-09-16T09:00:00.000Z";
 const ALIAS = "codex-fixture";
@@ -46,19 +46,19 @@ async function freshTarget(): Promise<ValidatedTargetRoot> {
 }
 
 async function readTargetState(root: ValidatedTargetRoot): Promise<TargetState> {
-  const pointer = await readTargetPointer(root);
-  if (!pointer) return { files: [], pointer: null };
-  const base = join(root.root, "versions", pointer.release_id, String(pointer.release_version));
+  const active = await readActiveManifestDirectory(root.root);
+  if (active === null) return { files: [], pointer: null };
   const files: PackageFile[] = [];
   const { readdir } = await import("node:fs/promises");
   async function walk(directory: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
       const full = join(directory, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("unsafe fixture symlink");
       if (entry.isDirectory()) await walk(full);
       else if (entry.isFile() && entry.name !== ".caphub-version.json") {
         const raw = await readFile(full);
         files.push({
-          path: full.slice(base.length + 1),
+          path: full.slice(active.directory.length + 1),
           media_type: "text/markdown",
           content: raw.toString("utf8"),
           sha256: createHash("sha256").update(raw).digest("hex"),
@@ -67,8 +67,8 @@ async function readTargetState(root: ValidatedTargetRoot): Promise<TargetState> 
       }
     }
   }
-  await walk(base);
-  return { files, pointer };
+  await walk(active.directory);
+  return { files, pointer: active.pointer };
 }
 
 function makeReleaseService(pool: Pool): ReleaseService {
@@ -303,6 +303,7 @@ describe.sequential("Deployment behavior chain (real PostgreSQL + fixture target
       exports,
       deploymentRecordId: deploymentIdV1,
       planApprovalDecisionId: planApprovalV1,
+      assertAuthority: async () => undefined,
       clock: () => NOW
     });
     expect((await readTargetPointer(target))?.release_id).toBe(releaseV1.record_id);
@@ -336,6 +337,7 @@ describe.sequential("Deployment behavior chain (real PostgreSQL + fixture target
       exports,
       deploymentRecordId: deploymentIdV2,
       planApprovalDecisionId: planApprovalV2,
+      assertAuthority: async () => undefined,
       clock: () => NOW
     });
     expect((await readTargetPointer(target))?.release_id).toBe(releaseV2.record_id);
@@ -359,6 +361,7 @@ describe.sequential("Deployment behavior chain (real PostgreSQL + fixture target
       exports,
       deploymentRecordId: rollbackDeploymentId,
       planApprovalDecisionId: rollbackApproval,
+      assertAuthority: async () => undefined,
       clock: () => NOW
     });
 
