@@ -1,8 +1,34 @@
 import type { CapabilityPackage } from "../lib/caphub/packages/types";
 import type { RegistryVersion } from "../lib/caphub/registry/types";
 import type { ExportRuntime, ExportTargetName } from "../lib/caphub/exports/runtime";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { consoleIo, parseFlags, rejectForbiddenArgs, reportError, requireDryRun, type CliIo } from "./caphub-cli";
+
+/** Read only the exact active manifest directory named by the validated
+ * pointer + operation binding. Paths are normalized relative to that manifest
+ * directory so base and next files share adapter-relative paths. */
+export async function readActiveAdapterFiles(rootDir: string): Promise<Array<{ path: string; content: string }>> {
+  const { readActiveManifestDirectory } = await import("../lib/caphub/deployments/publisher");
+  const { readdir } = await import("node:fs/promises");
+  const { readFile: readFileAsync } = await import("node:fs/promises");
+  const active = await readActiveManifestDirectory(rootDir);
+  if (active === null) return [];
+  const directory = active.directory;
+  const files: Array<{ path: string; content: string }> = [];
+  async function walk(current: string): Promise<void> {
+    for (const entry of await readdir(current, { withFileTypes: true }).catch(() => [])) {
+      const full = join(current, entry.name);
+      if (entry.isSymbolicLink()) throw new Error("UNSAFE_TARGET_ROOT: active manifest contains a symlink");
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile() && entry.name !== ".caphub-version.json") {
+        files.push({ path: full.slice(directory.length + 1), content: await readFileAsync(full, "utf8") });
+      }
+    }
+  }
+  await walk(directory);
+  return files;
+}
 
 export interface ExportCliDeps {
   loadRuntime(): ExportRuntime;
@@ -69,33 +95,6 @@ async function loadExportCliDeps(): Promise<ExportCliDeps> {
   const context = await loadControlHostExportContext();
   const adapters = { codex: renderCodexPreview, claude: renderClaudePreview, hermes: renderHermesPreview } as const;
 
-  async function activeFiles(rootDir: string): Promise<Array<{ path: string; content: string }>> {
-    let pointer: { release_id: string; release_version: number } | null = null;
-    try {
-      pointer = JSON.parse(await readFile(join(rootDir, "current.json"), "utf8"));
-    } catch {
-      pointer = null;
-    }
-    // The pointer file is untrusted target state: validate its shape before it
-    // influences any filesystem path.
-    if (!pointer || !/^rel_[a-f0-9]{32}$/.test(String(pointer.release_id ?? ""))
-      || !Number.isInteger(pointer.release_version) || (pointer.release_version as number) <= 0) {
-      return [];
-    }
-    const files: Array<{ path: string; content: string }> = [];
-    async function walk(directory: string): Promise<void> {
-      for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
-        const full = join(directory, entry.name);
-        if (entry.isDirectory()) await walk(full);
-        else if (entry.isFile() && entry.name !== ".caphub-version.json") {
-          files.push({ path: full.slice(rootDir.length + 1), content: await readFile(full, "utf8") });
-        }
-      }
-    }
-    await walk(join(rootDir, "versions", pointer.release_id, String(pointer.release_version)));
-    return files;
-  }
-
   return {
     loadRuntime: () => context.runtime,
     loadReleaseSnapshot: context.releaseSnapshot,
@@ -105,7 +104,7 @@ async function loadExportCliDeps(): Promise<ExportCliDeps> {
         throw new Error(`${rendered.code}: ${rendered.diagnostics.join("; ")}`);
       }
       const rootDir = context.runtime.resolveTargetRoot(target);
-      const snapshot = await activeFiles(rootDir);
+      const snapshot = await readActiveAdapterFiles(rootDir);
       const diff = diffPackageFiles({
         baseFiles: snapshot.map((file) => ({
           path: file.path,

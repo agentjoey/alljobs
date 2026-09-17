@@ -56,7 +56,17 @@ async function readRecovery(root: string): Promise<unknown | null> {
 }
 
 async function writeRecovery(root: string, record: unknown): Promise<void> {
-  await writeFile(join(root, RECOVERY_FILE), `${JSON.stringify(record, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  const { open, rename } = await import("node:fs/promises");
+  const path = join(root, RECOVERY_FILE);
+  const temporary = join(root, `.caphub-projection-recovery.json.tmp-${process.pid}-${Math.random().toString(16).slice(2)}`);
+  const handle = await open(temporary, "wx", 0o600);
+  try {
+    await handle.writeFile(`${JSON.stringify(record, null, 2)}\n`, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  await rename(temporary, path);
 }
 
 async function fsyncDirectory(directory: string): Promise<void> {

@@ -190,3 +190,49 @@ describe("caphub CLI entrypoints", () => {
     expect(serialized).not.toContain("message");
   });
 });
+
+describe("readActiveAdapterFiles (acceptance fix 6)", () => {
+  it("binds to the exact active manifest and ignores sibling manifests", async () => {
+    const { readActiveAdapterFiles } = await import("./caphub-export");
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { join: joinPath } = await import("node:path");
+    const root = await realpath(await mkdtemp(join(tmpdir(), "caphub-cli-active-")));
+    tempDirs.push(root);
+    const releaseId = `rel_${"ab".repeat(16)}`;
+    const pointerBase = {
+      deployment_id: `dep_${"cd".repeat(16)}`,
+      release_id: releaseId,
+      release_version: 1,
+      release_digest: "e".repeat(64)
+    };
+    const pointer = {
+      ...pointerBase,
+      pointer_digest: "f".repeat(64)
+    };
+    const manifestA = "a1".repeat(32);
+    const manifestB = "b2".repeat(32);
+    for (const [manifest, body] of [[manifestA, "# inactive manifest A\n"], [manifestB, "# active manifest B\n"]] as const) {
+      const dir = joinPath(root, "versions", releaseId, "1", manifest);
+      await mkdir(joinPath(dir, "$CODEX_HOME", "skills", "tool"), { recursive: true });
+      await writeFile(joinPath(dir, ".caphub-version.json"), JSON.stringify({
+        schema_version: 1, action: "publish", release: { record_id: releaseId, version: 1, digest: "e".repeat(64) },
+        manifest_digest: manifest,
+        files: [{ path: "$CODEX_HOME/skills/tool/SKILL.md", sha256: "0".repeat(64), bytes: body.length }]
+      }));
+      await writeFile(joinPath(dir, "$CODEX_HOME", "skills", "tool", "SKILL.md"), body);
+    }
+    await mkdir(joinPath(root, "operations"), { recursive: true });
+    await writeFile(joinPath(root, "operations", `${pointerBase.deployment_id}.json`), JSON.stringify({
+      schema_version: 1, deployment_id: pointerBase.deployment_id, plan_digest: "1".repeat(64),
+      action: "publish", stage: "completed",
+      release: { record_id: releaseId, version: 1, digest: "e".repeat(64) },
+      manifest_digest: manifestB, created_at: "2026-09-16T09:00:00.000Z"
+    }));
+    await writeFile(joinPath(root, "current.json"), JSON.stringify(pointer));
+
+    const files = await readActiveAdapterFiles(root);
+    expect(files).toHaveLength(1);
+    expect(files[0]?.path).toBe("$CODEX_HOME/skills/tool/SKILL.md");
+    expect(files[0]?.content).toBe("# active manifest B\n");
+  });
+});
