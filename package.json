@@ -15,6 +15,7 @@
     "test:e2e:caphub": "playwright test --config playwright.caphub-foundation.config.ts",
     "test:e2e:caphub-review-registry": "playwright test --config playwright.caphub-review-registry.config.ts",
     "test:e2e:caphub-package-export": "playwright test --config playwright.caphub-package-export.config.ts",
+    "test:e2e:caphub-production-pilot": "NODE_OPTIONS=--conditions=react-server playwright test --config playwright.caphub-production-pilot.config.ts",
     "assistant:smoke": "tsx scripts/assistant-smoke.ts",
     "caphub:analyze": "tsx --conditions=react-server scripts/caphub-analyze.ts",
     "caphub:project": "tsx --conditions=react-server scripts/caphub-project.ts",

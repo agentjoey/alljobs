@@ -151,3 +151,39 @@ and one independent Verification occur only after the implementation tasks.
 - No real provider, Production Registry, filesystem Capture, Release, target,
   Deployment, Production configuration, secret, or service state was used or
   changed.
+
+## Task 6 — isolated P1–P4 production pilot
+
+- Added one sentinel-owned, single-worker Playwright scenario covering an exact
+  filesystem Capture dry-run/apply, browser Capture, fixture-only analysis,
+  ReviewPacket import, Candidate approval, Release composition and approval,
+  exact finalization retry, read-only neutral manifest/adapter previews, and
+  verified backup/isolated restore.
+- The fixture uses a private temporary Control Host home, a Unix-socket-only
+  PostgreSQL 17 cluster, fixed MiniMax/Kimi (`k3-256k`) adapters, and a loopback
+  HTTPS proxy. It creates no export target root and asserts zero Deployment or
+  DeploymentPlan records.
+- The cross-boundary scenario exposed and fixed two Production-only integration
+  defects:
+  1. application-role Capture creation tried to lock the append-only
+     `capture_idempotency` table, which correctly has no UPDATE grant; it now
+     serializes the idempotency key with a transaction-scoped advisory lock;
+  2. ReviewPacket import assumed a filesystem-origin version-1 analysis job;
+     it now binds exact existing current Registry versions while preserving the
+     original version-1 import path and post-commit retry repair.
+- RED/GREEN evidence: the new scenario first failed because the harness was
+  absent; the least-privileged Capture BDD then reproduced the 503, and the
+  Registry-native import path reproduced `IMPORT_DIGEST_CONFLICT`. Final
+  focused evidence: app-role/import tests 2 files / 5 tests PASS; typecheck and
+  scoped lint PASS; Next.js 16.3.3 webpack Production build PASS; production
+  pilot E2E 1/1 PASS.
+- Final-build screenshots were inspected at 1440 CSS pixels for Review and a
+  true 390 CSS-pixel viewport for Capability detail. No absolute path,
+  credential, database URL, raw object key, Capture bytes, prompt, provider
+  response, or publish control is visible.
+- Turbopack build attempts were blocked by the execution container denying its
+  temporary CSS worker port (`EPERM`). The final verified artifact uses the
+  repository-supported Next.js webpack Production builder; this is recorded as
+  an environment limitation, not a passing Turbopack result.
+- No Production database, config, LaunchAgent, service, provider, source URL,
+  target, Git remote, or deployment state was used or changed.

@@ -27,6 +27,7 @@ export class ReviewPacketImportError extends Error {
 interface ImportRecord {
   id: string;
   kind: RegistryRecordKind;
+  version: number;
   payload: unknown;
   digest: string;
   createdAt: string;
@@ -57,18 +58,22 @@ async function ensureRecord(client: PoolClient, record: ImportRecord): Promise<v
     throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
   }
   const existing = await client.query<{
+    version: number;
     kind: RegistryRecordKind;
     payload: unknown;
     payload_digest: string;
     created_at: Date | string;
   }>(`
-    SELECT kind, payload, payload_digest, created_at
-    FROM caphub.registry_versions
-    WHERE record_id = $1 AND version = 1
+    SELECT v.version, v.kind, v.payload, v.payload_digest, v.created_at
+    FROM caphub.registry_records r
+    JOIN caphub.registry_versions v
+      ON v.record_id = r.record_id AND v.version = r.current_version
+    WHERE r.record_id = $1
   `, [record.id]);
   if (existing.rows[0]) {
     const row = existing.rows[0];
-    if (row.kind !== record.kind
+    if (row.version !== record.version
+      || row.kind !== record.kind
       || row.payload_digest !== record.digest
       || canonicalJson(row.payload) !== canonicalJson(payload)
       || normalizedTimestamp(row.created_at) !== normalizedTimestamp(record.createdAt)) {
@@ -76,6 +81,7 @@ async function ensureRecord(client: PoolClient, record: ImportRecord): Promise<v
     }
     return;
   }
+  if (record.version !== 1) throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
   const parent = await client.query<{ kind: RegistryRecordKind }>(
     "SELECT kind FROM caphub.registry_records WHERE record_id = $1 FOR UPDATE",
     [record.id]
@@ -91,6 +97,33 @@ async function ensureRecord(client: PoolClient, record: ImportRecord): Promise<v
       (record_id, version, kind, schema_version, payload, payload_digest, previous_version, created_at)
     VALUES ($1,1,$2,1,$3::jsonb,$4,NULL,$5)
   `, [record.id, record.kind, canonicalJson(payload), record.digest, record.createdAt]);
+}
+
+async function bindExistingVersions(pool: Pool, records: ImportRecord[]): Promise<void> {
+  for (const record of records) {
+    const existing = await pool.query<{
+      version: number;
+      kind: RegistryRecordKind;
+      payload: unknown;
+      payload_digest: string;
+      created_at: Date | string;
+    }>(`
+      SELECT v.version, v.kind, v.payload, v.payload_digest, v.created_at
+      FROM caphub.registry_records r
+      JOIN caphub.registry_versions v
+        ON v.record_id = r.record_id AND v.version = r.current_version
+      WHERE r.record_id = $1
+    `, [record.id]);
+    const row = existing.rows[0];
+    if (!row) continue;
+    if (row.kind !== record.kind
+      || row.payload_digest !== record.digest
+      || canonicalJson(row.payload) !== canonicalJson(registryJsonValueSchema.parse(record.payload))
+      || normalizedTimestamp(row.created_at) !== normalizedTimestamp(record.createdAt)) {
+      throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
+    }
+    record.version = row.version;
+  }
 }
 
 async function ensureLineage(client: PoolClient, edge: RegistryLineageEdge): Promise<void> {
@@ -122,12 +155,12 @@ function edge(from: ImportRecord, relationship: RegistryLineageEdge["relationshi
     schema_version: 1,
     from_record_id: from.id,
     from_kind: from.kind,
-    from_version: 1,
+    from_version: from.version,
     from_digest: from.digest,
     relationship,
     to_record_id: to.id,
     to_kind: to.kind,
-    to_version: 1,
+    to_version: to.version,
     to_digest: to.digest,
     created_at: at
   };
@@ -221,11 +254,11 @@ function importRecords(
   candidate: ImportRecord;
 } {
   const captureRecord: ImportRecord = {
-    id: capture.id, kind: "capture", payload: capture,
+    id: capture.id, kind: "capture", version: 1, payload: capture,
     digest: digestCanonicalJson(capture), createdAt: capture.created_at
   };
   const jobRecord: ImportRecord = {
-    id: job.id, kind: "analysis_job", payload: job,
+    id: job.id, kind: "analysis_job", version: 1, payload: job,
     digest: digestCanonicalJson(job), createdAt: job.updated_at
   };
   const artifactRecords = loadedArtifacts.map(({ artifact, payload }) => {
@@ -233,18 +266,20 @@ function importRecords(
     return {
       id: artifact.id,
       kind: "analysis_artifact" as const,
+      version: 1,
       payload: wrapped,
       digest: digestCanonicalJson(wrapped),
       createdAt: artifact.created_at
     };
   });
   const packetRecord: ImportRecord = {
-    id: packet.packet_id, kind: "review_packet", payload: packet,
+    id: packet.packet_id, kind: "review_packet", version: 1, payload: packet,
     digest: digestCanonicalJson(packet), createdAt: packet.created_at
   };
   const entities = [...new Map(packet.entities.map((payload) => {
     const record: ImportRecord = {
       id: derivedId("ent_", payload), kind: "entity", payload,
+      version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
     return [record.id, record];
@@ -252,6 +287,7 @@ function importRecords(
   const claims = [...new Map(packet.claims.map((payload) => {
     const record: ImportRecord = {
       id: payload.id, kind: "claim", payload,
+      version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
     return [record.id, record];
@@ -259,12 +295,13 @@ function importRecords(
   const evidence = [...new Map(packet.evidence.map((payload) => {
     const record: ImportRecord = {
       id: payload.id, kind: "evidence", payload,
+      version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
     return [record.id, record];
   })).values()];
   const candidate: ImportRecord = {
-    id: derivedId("cand_", packet.candidate), kind: "candidate", payload: packet.candidate,
+    id: derivedId("cand_", packet.candidate), kind: "candidate", version: 1, payload: packet.candidate,
     digest: digestCanonicalJson(packet.candidate), createdAt: packet.created_at
   };
   return {
@@ -313,6 +350,7 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
           return { requestId, job: repaired };
         }
 
+        await bindExistingVersions(dependencies.pool, built.records);
         const importedAt = dependencies.clock();
         const manifest = registryImportManifestSchema.parse({
           schema_version: 1,
@@ -322,7 +360,7 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
           records: built.records.map((record) => ({
             record_id: record.id,
             kind: record.kind,
-            version: 1,
+            version: record.version,
             payload_digest: record.digest
           })),
           review_request_id: requestId,

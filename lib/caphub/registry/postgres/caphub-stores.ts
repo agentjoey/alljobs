@@ -76,8 +76,15 @@ export class PostgresCaptureStore implements CaptureStore {
     const digest = digestCanonicalJson(record);
     try {
       return await withSerializableRegistryTransaction(this.pool, async (client) => {
+        // capture_idempotency is append-only, so the least-privileged app role
+        // intentionally has no UPDATE grant and cannot SELECT ... FOR UPDATE.
+        // Serialize the idempotency key without granting mutation authority.
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtext('caphub.capture_idempotency'), hashtext($1))",
+          [record.idempotency_key]
+        );
         const keyed = await client.query<{ capture_id: string; request_digest: string }>(
-          "SELECT capture_id, request_digest FROM caphub.capture_idempotency WHERE idempotency_key = $1 FOR UPDATE",
+          "SELECT capture_id, request_digest FROM caphub.capture_idempotency WHERE idempotency_key = $1",
           [record.idempotency_key]
         );
         if (keyed.rows[0]) return "conflict";
