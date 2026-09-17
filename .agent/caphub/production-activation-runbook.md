@@ -26,12 +26,15 @@ enabled target, missing invariant, or `PREFLIGHT_*` error blocks progress.
 Record aliases such as `<CAPHUB_HOME>`, `<CAPHUB_SOCKET>`, and
 `<BACKUP_GENERATION>` in operator notes. Do not record their absolute values.
 
-## S1 — stop writer and preserve the source (requires PA-B)
+## S1 — stop writer and preserve the source (requires PA-B plus an explicit safe-off action)
 
 1. Obtain PA-B authorization naming the accepted SHA and intended local-only
-   changes.
-2. Set Caphub safe-off through the approved installed configuration procedure
-   and reload only `com.agentjoey.alljobs`.
+   changes. PA-B alone does not authorize stopping or reloading the Production
+   application.
+2. In the same grant or a separate grant, obtain explicit authorization to
+   stop the `com.agentjoey.alljobs` listener for safe-off maintenance. Stop it;
+   do not rebuild, reload, or transition it to S2/S3/S4 before PA-D. If the
+   listener is already stopped, record that fact instead of changing it.
 3. Confirm the public Capture action is disabled and inspect the application
    log for no in-flight Caphub writer. Do not prove this with a live POST.
 4. Create an immutable whole-tree source backup using the approved Control Host
@@ -43,18 +46,24 @@ delete, move, or rewrite Capture files.
 
 ## PA-B — local Registry bootstrap and migration
 
-After installing the reviewed LaunchAgent template with its fixed Control Host
-placeholder resolved, run only:
+Resolve and install the reviewed LaunchAgent template with its fixed Control
+Host placeholder, but do not load it yet. Confirm the label is not already
+registered, then run only:
 
 ```bash
 npm run caphub:postgres -- --bootstrap --confirm BOOTSTRAP-CAPHUB-POSTGRES
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agentjoey.alljobs-caphub-postgres.plist
 launchctl print gui/$(id -u)/com.agentjoey.alljobs-caphub-postgres
+# Substitute the exact pid reported by launchctl; expected parent is 1.
+ps -p <LAUNCHD_POSTMASTER_PID> -o ppid=,command=
 npm run caphub:postgres -- --migrate --confirm APPLY-CAPHUB-MIGRATIONS
 npm run caphub:postgres -- --check
 npm run verify:deploy
 ```
 
-Expected: PostgreSQL 17; database `caphub`; roles `caphub_app` and
+Expected: bootstrap exits with `serviceRunning: false`; `launchctl bootstrap`
+starts exactly one launchd-owned postmaster from the fixed template; PostgreSQL
+17; database `caphub`; roles `caphub_app` and
 `caphub_migrator`; no TCP listener; one private Unix socket; migrations
 `001_registry`, `002_read_models`, and `003_exports` at committed checksums;
 `appCanMigrate: false`; `appCanUpdateAppendOnly: false`; `ready: true`.
@@ -84,15 +93,24 @@ Registry counts and migration checksums. Preserve the backup even if verify
 fails. `caphub:preflight` does not itself perform or attest the restore drill;
 the operator binds the successful verify output to PA-D evidence.
 
-## S2 — Registry-only verification (requires PA-D before cutover)
+This backup command is intentionally local-socket-only. It fails closed for
+`tls_verify_full`; a future managed database requires a separately reviewed
+verify-full `pg_dump` contract before it can be activated.
+
+## S2 — Registry-only operator verification (application remains stopped)
 
 Prepare an exact configuration diff with outer Caphub safe-off, Registry
 configured, analysis off, exports off, and every target disabled/unconfigured.
+While the application listener remains stopped, verify the migrated Registry
+only through the bounded operator commands (`caphub:postgres -- --check`,
+`caphub:registry-import -- --dry-run`, and `caphub:preflight`). Do not claim
+browser-route evidence in S2.
+
 PA-D must name the accepted commit/build, migration checksums, verified backup
 generation, import digest/count, intended LaunchAgent/config diff, and rollback
-build. After approval, rebuild/reload only `com.agentjoey.alljobs` and verify
-metadata-only reads. Do not restart the refresh worker, Tunnel, Access, or
-domain.
+build. Only after approval may the operator rebuild/reload
+`com.agentjoey.alljobs` and enter S3. Do not restart the refresh worker,
+Tunnel, Access, or domain.
 
 ## S3 — Capture + Review + P4 preview
 

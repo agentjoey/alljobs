@@ -381,8 +381,9 @@ paths stay disabled and unconfigured.
 
 - S0 is metadata-only inventory. No Production mutation or provider call.
 - S1 stops Capture writes and preserves the complete filesystem source.
-- S2 enables only the checksum-verified Registry after exact import and a
-  verified backup/isolated restore.
+- S2 verifies only the checksum-verified Registry through operator commands
+  after exact import and a verified backup/isolated restore; the application
+  remains stopped.
 - S3 enables Capture, Review, and read-only package/adapter preview while
   analysis and every export target remain disabled. This is a valid terminal
   state.
@@ -390,7 +391,8 @@ paths stay disabled and unconfigured.
   Capability analysis only after a PA-C Kimi `k3-256k` compatibility pass.
 
 PA-B controls the real database, LaunchAgent, configuration, secrets,
-migrations, import, and backup. PA-D controls application cutover. PA-C controls
+migrations, import, and backup; stopping Production for S1 also requires an
+explicit safe-off maintenance action. PA-D controls application cutover. PA-C controls
 each real provider call. A provider failure is not retried and leaves the
 system at S3. Code rollback restores the prior approved build and safe-off
 configuration without deleting or migrating down database/filesystem evidence.

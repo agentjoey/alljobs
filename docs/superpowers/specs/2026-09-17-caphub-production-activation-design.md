@@ -174,8 +174,11 @@ state's checks pass.
 
 `caphub.enabled` is the Capture master switch. S1 is implemented by stopping the
 application listener or temporarily setting that master switch false; the
-operator must prove no writer remains before migration. Registry, analysis, and
-exports retain their own strict switches.
+operator must prove no writer remains before migration. PA-B does not by itself
+authorize that Production service action: an exact safe-off maintenance action
+must also be approved. S2 is operator-only while the application remains
+stopped; browser-route validation begins after PA-D when entering S3. Registry,
+analysis, and exports retain their own strict switches.
 
 The intended S4 configuration is equivalent to:
 
@@ -402,7 +405,7 @@ retried. Failure leaves Production at S3.
 ### Gate PA-D — Production cutover
 
 Fresh Human authorization is required immediately before the final application
-rebuild/reload and configuration transition to S2/S3/S4. The approved action
+rebuild/reload and configuration transition to S3/S4. The approved action
 must name the exact commit, build, migration checksums, backup generation, and
 rollback build.
 

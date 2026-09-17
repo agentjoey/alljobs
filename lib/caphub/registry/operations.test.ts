@@ -70,10 +70,19 @@ describe("local Registry bootstrap paths", () => {
         calls.push({ file, args });
         return { stdout: "", stderr: "" };
       }
-    })).resolves.toMatchObject({ initialized: true, database: "caphub", port: 54_329 });
-    expect(calls.map(({ file }) => file.split("/").at(-1))).toEqual(["initdb", "pg_ctl", "psql", "createdb"]);
+    })).resolves.toMatchObject({
+      initialized: true,
+      database: "caphub",
+      port: 54_329,
+      serviceRunning: false
+    });
+    expect(calls.map(({ file }) => file.split("/").at(-1)))
+      .toEqual(["initdb", "pg_ctl", "psql", "createdb", "pg_ctl"]);
     expect(calls[0]?.args).toContain("--auth-host=reject");
     expect(calls[1]?.args).toEqual(expect.arrayContaining(["-D", join(home, "postgres", "caphub"), "start"]));
+    expect(calls[4]?.args).toEqual([
+      "-D", join(home, "postgres", "caphub"), "-m", "fast", "-w", "stop"
+    ]);
     expect(readFileSync(join(home, "postgres", "caphub", "postgresql.conf"), "utf8"))
       .toContain("listen_addresses = ''");
 

@@ -269,6 +269,7 @@ export async function bootstrapLocalRegistry(
   database: "caphub";
   roles: ["caphub_app", "caphub_migrator"];
   port: 54_329;
+  serviceRunning: false;
 }> {
   const paths = prepareRegistryBootstrapDirectories(input.resolvedHome);
   const controlHostUser = input.controlHostUser ?? userInfo().username;
@@ -335,6 +336,8 @@ export async function bootstrapLocalRegistry(
       "-O", "caphub_migrator",
       "caphub"
     ]);
+    await run(pgCtl, ["-D", paths.dataDir, "-m", "fast", "-w", "stop"]);
+    started = false;
   } catch (error) {
     if (started) {
       try {
@@ -350,6 +353,7 @@ export async function bootstrapLocalRegistry(
     initialized: true,
     database: "caphub",
     roles: ["caphub_app", "caphub_migrator"],
-    port: LOCAL_REGISTRY_PORT
+    port: LOCAL_REGISTRY_PORT,
+    serviceRunning: false
   };
 }

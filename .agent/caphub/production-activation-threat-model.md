@@ -51,7 +51,9 @@ record does not authorize PA-B, PA-C, PA-D, any P4 target, or P5/P6.
   before P6, or earlier when RPO/PITR, multi-host access, growth, or operating
   burden crosses the approved triggers.
 - PA-B is required before any real cluster, LaunchAgent, configuration, secret,
-  migration, import, or backup action. PA-D is required before application
-  rebuild/reload/cutover. PA-C is required before each real provider call.
+  migration, import, or backup action. PA-B alone does not authorize stopping
+  or reloading the Production application: S1 needs an explicit safe-off
+  maintenance action, and PA-D is required before rebuild/reload/cutover into
+  S3/S4. PA-C is required before each real provider call.
 - P4-A/P4-B/P4-C, all target roots, publish/install/rollback, P5/P6, push, PR,
   merge, tag, and release publication remain closed.

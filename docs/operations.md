@@ -100,8 +100,9 @@ configuration, filesystem Capture source, database, backup, provider, service,
 or target roots, and it does not replace the isolated backup restore drill.
 
 PA-B controls the real local PostgreSQL cluster, LaunchAgent, configuration,
-secret environment, migrations, Capture import, and backup. PA-D controls the
-application rebuild/reload and S2/S3/S4 cutover. PA-C controls the one real Kimi
+secret environment, migrations, Capture import, and backup; stopping the app
+for S1 needs an explicit safe-off maintenance action as well. PA-D controls the
+application rebuild/reload and S3/S4 cutover. PA-C controls the one real Kimi
 canary and first real analysis; it permits no retry. P4 target gates remain
 closed. On failure, return/keep Caphub safe-off and preserve all database,
 filesystem, backup, and provider evidence without deletion.

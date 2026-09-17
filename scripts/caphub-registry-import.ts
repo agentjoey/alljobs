@@ -11,6 +11,23 @@ export interface CaphubRegistryImportDependencies {
   apply(expectedSourceDigest: string): Promise<unknown>;
 }
 
+export interface RegistryImportConfig {
+  enabled: boolean;
+  databaseUrlEnv: string;
+  migrationDatabaseUrlEnv: string;
+  connectionMode: "local_socket" | "tls_verify_full";
+  maxConnections: number;
+  statementTimeoutMs: number;
+}
+
+export function resolveRegistryImportConfig(config: {
+  caphub?: { enabled: boolean; registry?: RegistryImportConfig };
+}): RegistryImportConfig {
+  const registry = config.caphub?.registry;
+  if (!registry?.enabled) throw new Error("Caphub Registry must be enabled for import");
+  return registry;
+}
+
 export function parseCaphubRegistryImportArgs(args: readonly string[]): CaphubRegistryImportCommand {
   if (args.length === 0 || (args.length === 1 && args[0] === "--dry-run")) return { action: "dry-run" };
   if (args.length === 5 && args[0] === "--apply" && args[1] === "--digest"
@@ -41,14 +58,36 @@ async function loadFixedDependencies(): Promise<CaphubRegistryImportDependencies
   return {
     plan: () => importer.planFilesystemCaptureImport({ root: resolved.caphubStateDir as string }),
     apply: async (expectedSourceDigest) => {
-      const { loadControlHostRegistryRuntime } = await import("../lib/caphub/registry/runtime");
-      const registry = await loadControlHostRegistryRuntime({ resolved });
-      return importer.applyFilesystemCaptureImport({
-        root: resolved.caphubStateDir as string,
-        expectedSourceDigest,
-        captures: registry.captures,
-        audit: registry.captureAudit
+      const [{ Pool }, connection, stores] = await Promise.all([
+        import("pg"),
+        import("../lib/caphub/registry/connection"),
+        import("../lib/caphub/registry/postgres/caphub-stores")
+      ]);
+      const registry = resolveRegistryImportConfig(resolved.config);
+      const databaseUrl = process.env[registry.databaseUrlEnv];
+      if (!databaseUrl) throw new Error("Caphub application database environment reference is unavailable");
+      const pool = new Pool({
+        ...connection.parseRegistryConnection({
+          databaseUrl,
+          mode: registry.connectionMode,
+          role: "application",
+          resolvedHome: resolved.homeDir
+        }),
+        max: registry.maxConnections,
+        statement_timeout: registry.statementTimeoutMs,
+        application_name: "alljobs-caphub-registry-import",
+        idleTimeoutMillis: 30_000
       });
+      try {
+        return await importer.applyFilesystemCaptureImport({
+          root: resolved.caphubStateDir as string,
+          expectedSourceDigest,
+          captures: new stores.PostgresCaptureStore(pool),
+          audit: new stores.PostgresCaptureAuditLog(pool)
+        });
+      } finally {
+        await pool.end();
+      }
     }
   };
 }

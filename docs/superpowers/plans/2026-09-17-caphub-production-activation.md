@@ -896,12 +896,12 @@ import digest/counts, S2/S3 configuration diff, installed LaunchAgent changes,
 and rollback build. Push/merge/release, if needed, must be authorized explicitly
 in the same or a separate decision.
 
-- [ ] **Step 6: Enter S2, then S3**
+- [ ] **Step 6: Verify S2, then enter S3**
 
-Rebuild/reload only the AllJobs listener using the authorized exact commit.
-First enable Registry with Capture/analysis/exports safe-off and verify migrated
-reads. Then enable Capture and the exports master while every target remains
-false. Verify:
+With the AllJobs listener still stopped, verify S2 through the bounded operator
+commands only; do not claim browser-route evidence. Then, using the PA-D
+authorized exact commit, rebuild/reload only the AllJobs listener into S3 with
+Capture and the exports master enabled while every target remains false. Verify:
 
 ```text
 /caphub                         200 and Capture ready

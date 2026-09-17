@@ -84,8 +84,9 @@ LaunchAgent, changing the installed config, or placing database/provider secret
 references into the application environment.
 
 Run `npm run verify:deploy` and `npm run caphub:preflight` from the exact
-accepted build before requesting PA-B. PA-D is separately required before
-rebuilding/reloading the application into S2/S3/S4. The Caphub rollout must not
+accepted build before requesting PA-B. Stopping the Production listener for S1
+also needs an explicit safe-off maintenance action. PA-D is separately required
+before rebuilding/reloading the application into S3/S4. The Caphub rollout must not
 restart or modify the refresh worker, Tunnel, Access policy, domain, or the
 mandatory `127.0.0.1:3456` listener. Full commands and rollback behavior are in
 the [Production activation runbook](../.agent/caphub/production-activation-runbook.md).
