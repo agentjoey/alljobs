@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-16 by Codex after Caphub P4 specification and implementation planning
+Last Updated:   2026-09-17 by Codex after local P4 implementation acceptance
 
 ## Current decision
 
@@ -56,17 +56,17 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **Task 13 (Deployment & Operations)**: LaunchAgents (`alljobs`, `alljobs-refresh`), deployment invariant verifier, operational recovery documentation.
 - **Task 14 (Release & Cutover)**: Merged to `main`, launchd services active, live domain verified.
 
-## Caphub P4 (ready for Codex acceptance)
+## Caphub P4 (implementation accepted locally)
 
 - **Branch / worktree:** `codex/caphub-p4-implementation` · `.worktrees/caphub-p4-implementation`
 - **Scope:** Capability Package contracts, deterministic renderers, Obsidian projection with byte-preserved human regions, Codex/Claude/Hermes preview adapters, exact Deployment plans, fixture publish/rollback, disabled-by-default export runtime, safe CLIs, read-only P4 UI.
-- **Status:** Codex acceptance fixes implemented (`3b167b3..1bda3ba`, 6 commits) — forged-pointer fail-closed publish, mandatory §9.2 authority revalidation, full version-byte verification, lease-based recovery locks, complete durability, exact dry-run manifest binding, unified page lifecycle states. Full suite 152 files / 1361 tests PASS; P4 E2E 11/11; scoped independent Review (1H/4M/2L, all fixed) and Verification PASS 10/10 bound to `1bda3ba`. Records: `p4-{review,verification,acceptance-review,acceptance-verification}.md`.
-- **Boundary:** no real Vault/Agent root, production database, provider call, push, merge, deploy, or release occurred. Gates P4-A/P4-B/P4-C remain open Human gates. Codex acceptance is the next step before any Human gate is proposed.
+- **Status:** Codex final acceptance fixes complete through `7ae8402`: approved-manifest binding survives joint operation+marker forgery, exact Release/plan/Deployment authority is checked before the lease and again under lock, root/sentinel state is freshly validated, rollback bytes are verified, and marker-less unsafe directories fail closed. Final gate: 152 files / 1372 tests PASS; typecheck PASS; lint 0 errors / 79 warnings; warning-free production build; deploy invariants PASS; P4 E2E 11/11. One scoped final Review returned PASS after its 1 Critical/3 Important findings were fixed; final independent Verification is pending against the evidence commit.
+- **Boundary:** no real Vault/Agent root, production database, provider call, push, merge, deploy, or release occurred. Gates P4-A/P4-B/P4-C remain open Human gates; local implementation acceptance does not authorize them.
 - **Evidence:** `.agent/caphub/p4-implementation-log.md` · `p4-threat-model.md` · `p4-verification.md` · `p4-screenshots/`
 
 ## Next safe action
 
-Continue the authorized Caphub Capture-only trial without enabling Analysis or Registry, and implement P4 from the approved planning branch in a separate isolated worktree. Any real P4 Vault/Agent target or publish remains gated.
+Keep `codex/caphub-p4-implementation` and its isolated worktree for Human integration. Any real P4 target configuration, dry run, adapter enablement, publish, or rollback requires the corresponding P4-A/P4-B/P4-C authorization.
 
 ## Caphub development status — 2026-09-16
 
@@ -74,8 +74,8 @@ Continue the authorized Caphub Capture-only trial without enabling Analysis or R
 - P3 Review Center and PostgreSQL Registry implementation/fixture verification passed independent Review and Verification with zero blocker/high/medium findings, was merged to `main`, and was deployed at `bac60042064e258072f025d42ce2d6633ba21a43` with production Registry and Analysis disabled.
 - Human separately authorized a Capture-only production trial. Capture is enabled on the Control Host; Analysis and Registry remain disabled, and the enablement verification did not create a Capture.
 - Gate P3-D remains a hard stop for production PostgreSQL selection, credentials, backup/PITR, migration, or Registry/Analysis enablement.
-- P4 design and implementation plan are now recorded in `docs/superpowers/specs/2026-09-16-caphub-obsidian-package-export-design.md` and `docs/superpowers/plans/2026-09-16-caphub-obsidian-package-export.md`. Implementation is assigned to KimiCode (`k3-256k`) on a separate local branch; Codex will independently accept the result.
-- No P4 implementation, real Vault/Agent root, dry run, publish, rollback, push, merge, deployment, or P4-A/P4-B/P4-C approval has occurred.
+- P4 design, plan, local implementation, Codex acceptance, and scoped Review are recorded on `codex/caphub-p4-implementation`; final independent Verification is pending and integration remains a separate Human decision.
+- No real Vault/Agent root, dry run, publish, rollback, push, merge, deployment, or P4-A/P4-B/P4-C approval has occurred.
 
 ## P0 Backlog retirement (live)
 

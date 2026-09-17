@@ -1,6 +1,6 @@
 # Caphub P4 Threat Model
 
-**Status:** P4 implementation complete; ready for independent Codex acceptance
+**Status:** P4 implementation accepted locally; real-target Human gates remain closed
 **Date:** 2026-09-17
 **Scope:** Capability Package contracts, deterministic renderers, Obsidian projection, platform preview adapters, exact Deployment plans, fixture publish/rollback, export runtime and read-only browser surfaces
 **Out of scope:** real Vault/Agent configuration or writes, production PostgreSQL, provider/model calls, Gate P4-A/P4-B/P4-C execution, P5 BuildProposal implementation, P6 runtime routing
@@ -30,7 +30,7 @@
 | Stale or replayed approval | exact subject digest/version binding, lock-version checks, serializable row locks, single-consumption primary key, idempotent replay returns stable receipt | exports store tests; review-decision behavior tests; publisher concurrency tests |
 | Two deployments from one approval | `decision_consumers` PK + request-row serialization; second consumer gets `DECISION_ALREADY_CONSUMED` or stable existing receipt | Task 2/8 store and publisher tests |
 | Unapproved/revoked Release planned or applied | `DeploymentService.createPlan` requires finalized authority (approval consumed by the Release record); `finalizeRelease` revalidates exact version/digest | plan.test.ts, release-candidate.behavior.test.ts |
-| Tampered package or preview after planning | apply-time re-render compared to plan digests (`STALE_DEPLOYMENT`); version-dir content-addressed marker rejects collisions | publisher.ts revalidate + tests |
+| Tampered package, operation, marker, or preview after planning | operation, marker manifest, exact bytes, apply evidence, adapter output, and reproduced diff must all match the approved plan digests; joint operation+marker forgery fails `STALE_DEPLOYMENT` | publisher.ts revalidate + acceptance tests; caphub-publish tests |
 | Path traversal / symlink escape | `resolveSafeDescendant` rejects `..`, absolute paths, backslashes, control chars, dot-only segments; lstat per segment rejects symlinks; root must be canonical real owned dir | paths.test.ts; filesystem.test.ts; publisher symlink test |
 | Claiming `/`, home, workspace, or a nested vault | runtime + validator reject broad roots, home, `process.cwd()`, symlink roots, and any ancestor carrying a Caphub sentinel | paths.test.ts; runtime.test.ts |
 | Foreign file overwrite | planner marks foreign files `conflict`; apply refuses with `PROJECTION_CONFLICT`; preimage revalidation raises `STALE_PREIMAGE` | planner/filesystem tests |
@@ -38,8 +38,8 @@
 | Frontmatter/marker injection | renderer and adapters reject caphub markers and leading `---`; package schema rejects absolute paths and approval phrases in protected text | render.test.ts, adapters tests, schemas.test.ts |
 | Non-deterministic output | canonical JSON (sorted keys, set-order permissions, LF text), deterministic YAML emitter, sorted file lists, digest-bound manifests | digest/render/adapter determinism tests |
 | Browser leakage of roots/secrets | safe DTO mapping (aliases only), explicit leakage tests in query and component suites, E2E page-content audit | queries.test.ts, capability-export tests, E2E |
-| Export side effects while disabled | layered gates (caphub → registry → exports → target) throw `P4_EXPORT_DISABLED` before any DB/FS side effect; CLIs refuse without `--dry-run` and reject `--root` args | runtime.test.ts, caphub-export.test.ts |
-| Interrupted apply/publish | same-directory exclusive temp files, fsync, atomic rename; operation records with stages; recovery record blocks new applies until deterministic reconcile | filesystem/publisher injected-failure tests |
+| Export side effects while disabled or after target mutation | read-only authority and fresh root/sentinel validation complete before lease creation, then repeat under lock before domain writes; layered gates throw before DB/managed-target mutation | runtime/publisher acceptance tests; caphub-export tests |
+| Interrupted or partially materialized apply/publish | same-directory exclusive temp files, fsync, atomic rename; marker-less enumeration propagates symlink/non-regular failures; exact post-write verification precedes Registry mutation; operation records block new applies until reconcile | filesystem/publisher injected-failure and acceptance tests |
 | Rollback destroys history | rollback writes a new Deployment and switches only the pointer; version directories and prior deployments retained | publisher rollback test, deployment behavior chain |
 | Dependency advisory expansion | no new runtime dependencies in P4; `npm install` added zero new direct deps beyond existing lockfile | package.json diff |
 

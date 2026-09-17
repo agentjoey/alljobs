@@ -27,3 +27,24 @@
 - Production build PASS; P4 E2E **11/11 PASS** (whole-page assertions re-validated after the deployed-semantics correction).
 - Full unit/component suite at closeout: **152 files / 1361 tests PASS**.
 - `npm run typecheck` PASS; `npm run lint` 0 errors / 79 warnings; `npm run verify:deploy` PASS.
+
+## Final Codex scoped review (2026-09-17)
+
+**Scope:** `16721de..ab6893d`, followed by fix-only re-review `ab6893d..7ae8402`
+
+**Reviewer:** one independent scoped agent; read-only; no duplicate global review
+
+The first pass returned **CHANGES_REQUIRED** with 1 Critical and 3 Important findings:
+
+1. completed replay could trust an attacker-selected operation/marker manifest rather than the approved plan manifest;
+2. lease creation occurred before authority revalidation;
+3. apply-time root/sentinel validation could reuse cached runtime validation;
+4. marker-less version enumeration swallowed unsafe directory errors and lacked final exact verification.
+
+Commit `7ae8402` binds operation/marker/bytes to `plan.preview_manifest_digest`, validates apply
+evidence, performs read-only root/sentinel and authority preflight before lease acquisition plus
+an under-lock recheck, propagates unsafe directory errors, and verifies newly written version
+directories before Registry mutation. RED→GREEN regressions cover every path.
+
+The same reviewer re-reviewed only those four closures and returned **PASS** with no remaining
+Critical or Important finding. It did not repeat the full repository suite.
