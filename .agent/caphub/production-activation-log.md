@@ -104,3 +104,25 @@ and one independent Verification occur only after the implementation tasks.
   conflict without added rows. Typecheck and scoped lint PASS.
 - No real filesystem Capture, Production Registry, or service state was read,
   mutated, or migrated.
+
+## Task 4 — non-destructive backup and restore verification
+
+- Added immutable backup generations below the resolved Control Host home.
+  Creation writes a PostgreSQL custom-format dump first, copies the complete
+  secure Caphub state tree, binds both to SHA-256 manifests, and publishes the
+  generation only after all evidence is complete.
+- Existing generation IDs are never overwritten. Failed pending generations
+  are not published; the command exposes no delete or pruning operation and
+  refuses symlinks, unsafe ownership/modes, unsupported files, and hash/count
+  mismatches.
+- Verification checks dump and state hashes, restores into a newly created
+  sentinel-owned temporary PostgreSQL 17 cluster, compares Registry counts and
+  migration checksums, then revalidates ownership/PID before stopping and
+  removing only that temporary restore root.
+- The fixed CLI exposes only `--create` and `--verify GENERATION_ID`; it accepts
+  no root, output path, database URL, delete, or prune argument.
+- TDD/BDD evidence: missing module/CLI produced the expected RED; final focused
+  gate passed 3 files / 6 tests, including a real `pg_dump -Fc` and isolated
+  `pg_restore` drill. Typecheck and scoped lint PASS.
+- No Production backup, database dump, restore cluster, or state mutation was
+  created or performed.
