@@ -97,7 +97,7 @@ One independent reviewer evaluated `3b167b3..628b553`: 1 HIGH + 4 MEDIUM + 2 LOW
 
 ## Codex final re-acceptance closeout (2026-09-17)
 
-Codex directly closed the remaining acceptance gaps in four narrow commits after the prior
+Codex directly closed the remaining acceptance gaps in five narrow commits after the prior
 verification record:
 
 | Commit | Scope |
@@ -106,16 +106,18 @@ verification record:
 | `6e2b5f3` | remove broad Next build tracing without weakening workspace-root rejection |
 | `ab6893d` | make the P4 browser fixture use the production canonical pointer digest |
 | `7ae8402` | close final reviewer findings: operation+marker forgery, pre-lease authority/root/sentinel preflight, apply evidence binding, marker-less unsafe directory handling, and post-write exact verification |
+| `d595e64` | close verifier TOCTOU finding by applying the under-lock root/sentinel recheck to realized crash-convergence before pointer reads or completion writes |
 
 Focused RED→GREEN evidence included forged marker-manifest binding, production replay from the
 approved preimage, consumed/wrong Deployment authority, rollback target tampering, combined
 operation+marker forgery, authority-before-lease ordering, mutated sentinel rejection,
-marker-less symlink rejection, and exact apply-evidence binding. The final directly affected
-files passed **2 files / 26 tests**; the broader P4 set had already passed all unaffected tests.
+marker-less symlink rejection, exact apply-evidence binding, and sentinel mutation during lease
+acquisition on realized recovery. The final directly affected files passed **2 files / 27 tests**;
+the broader P4 set had already passed all unaffected tests.
 
-Final gate at code SHA `7ae84022059056b8e360bb167e40ae85776c457b`:
+Final gate at code SHA `d595e6443a2400b2602c70de0211c70503f85cba`:
 
-- `env -u MINIMAX_API_KEY npm test` — **152 files / 1372 tests PASS**.
+- `env -u MINIMAX_API_KEY npm test` — **152 files / 1373 tests PASS**.
 - `npm run typecheck` — PASS.
 - `npm run lint` — **0 errors / 79 warnings** (all pre-existing/non-blocking at this final diff).
 - `npm run build` — Next.js 16.3.0 Turbopack production build PASS with no build warning.
@@ -125,8 +127,9 @@ Final gate at code SHA `7ae84022059056b8e360bb167e40ae85776c457b`:
 
 One scoped independent reviewer first returned **CHANGES_REQUIRED** for 1 Critical and 3
 Important trust-boundary findings. All four were fixed in `7ae8402`; the same reviewer performed
-a fix-only re-review and returned **PASS**, with no remaining blocking finding. Final independent
-verification will be bound to the evidence commit and recorded separately in
+a fix-only re-review and returned **PASS**. A subsequent verifier found one additional Important
+TOCTOU in realized crash-convergence; `d595e64` fixes it with a RED→GREEN regression. Final
+independent verification will be rebound to the updated evidence commit and recorded separately in
 `.agent/caphub/p4-acceptance-verification.md`.
 
 No real Vault/Agent root, provider, production PostgreSQL, deployment, service restart, push,

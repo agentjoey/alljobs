@@ -21,7 +21,7 @@ Visual assertions per capture: semantic section headings (Release candidate / Ne
 manifest / Adapter previews / Obsidian projection / Deployment plans / Deployment history),
 no absolute roots, no publish action, Paper Workbench styling preserved.
 
-Final acceptance build SHA: `7ae84022059056b8e360bb167e40ae85776c457b`.
+Final acceptance build SHA: `d595e6443a2400b2602c70de0211c70503f85cba`.
 
 Playwright final-build capture hashes:
 - capability-deployed-1440.png `3449c3a8…30477cb`
