@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P3 Registry/Analysis 生产启用仍停在 Gate P3-D；P4 本地 implementation 已通过 Codex 验收（P4-A/P4-B/P4-C Human gates 未动）
+- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Production activation 已批准采用 local-first 方案并完成 spec/plan，implementation 与 PA-B/PA-C/PA-D 仍待执行；P4-A/P4-B/P4-C 未动
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -29,7 +29,8 @@ P0 Backlog retirement
       -> P2 Providers + analysis
           -> P3 Review + PostgreSQL Registry
               -> P4 Obsidian + export
-              -> P5 Self-development handoff
+                  -> P1-P4 Production activation (third-party capability pilot)
+              -> P5 Self-development handoff (deferred during the pilot)
                   -> P6 Runtime router + evals + update watcher
 ```
 
@@ -266,6 +267,24 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 **明确非目标**
 
 - 不做 Obsidian 双向实时同步、不自动安装依赖或启用工具、不自动发布。
+
+## P1–P4 Production activation：第三方 Capability 受控试运行
+
+**规划状态（2026-09-17）**
+
+- Spec：`docs/superpowers/specs/2026-09-17-caphub-production-activation-design.md`
+- 开发计划：`docs/superpowers/plans/2026-09-17-caphub-production-activation.md`
+- 数据库决策：方案 A，Control Host 本地 PostgreSQL 17；保持 Neon-ready，P6 前复评。
+- 范围：Capture → operator-started analysis → Review Center → Candidate/Release 审批 → neutral package 与 Codex/Claude/Hermes adapter preview。
+- P5/P6、自研能力、真实 Obsidian/Agent root、Deployment plan、publish/install/rollback 均不进入本轮。
+
+**执行边界**
+
+- implementation 先补齐 Next.js `16.3.3` 安全基线、本地 Unix-socket Registry、filesystem Capture migration、备份/恢复、analysis→ReviewPacket import 和 Release compose/finalize operator bridge。
+- task 内只跑聚焦 RED→GREEN；最终只做一次全量 phase gate、一次 scoped independent Review 和一次 independent Verification。
+- PA-B 继续控制真实数据库/LaunchAgent/config/secret；PA-C 控制每次真实 provider request；PA-D 控制 push/merge/release/rebuild/reload/cutover。
+- Kimi `k3-256k` direct-HTTP structured output 未证明；失败时可停在 S3（Capture + Registry + Review + read-only P4 preview），不得自动重试或降级。
+- P4 exports master 只用于 read-only package/adapter preview；所有 target switches 保持 false 且无 root/alias，因此 P4-A/P4-B/P4-C 继续关闭。
 
 ## P5：自研能力人工移交闭环
 

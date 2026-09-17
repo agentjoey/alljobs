@@ -66,7 +66,11 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Keep `codex/caphub-p4-implementation` and its isolated worktree for Human integration. Any real P4 target configuration, dry run, adapter enablement, publish, or rollback requires the corresponding P4-A/P4-B/P4-C authorization.
+Implement the approved P1–P4 Production activation spec and plan from the
+isolated `codex/caphub-production-activation` branch. Use local PostgreSQL 17,
+keep the design Neon-ready, and stop before PA-B/PA-C/PA-D. Any real P4 target
+configuration, dry run, adapter enablement, publish, or rollback still requires
+the corresponding P4-A/P4-B/P4-C authorization.
 
 ## Caphub development status — 2026-09-16
 
@@ -76,6 +80,24 @@ Keep `codex/caphub-p4-implementation` and its isolated worktree for Human integr
 - Gate P3-D remains a hard stop for production PostgreSQL selection, credentials, backup/PITR, migration, or Registry/Analysis enablement.
 - P4 design, plan, local implementation, Codex acceptance, scoped Review, and independent Verification are complete on `codex/caphub-p4-implementation`; integration remains a separate Human decision.
 - No real Vault/Agent root, dry run, publish, rollback, push, merge, deployment, or P4-A/P4-B/P4-C approval has occurred.
+
+## Caphub P1–P4 Production activation planning — 2026-09-17
+
+- Human approved scheme A: dedicated local PostgreSQL 17 for the initial pilot,
+  standard PostgreSQL contracts only, and a Neon review before P6 or earlier if
+  RPO/PITR/multi-host/operations triggers occur.
+- Canonical activation spec:
+  `docs/superpowers/specs/2026-09-17-caphub-production-activation-design.md`.
+- Canonical activation plan:
+  `docs/superpowers/plans/2026-09-17-caphub-production-activation.md`.
+- Initial product goal is third-party capability recognition and management:
+  Capture, operator-started analysis, Registry/Review, exact Candidate/Release
+  decisions, and read-only neutral/adapter previews.
+- P5 self-development and P6 automation are deferred. Real export targets,
+  publish/install/rollback, and every P4-A/P4-B/P4-C gate remain untouched.
+- No activation implementation, database/bootstrap/migration, config/secret
+  change, provider call, service reload, push, merge, deploy, or release has
+  occurred from this planning branch.
 
 ## P0 Backlog retirement (live)
 
