@@ -128,8 +128,8 @@ Final gate at code SHA `d595e6443a2400b2602c70de0211c70503f85cba`:
 One scoped independent reviewer first returned **CHANGES_REQUIRED** for 1 Critical and 3
 Important trust-boundary findings. All four were fixed in `7ae8402`; the same reviewer performed
 a fix-only re-review and returned **PASS**. A subsequent verifier found one additional Important
-TOCTOU in realized crash-convergence; `d595e64` fixes it with a RED→GREEN regression. Final
-independent verification will be rebound to the updated evidence commit and recorded separately in
+TOCTOU in realized crash-convergence; `d595e64` fixes it with a RED→GREEN regression. Fix-only
+independent re-verification returned **PASS** against evidence SHA `20e2a71`; see
 `.agent/caphub/p4-acceptance-verification.md`.
 
 No real Vault/Agent root, provider, production PostgreSQL, deployment, service restart, push,
