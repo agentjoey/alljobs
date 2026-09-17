@@ -61,9 +61,11 @@ least-privilege identities `caphub_app` and `caphub_migrator`. They do not yet
 exist; creation is part of the later N1 gate.
 
 - The app URL uses Neon pooling when enabled and only the application role.
-- Migrations, `pg_dump`/`pg_restore`, and provisioning validation use an
-  unpooled/direct URL and only the migrator or a narrowly scoped one-time
-  provisioning identity.
+- Migrations and provisioning validation use an unpooled/direct URL and only
+  the migrator or a narrowly scoped one-time provisioning identity. Recovery
+  is proven with a Neon branch containing both the Registry database and
+  private bucket state; it does not depend on the retired local
+  `pg_dump`/`pg_restore` procedure.
 - Every TCP connection is parsed as `tls_verify_full`; a password, endpoint,
   database name, role, or TLS override that does not match the approved
   contract fails closed.
