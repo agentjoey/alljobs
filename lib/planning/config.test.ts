@@ -426,7 +426,8 @@ describe("control host Caphub Registry config", () => {
     expect(controlHostCaphubRegistryConfigSchema.parse({})).toEqual({
       enabled: false,
       databaseUrlEnv: "CAPHUB_DATABASE_URL",
-      sslMode: "require",
+      migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
+      connectionMode: "tls_verify_full",
       maxConnections: 4,
       statementTimeoutMs: 5_000
     });
@@ -435,7 +436,8 @@ describe("control host Caphub Registry config", () => {
     expect(parsed.caphub?.registry).toEqual({
       enabled: false,
       databaseUrlEnv: "CAPHUB_DATABASE_URL",
-      sslMode: "require",
+      migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
+      connectionMode: "tls_verify_full",
       maxConnections: 4,
       statementTimeoutMs: 5_000
     });
@@ -444,18 +446,24 @@ describe("control host Caphub Registry config", () => {
   it("accepts only bounded Registry settings and uppercase environment-variable references", () => {
     expect(controlHostCaphubRegistryConfigSchema.parse({
       databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
+      migrationDatabaseUrlEnv: "CAPHUB_TEST_MIGRATION_DATABASE_URL",
+      connectionMode: "local_socket",
       maxConnections: 1,
       statementTimeoutMs: 100
     })).toMatchObject({
       databaseUrlEnv: "CAPHUB_TEST_DATABASE_URL",
+      migrationDatabaseUrlEnv: "CAPHUB_TEST_MIGRATION_DATABASE_URL",
+      connectionMode: "local_socket",
       maxConnections: 1,
       statementTimeoutMs: 100
     });
 
     for (const mutation of [
       { databaseUrlEnv: "literal-postgres-url" },
+      { migrationDatabaseUrlEnv: "literal-postgres-url" },
       { databaseUrl: "postgres://user:secret@example.test/db" },
       { sslMode: "disable" },
+      { connectionMode: "disable" },
       { maxConnections: 0 },
       { maxConnections: 17 },
       { statementTimeoutMs: 99 },

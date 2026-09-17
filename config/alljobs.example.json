@@ -31,7 +31,8 @@
     "registry": {
       "enabled": false,
       "databaseUrlEnv": "CAPHUB_DATABASE_URL",
-      "sslMode": "require",
+      "migrationDatabaseUrlEnv": "CAPHUB_MIGRATION_DATABASE_URL",
+      "connectionMode": "tls_verify_full",
       "maxConnections": 4,
       "statementTimeoutMs": 5000
     },

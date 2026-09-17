@@ -10,7 +10,8 @@ import { loadControlHostRegistryRuntime } from "./runtime";
 const registryConfig = {
   enabled: true,
   databaseUrlEnv: "CAPHUB_DATABASE_URL",
-  sslMode: "require" as const,
+  migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
+  connectionMode: "tls_verify_full" as const,
   maxConnections: 4,
   statementTimeoutMs: 5_000
 };
@@ -24,6 +25,7 @@ describe.sequential("Control Host Registry runtime", () => {
     await applyRegistryMigrations(postgres.pool);
     root = realpathSync(mkdtempSync(join(realpathSync(tmpdir()), "alljobs-caphub-review-e2e-")));
     mkdirSync(join(root, "home", "state", "caphub"), { recursive: true, mode: 0o700 });
+    chmodSync(join(root, "home"), 0o700);
     chmodSync(join(root, "home", "state", "caphub"), 0o700);
   }, 30_000);
 
@@ -47,12 +49,23 @@ describe.sequential("Control Host Registry runtime", () => {
 
   it("composes PostgreSQL metadata ports while raw bytes remain in the local object store", async () => {
     const objectRoot = join(root, "home", "state", "caphub");
+    let options: ConstructorParameters<typeof import("pg").Pool>[0] | undefined;
     const runtime = await loadControlHostRegistryRuntime({
       config: { caphubEnabled: true, registry: registryConfig },
+      homeDir: join(root, "home"),
       objectRoot,
-      env: { CAPHUB_DATABASE_URL: "postgresql://fixture.invalid/caphub" },
-      poolFactory: () => postgres.pool
+      env: { CAPHUB_DATABASE_URL: "postgresql://caphub_app:fixture-secret@registry.example.test/caphub" },
+      poolFactory: (value) => { options = value; return postgres.pool; }
     });
+    expect(options).toMatchObject({
+      host: "registry.example.test",
+      port: 5_432,
+      database: "caphub",
+      user: "caphub_app",
+      password: "fixture-secret",
+      ssl: { rejectUnauthorized: true }
+    });
+    expect(options).not.toHaveProperty("connectionString");
     const bytes = new TextEncoder().encode("immutable screenshot bytes");
     const object = await runtime.objects.putImmutable({ bytes, mimeType: "image/png" });
     const capture = {
@@ -80,11 +93,42 @@ describe.sequential("Control Host Registry runtime", () => {
     let constructed = false;
     await expect(loadControlHostRegistryRuntime({
       config: { caphubEnabled: true, registry: registryConfig },
+      homeDir: join(root, "home"),
       objectRoot: join(root, "home", "state", "caphub"),
-      env: { CAPHUB_DATABASE_URL: "postgresql://registry.invalid/caphub?sslmode=disable" },
+      env: { CAPHUB_DATABASE_URL: "postgresql://caphub_app:fixture-secret@registry.example.test/caphub?sslmode=disable" },
       poolFactory: () => { constructed = true; return postgres.pool; }
     })).rejects.toMatchObject({ code: "REGISTRY_UNAVAILABLE" });
     expect(constructed).toBe(false);
+  });
+
+  it("uses only the fixed private Control Host socket in local mode", async () => {
+    const homeDir = join(root, "home");
+    const socketDir = join(homeDir, "run", "caphub-postgres");
+    mkdirSync(socketDir, { recursive: true, mode: 0o700 });
+    chmodSync(join(homeDir, "run"), 0o700);
+    chmodSync(socketDir, 0o700);
+    let options: ConstructorParameters<typeof import("pg").Pool>[0] | undefined;
+    const runtime = await loadControlHostRegistryRuntime({
+      config: {
+        caphubEnabled: true,
+        registry: { ...registryConfig, connectionMode: "local_socket" }
+      },
+      homeDir,
+      objectRoot: join(homeDir, "state", "caphub"),
+      env: {
+        CAPHUB_DATABASE_URL: `postgresql://caphub_app@localhost/caphub?host=${encodeURIComponent(socketDir)}&port=54329`
+      },
+      poolFactory: (value) => { options = value; return postgres.pool; }
+    });
+    expect(runtime.pool).toBe(postgres.pool);
+    expect(options).toMatchObject({
+      host: socketDir,
+      port: 54_329,
+      database: "caphub",
+      user: "caphub_app",
+      ssl: false
+    });
+    expect(options).not.toHaveProperty("connectionString");
   });
 
   it("allows only an owner-checked E2E socket seam to disable TLS", async () => {
@@ -96,6 +140,7 @@ describe.sequential("Control Host Registry runtime", () => {
         caphubEnabled: true,
         registry: { ...registryConfig, databaseUrlEnv: "CAPHUB_E2E_DATABASE_URL" }
       },
+      homeDir: join(root, "home"),
       objectRoot: join(root, "home", "state", "caphub"),
       env: {
         CAPHUB_E2E_DATABASE_URL: `postgresql://caphub_app@localhost/postgres?host=${encodeURIComponent(postgres.socketDir)}&port=${postgres.port}&sslmode=disable`,

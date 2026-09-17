@@ -127,7 +127,8 @@ export function createP4Fixture(): P4Fixture {
         registry: {
           enabled: true,
           databaseUrlEnv: DATABASE_ENV,
-          sslMode: "require",
+          migrationDatabaseUrlEnv: "CAPHUB_MIGRATION_DATABASE_URL",
+          connectionMode: "tls_verify_full",
           maxConnections: 4,
           statementTimeoutMs: 5_000
         },

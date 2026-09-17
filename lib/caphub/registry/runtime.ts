@@ -6,6 +6,7 @@ import { basename, dirname, join } from "node:path";
 import { Pool } from "pg";
 import type { loadControlHostConfig } from "../../planning/config";
 import { LocalCaptureObjectStore } from "../storage/local-objects";
+import { parseRegistryConnection } from "./connection";
 import {
   PostgresAnalysisJobStore,
   PostgresCaptureAuditLog,
@@ -42,6 +43,7 @@ export interface ControlHostRegistryRuntime {
 export interface RegistryRuntimeOptions {
   resolved?: ResolvedControlHost;
   config?: { caphubEnabled: boolean; registry: RegistryConfig };
+  homeDir?: string;
   objectRoot?: string;
   env?: Readonly<Record<string, string | undefined>>;
   poolFactory?: (options: ConstructorParameters<typeof Pool>[0]) => Pool;
@@ -141,22 +143,35 @@ function isOwnedE2eSocket(
 
 function registryPoolOptions(
   registry: RegistryConfig,
+  resolvedHome: string,
   objectRoot: string,
   env: Readonly<Record<string, string | undefined>>,
   databaseUrl: string
 ): ConstructorParameters<typeof Pool>[0] {
   const fixtureSocket = isOwnedE2eSocket(registry, objectRoot, env, databaseUrl);
-  const parsed = new URL(databaseUrl);
-  if (!fixtureSocket && [...parsed.searchParams.keys()].some((key) => key.startsWith("ssl") || key === "uselibpqcompat")) {
-    throw new Error("database URL may not override the required Registry TLS policy");
-  }
+  const connection = fixtureSocket
+    ? (() => {
+      const fixture = new URL(databaseUrl);
+      return {
+        host: fixture.searchParams.get("host") as string,
+        port: Number(fixture.searchParams.get("port")),
+        database: "postgres",
+        user: "caphub_app",
+        ssl: false as const
+      };
+    })()
+    : parseRegistryConnection({
+      databaseUrl,
+      mode: registry.connectionMode,
+      role: "application",
+      resolvedHome
+    });
   return {
-    connectionString: databaseUrl,
+    ...connection,
     max: registry.maxConnections,
     statement_timeout: registry.statementTimeoutMs,
     application_name: "alljobs-caphub-registry",
-    idleTimeoutMillis: 30_000,
-    ssl: fixtureSocket ? false : { rejectUnauthorized: true }
+    idleTimeoutMillis: 30_000
   };
 }
 
@@ -169,19 +184,21 @@ export async function loadControlHostRegistryRuntime(
   if (!caphubEnabled || !registry?.enabled) throw new RegistryRuntimeError("REGISTRY_DISABLED");
 
   const root = options.objectRoot ?? options.resolved?.caphubStateDir;
-  if (!root) throw new RegistryRuntimeError("REGISTRY_UNAVAILABLE");
+  const homeDir = options.homeDir ?? options.resolved?.homeDir;
+  if (!root || !homeDir) throw new RegistryRuntimeError("REGISTRY_UNAVAILABLE");
   const env = options.env ?? process.env;
   const databaseUrl = env[registry.databaseUrlEnv];
   if (!databaseUrl) throw new RegistryRuntimeError("REGISTRY_UNAVAILABLE");
 
   const useSharedRuntime = options.resolved !== undefined
     && options.config === undefined
+    && options.homeDir === undefined
     && options.objectRoot === undefined
     && options.poolFactory === undefined;
   if (useSharedRuntime && sharedRuntime) return sharedRuntime;
 
   const createRuntime = async (): Promise<ControlHostRegistryRuntime> => {
-    const poolOptions = registryPoolOptions(registry, root, env, databaseUrl);
+    const poolOptions = registryPoolOptions(registry, homeDir, root, env, databaseUrl);
     const pool = (options.poolFactory ?? ((value) => new Pool(value)))(poolOptions);
     return {
       pool,

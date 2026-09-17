@@ -112,7 +112,8 @@ const DEFAULT_CAPHUB_ANALYSIS_CONFIG = controlHostCaphubAnalysisConfigSchema.par
 export const controlHostCaphubRegistryConfigSchema = z.object({
   enabled: z.boolean().default(false),
   databaseUrlEnv: secretEnvNameSchema.default("CAPHUB_DATABASE_URL"),
-  sslMode: z.literal("require").default("require"),
+  migrationDatabaseUrlEnv: secretEnvNameSchema.default("CAPHUB_MIGRATION_DATABASE_URL"),
+  connectionMode: z.enum(["local_socket", "tls_verify_full"]).default("tls_verify_full"),
   maxConnections: z.number().int().min(1).max(16).default(4),
   statementTimeoutMs: z.number().int().min(100).max(30_000).default(5_000)
 }).strict();
