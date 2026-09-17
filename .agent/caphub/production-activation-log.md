@@ -263,7 +263,8 @@ and one independent Verification occur only after the implementation tasks.
 - Human-approved design replaces the unavailable local Time Machine/off-host
   backup prerequisite with a private immutable Neon object copy and a recovery
   branch proof. The existing `alljobs` Production branch's Object Storage
-  capability was verified in the control plane; this log records no Neon write.
+  capability was verified in the control plane; before the N1 partial execution
+  recorded below, no Neon write had occurred.
 - Implementation commits: `ceb8b51` strict Registry configuration/host policy;
   `9633bd9` private path-style immutable S3 adapter; `af126df` manifest-bound
   object transfer; `260b583` runtime composition; `62f3384` managed readiness,
@@ -295,3 +296,17 @@ and one independent Verification occur only after the implementation tasks.
   fully anchored version allowlist. Independent fix-only Verification: PASS;
   it reran the preflight regression (6/6), confirmed a clean worktree and
   `git diff --check`, and performed no Neon/service action.
+
+## N1 partial execution — 2026-09-18
+
+- Under explicit Human authorization, Production now has the private
+  `caphub-objects` bucket, the `caphub_migrator` and `caphub_app` roles, and
+  transaction pooling enabled on the approved endpoint. No secret value is
+  retained in this record.
+- The Human explicitly declined IP allowlisting for this single-Control-Host
+  deployment. No network-source restriction is claimed as activation evidence.
+- The separately authorized `ALTER ROLE ... NOLOGIN` attempt was refused by the
+  Neon SQL execution identity; no role containment change succeeded.
+- No Caphub database creation, credential installation, migration, object
+  transfer, Registry import, recovery proof, provider request, service restart,
+  deployment, push, merge, or release occurred.

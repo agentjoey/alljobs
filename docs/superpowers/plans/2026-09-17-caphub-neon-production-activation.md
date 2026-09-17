@@ -18,7 +18,7 @@
 - Application connections use only `caphub_app`; migration/provisioning connections use only `caphub_migrator`; both use TLS verification and exact configured Neon hosts.
 - `CAPHUB_DATABASE_URL`, `CAPHUB_MIGRATION_DATABASE_URL`, and Object Storage credential values stay in private LaunchAgent environment entries. Source, tests, logs, screenshots, and docs contain names, aliases, digests, counts, and IDs only.
 - Keep the Production app stopped through N0–N4. No provider call, target export, P5/P6 capability, app reload, push, merge, release, deletion, or change to the local Capture tree belongs to this plan.
-- N1 requires a fresh explicit Human authorization immediately before any Production Neon write or secret/network configuration change. N4 still requires PA-D before an application cutover.
+- N1 requires a fresh explicit Human authorization immediately before any Production Neon write or secret/endpoint configuration change. N4 still requires PA-D before an application cutover.
 
 ---
 
@@ -356,7 +356,7 @@
 
 ## Production execution gates after implementation
 
-1. **N1 / PA-B-N — fresh Human authorization required.** Create the private `caphub-objects` bucket, database/roles, exact network allowlist, pooled/direct endpoint configuration, and private environment references. Record aliases/IDs only.
+1. **N1 / PA-B-N — fresh Human authorization required.** Create the private `caphub-objects` bucket, database/roles, pooled/direct endpoint configuration, and private environment references. IP allowlisting is explicitly out of scope for this single-Control-Host deployment. Record aliases/IDs only.
 2. **N2 — object-first preservation.** With the app still stopped, run the transfer command with the planned digest; independently list/read/hash every remote object and record the private attestation. A mismatch blocks N3.
 3. **N3 — Registry import.** Apply checksum-bound migrations via the direct migrator connection, run the existing exact-digest import, and verify Registry lineage/counts/object refs against the remote object manifest.
 4. **N4 — recovery proof.** Create a Neon recovery branch through the authorized control plane, restore/check it in a validation branch, and persist the redacted attestation. A mismatch keeps S1.

@@ -30,14 +30,15 @@ blocks progress.
 Obtain a new authorization immediately before any Production Neon write. It
 must name the accepted build and allow only the required actions: private
 `caphub-objects` bucket creation, Registry database/least-privilege role setup,
-pooling/network posture, credential issuance, or private environment-reference
+pooling posture, credential issuance, or private environment-reference
 installation.
 
 Before a write, verify the existing `alljobs` Production branch and its Object
 Storage capability in the Neon control plane. Create no public bucket. Keep
-object storage private; do not expose S3 credentials or public URLs. A missing
-TLS verify-full connection, approved host, egress policy, or credential boundary
-is a hard stop.
+object storage private; do not expose S3 credentials or public URLs. The Human
+approved no IP allowlist for this single-Control-Host deployment; do not report
+a network-source restriction as evidence. A missing TLS verify-full connection,
+approved host, or credential boundary is a hard stop.
 
 For the optional non-Production BDD, authorization must separately name exact
 source and recovery branch aliases plus their exact database and Object Storage

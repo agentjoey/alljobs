@@ -72,9 +72,10 @@ exist; creation is part of the later N1 gate.
 - URL values, object-storage access keys, and secret access keys are installed
   only as private LaunchAgent environment entries. Repository configuration and
   evidence contain environment-variable names, never values.
-- Network access is restricted to the Control Host's approved egress address
-  before any application URL is installed. The current project-wide public
-  connection setting is not accepted as the final Production posture.
+- The Human explicitly declined an IP allowlist for this single-Control-Host
+  deployment. Production does not claim a network-source restriction; TLS
+  verify-full, exact database/S3 host allowlists, private bucket enforcement,
+  least-privilege roles, and private credential handling remain mandatory.
 
 The implementation may use standard PostgreSQL and S3-compatible APIs only.
 It must not depend on Neon Functions, Auth, AI Gateway, Data API, proprietary
@@ -115,8 +116,8 @@ synthetic object fixture only. Do not copy real Capture data into validation.
 ### N1 — Neon provisioning gate
 
 A fresh Human authorization is required immediately before any Production Neon
-write: creating the bucket/database/roles, enabling pooling, changing the
-network allowlist, issuing credentials, or installing private environment
+write: creating the bucket/database/roles, enabling pooling, issuing
+credentials, or installing private environment
 references. The prior local PA-B authorization does not authorize these
 different remote changes.
 
@@ -152,8 +153,8 @@ single real Kimi compatibility canary; all P4 target gates remain closed.
 
 ## 7. Failure handling
 
-- Missing TLS verification, an unsafe endpoint, a public bucket, an unapproved
-  egress address, or a missing credential fails closed before a write.
+- Missing TLS verification, an unsafe endpoint, a public bucket, or a missing
+  credential fails closed before a write.
 - Object mismatch, existing-key byte mismatch, incomplete manifest, database
   checksum drift, or recovery mismatch leaves the app stopped and preserves
   both local and remote evidence without deletion.
