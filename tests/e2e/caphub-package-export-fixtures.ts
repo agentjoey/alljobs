@@ -383,16 +383,21 @@ export async function seedP4Matrix(pool: Pool, fixture: P4Fixture): Promise<P4Fi
   await insertLineage(planCId, "deployment_plan", planCDigest, "realized_as", deploymentCId, "deployment", deploymentCDigest);
   await insertLineage(releaseC.releaseId, "release", releaseC.releaseDigest, "deployed_as", deploymentCId, "deployment", deploymentCDigest);
 
+  const pointerBase = {
+    deployment_id: deploymentCId,
+    release_id: releaseC.releaseId,
+    release_version: 1,
+    release_digest: releaseC.releaseDigest
+  };
+  const pointer = {
+    ...pointerBase,
+    pointer_digest: digest(digestCanonicalJson({ schema_version: 1, pointer: pointerBase }))
+  };
+
   const rollbackPlan: Record<string, unknown> = {
     ...planC,
     action: "rollback",
-    expected_current_pointer: {
-      deployment_id: deploymentCId,
-      release_id: releaseC.releaseId,
-      release_version: 1,
-      release_digest: releaseC.releaseDigest,
-      pointer_digest: digest("pointer-c")
-    },
+    expected_current_pointer: pointer,
     created_at: now
   };
   const rollbackDigest = digestCanonicalJson(rollbackPlan);
@@ -405,16 +410,6 @@ export async function seedP4Matrix(pool: Pool, fixture: P4Fixture): Promise<P4Fi
   await insertDecision(rollbackDecision, rollbackRequest, "intent-rollback-1", 1, rollbackDigest, "approve", "deployment", rollbackId, `APPROVE DEPLOYMENT ${shortId(rollbackId)}`, null);
   await pool.query("INSERT INTO caphub.decision_consumers (decision_id, consumer_id, consumed_at) VALUES ($1,$2,$3)", [rollbackDecision, `dep_${digest("deployed:rollback-deployment").slice(0, 32)}`, now]);
 
-  const pointerBase = {
-    deployment_id: deploymentCId,
-    release_id: releaseC.releaseId,
-    release_version: 1,
-    release_digest: releaseC.releaseDigest
-  };
-  const pointer = {
-    ...pointerBase,
-    pointer_digest: digest(JSON.stringify({ schema_version: 1, pointer: pointerBase }))
-  };
   const codexRoot = join(fixture.rootDir, "targets", "codex");
   const versionDir = join(codexRoot, "versions", releaseC.releaseId, "1", String(planC.preview_manifest_digest));
   mkdirSync(join(versionDir, "$CODEX_HOME", "skills", pkgC.slug), { recursive: true, mode: 0o700 });
