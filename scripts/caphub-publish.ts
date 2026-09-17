@@ -28,8 +28,13 @@ function authorityError(code: string, message: string): Error {
 export function createPublishAuthority(deps: PublishAuthorityDeps) {
   return async (
     expected: import("../lib/caphub/packages/types").DeploymentPlan,
-    _evidence?: import("../lib/caphub/deployments/publisher").ApplyEvidence
+    evidence?: import("../lib/caphub/deployments/publisher").ApplyEvidence
   ): Promise<void> => {
+    if (!evidence
+      || evidence.manifestDigest !== expected.preview_manifest_digest
+      || (evidence.preimageDigest !== null && evidence.preimageDigest !== expected.target_preimage_digest)) {
+      throw authorityError("STALE_DEPLOYMENT", "apply evidence is not bound to the approved plan");
+    }
     deps.assertEnabled(expected.target as "codex" | "claude" | "hermes");
     if (deps.releaseRecord.version !== expected.release.version
       || deps.releaseRecord.payload_digest !== expected.release.digest) {

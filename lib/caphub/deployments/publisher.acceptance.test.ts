@@ -184,7 +184,7 @@ describe.sequential("Codex acceptance fixes 1-3 (publisher fail-closed)", () => 
     await writeFile(join(target.root, "current.json"), `${JSON.stringify(forgePointer(deploymentId, plan), null, 2)}\n`, "utf8");
 
     await expect(publishToTarget(input)).rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
-    expect(authority).toHaveBeenCalledTimes(1);
+    expect(authority).toHaveBeenCalledTimes(2);
     expect(realize).not.toHaveBeenCalled();
     await expect(readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8")).rejects.toThrow();
     await expect(readFile(join(target.root, "versions", plan.release.record_id, "1", plan.preview_manifest_digest, ".caphub-version.json"), "utf8")).rejects.toThrow();
@@ -245,6 +245,108 @@ describe.sequential("Codex acceptance fixes 1-3 (publisher fail-closed)", () => 
     expect(marker.manifest_digest).toBe(plan.preview_manifest_digest);
     expect(actualManifestDigest).not.toBe(plan.preview_manifest_digest);
     await expect(publishToTarget(input)).rejects.toMatchObject({ code: "PACKAGE_DIGEST_CONFLICT" });
+  });
+
+  it("rejects a completed replay whose operation and marker jointly select an unapproved manifest", async () => {
+    const seed = nextSeed() + 2000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    const first = await publishToTarget(input);
+
+    const forgedContent = "# attacker-selected manifest\n";
+    const forgedFile = {
+      path: `$CODEX_HOME/skills/${pkg.slug}/SKILL.md`,
+      sha256: createHash("sha256").update(forgedContent, "utf8").digest("hex"),
+      bytes: Buffer.byteLength(forgedContent, "utf8")
+    };
+    const forgedManifestDigest = digestCanonicalJson({ schema_version: 1, files: [forgedFile] });
+    const forgedDir = join(target.root, "versions", plan.release.record_id, "1", forgedManifestDigest);
+    await mkdir(join(forgedDir, "$CODEX_HOME", "skills", pkg.slug), { recursive: true, mode: 0o700 });
+    await writeFile(join(forgedDir, forgedFile.path), forgedContent, "utf8");
+    await writeFile(join(forgedDir, ".caphub-version.json"), `${JSON.stringify({
+      schema_version: 1,
+      action: "publish",
+      release: plan.release,
+      manifest_digest: forgedManifestDigest,
+      files: [forgedFile]
+    }, null, 2)}\n`, "utf8");
+    const operationPath = join(target.root, "operations", `${deploymentId}.json`);
+    const forgedOperation = JSON.parse(await readFile(operationPath, "utf8"));
+    forgedOperation.manifest_digest = forgedManifestDigest;
+    await writeFile(operationPath, `${JSON.stringify(forgedOperation, null, 2)}\n`, "utf8");
+
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
+    expect(JSON.parse(await readFile(join(target.root, "current.json"), "utf8"))).toEqual(first.pointer);
+  });
+
+  it("checks authority before attempting to acquire the filesystem lease", async () => {
+    const seed = nextSeed() + 2000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    (input as { assertAuthority?: unknown }).assertAuthority = undefined;
+    const lockDir = join(target.root, ".caphub-deployment.lock");
+    await mkdir(lockDir, { mode: 0o700 });
+    const owner = { schema_version: 1, operation_id: deploymentId, pid: process.pid, acquired_at: NOW };
+    await writeFile(join(lockDir, "owner.json"), `${JSON.stringify(owner)}\n`, "utf8");
+    input.lock = { isProcessAlive: () => true, staleMs: 0, now: () => Date.parse(NOW) + 1_000 };
+
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "DEPLOYMENT_NOT_APPROVED" });
+    expect(JSON.parse(await readFile(join(lockDir, "owner.json"), "utf8"))).toEqual(owner);
+  });
+
+  it("revalidates the target sentinel before any apply-time side effect", async () => {
+    const seed = nextSeed() + 2000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    const realize = vi.fn(async () => "created" as const);
+    input.exports = {
+      composeRelease: async () => "created",
+      finalizeRelease: async () => "finalized",
+      composeDeploymentPlan: async () => "created",
+      realizeDeployment: realize
+    } satisfies RegistryExportStore;
+    await writeFile(target.sentinelPath, `${JSON.stringify({ schema_version: 1, caphub: true, alias: "wrong-alias" })}\n`, "utf8");
+
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "UNSAFE_TARGET_ROOT" });
+    expect(realize).not.toHaveBeenCalled();
+    await expect(readFile(join(target.root, "operations", `${deploymentId}.json`), "utf8")).rejects.toThrow();
+    await expect(readFile(join(target.root, "current.json"), "utf8")).rejects.toThrow();
+  });
+
+  it("rejects an unexpected symlink in a marker-less version directory", async () => {
+    const seed = nextSeed() + 2000;
+    const pkg = adapterPackage(seed);
+    const plan = planFor(pkg, nullPointerPreimage());
+    const decisionId = await seedApprovedPlan(seed, plan);
+    const target = await freshTarget();
+    const deploymentId = hexId("dep_", seed + 5000);
+    const input = makeInput(pkg, plan, decisionId, deploymentId, target);
+    const realize = vi.fn(async () => "created" as const);
+    input.exports = {
+      composeRelease: async () => "created",
+      finalizeRelease: async () => "finalized",
+      composeDeploymentPlan: async () => "created",
+      realizeDeployment: realize
+    } satisfies RegistryExportStore;
+    const versionDir = join(target.root, "versions", plan.release.record_id, "1", plan.preview_manifest_digest);
+    await mkdir(versionDir, { recursive: true, mode: 0o700 });
+    await symlink("/private/tmp", join(versionDir, "unexpected-link"));
+
+    await expect(publishToTarget(input)).rejects.toMatchObject({ code: "UNSAFE_TARGET_ROOT" });
+    expect(realize).not.toHaveBeenCalled();
+    await expect(readFile(join(target.root, "current.json"), "utf8")).rejects.toThrow();
   });
 
   it("rejects unexpected managed files inside a completed version directory", async () => {

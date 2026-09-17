@@ -236,6 +236,23 @@ describe("createPublishAuthority (acceptance fix 2)", () => {
       .rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
   });
 
+  it("rejects apply evidence that is not bound to the approved manifest and preimage", async () => {
+    const rootDir = await realpath(await mkdtemp(join(tmpdir(), "caphub-auth-evidence-")));
+    tempDirs.push(rootDir);
+    const draft = plan({ preview_diff_digest: "" } as never);
+    const pkg = testCapabilityPackage({ release_id: draft.release.record_id, dependencies: [] });
+    const rendered = renderCodexPreview(pkg);
+    if (!rendered.ok) throw new Error("fixture");
+    const { diffPackageFiles } = await import("../lib/caphub/packages/diff");
+    const valid = plan({ preview_diff_digest: diffPackageFiles({ baseFiles: null, nextFiles: rendered.result.files }).digest });
+    const authority = createPublishAuthority(makeDeps(valid, { targetRootDir: rootDir }) as never);
+
+    await expect(authority(valid, { manifestDigest: "f".repeat(64), preimageDigest: null }))
+      .rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
+    await expect(authority(valid, { manifestDigest: valid.preview_manifest_digest, preimageDigest: "e".repeat(64) }))
+      .rejects.toMatchObject({ code: "STALE_DEPLOYMENT" });
+  });
+
   it("does not treat a finalized approval for another release version as current authority", async () => {
     const rootDir = await realpath(await mkdtemp(join(tmpdir(), "caphub-auth-release-version-")));
     tempDirs.push(rootDir);

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Dirent } from "node:fs";
 import { lstat, mkdir, open, readdir, readFile, rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { digestCanonicalJson } from "../analysis/digest";
@@ -6,7 +7,7 @@ import type { DeploymentPlan, PackageFile, P4ErrorCode } from "../packages/types
 import type { RegistryExportStore } from "../registry/contracts";
 import { PostgresExportStoreError } from "../registry/postgres/exports";
 import type { RegistryLineageEdge, RegistryVersion } from "../registry/types";
-import { ProjectionPathError, resolveSafeDescendant, type ValidatedTargetRoot } from "../projection/paths";
+import { ProjectionPathError, resolveSafeDescendant, validateTargetRoot, type ValidatedTargetRoot } from "../projection/paths";
 import type { CurrentPointer } from "./plan";
 import { derivePlanRecordId } from "./plan";
 import {
@@ -192,7 +193,13 @@ function parseVersionMarker(raw: string): VersionMarker | null {
  * any non-regular file fail closed. */
 async function listVersionFiles(directory: string, relative = ""): Promise<string[]> {
   const output: string[] = [];
-  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  let entries: Dirent<string>[];
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
   for (const entry of entries) {
     const full = join(directory, entry.name);
     const rel = relative ? `${relative}/${entry.name}` : entry.name;
@@ -251,8 +258,12 @@ async function versionDirectory(root: ValidatedTargetRoot, plan: DeploymentPlan)
 async function verifiedManifestState(
   root: ValidatedTargetRoot,
   pointer: CurrentPointer,
-  operation: OperationRecord
+  operation: OperationRecord,
+  approvedManifestDigest: string
 ): Promise<{ marker: VersionMarker; relativeDir: string }> {
+  if (operation.manifest_digest !== approvedManifestDigest) {
+    throw new PublishError("STALE_DEPLOYMENT", "operation manifest does not match the approved plan");
+  }
   if (operation.release.record_id !== pointer.release_id
     || operation.release.version !== pointer.release_version
     || operation.release.digest !== pointer.release_digest) {
@@ -366,7 +377,7 @@ async function writeVersionFiles(
   // Resume-safe materialization. Any pre-existing file that is not part of
   // the approved plan fails closed; matching planned files are verified.
   const plannedPaths = new Set(files.map((file) => file.path));
-  const preexisting = await listVersionFiles(directory).catch(() => [] as string[]);
+  const preexisting = await listVersionFiles(directory);
   for (const actual of preexisting) {
     if (!plannedPaths.has(actual)) {
       throw new PublishError("PACKAGE_DIGEST_CONFLICT", `unexpected file ${JSON.stringify(actual)} in version directory`);
@@ -397,6 +408,7 @@ async function writeVersionFiles(
     files: files.map(({ path, sha256, bytes }) => ({ path, sha256, bytes }))
   };
   await writeFileDurable(markerPath, `${JSON.stringify(manifest, null, 2)}\n`, 0o600);
+  await verifyVersionDirectory(root, relativeDir, manifest);
   await fsyncDirectoryBestEffort(directory);
   return "written";
 }
@@ -508,13 +520,33 @@ async function runAuthority(input: PublishInput, evidence: ApplyEvidence): Promi
   }
 }
 
-/** Strict pre-state revalidation: authority, pointer shape + expectation,
- * target preimage reproduction, and preview manifest reproduction. */
-async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | null> {
+async function revalidateTargetRoot(root: ValidatedTargetRoot): Promise<void> {
+  try {
+    const current = await validateTargetRoot({ root: root.root, alias: root.alias });
+    if (current.root !== root.root || current.sentinelPath !== root.sentinelPath) {
+      throw new PublishError("UNSAFE_TARGET_ROOT", "target root identity changed after validation");
+    }
+  } catch (error) {
+    if (error instanceof PublishError) throw error;
+    if (error instanceof ProjectionPathError) {
+      throw new PublishError(error.code, error.message);
+    }
+    throw error;
+  }
+}
+
+async function revalidateAuthority(input: PublishInput): Promise<void> {
   if (manifestDigestFor(input.files) !== input.plan.preview_manifest_digest) {
     throw new PublishError("STALE_DEPLOYMENT", "preview files no longer reproduce the approved manifest digest");
   }
   await runAuthority(input, { manifestDigest: input.plan.preview_manifest_digest, preimageDigest: null });
+}
+
+/** Strict pre-state revalidation: authority, pointer shape + expectation,
+ * target preimage reproduction, and preview manifest reproduction. */
+async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | null> {
+  await revalidateTargetRoot(input.root);
+  await revalidateAuthority(input);
   const actual = await readTargetPointer(input.root);
   if (!samePointer(actual, input.plan.expected_current_pointer)) {
     throw new PublishError("STALE_DEPLOYMENT", "current target pointer does not match the approved plan");
@@ -545,12 +577,16 @@ async function fullRevalidate(input: PublishInput): Promise<CurrentPointer | nul
 export async function publishToTarget(input: PublishInput): Promise<{ pointer: CurrentPointer }> {
   const planDigest = digestCanonicalJson(input.plan);
   const resultPointer = pointerFor(input.deploymentRecordId, input.plan);
+  // Root/sentinel and authority preflight are read-only and must complete
+  // before acquiring the filesystem lease, which is itself a side effect.
+  await revalidateTargetRoot(input.root);
   const incomplete = (await listIncompleteOperations(input.root.root))
     .filter((operation) => operation.deployment_id !== input.deploymentRecordId);
   if (incomplete.length > 0) {
     throw new PublishError("PUBLISH_RECOVERY_REQUIRED", "an interrupted publish must be reconciled first");
   }
   const existingOperation = await readOperation(input.root.root, input.deploymentRecordId);
+  await revalidateAuthority(input);
 
   // Idempotent replay is anchored on a validated completed operation for this
   // exact plan/deployment, a valid pointer, and fully verified durable
@@ -560,7 +596,7 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     if (!samePointer(pointer, resultPointer)) {
       throw new PublishError("STALE_DEPLOYMENT", "completed operation no longer matches the materialized pointer");
     }
-    await verifiedManifestState(input.root, pointer!, existingOperation);
+    await verifiedManifestState(input.root, pointer!, existingOperation, input.plan.preview_manifest_digest);
     await runAuthority(input, {
       manifestDigest: existingOperation.manifest_digest,
       preimageDigest: input.plan.target_preimage_digest
@@ -577,7 +613,7 @@ export async function publishToTarget(input: PublishInput): Promise<{ pointer: C
     if (existingOperation && existingOperation.plan_digest === planDigest
       && existingOperation.stage === "realized"
       && samePointer(currentPointer, resultPointer)) {
-      await verifiedManifestState(input.root, currentPointer!, existingOperation);
+      await verifiedManifestState(input.root, currentPointer!, existingOperation, input.plan.preview_manifest_digest);
       await runAuthority(input, {
         manifestDigest: existingOperation.manifest_digest,
         preimageDigest: input.plan.target_preimage_digest
