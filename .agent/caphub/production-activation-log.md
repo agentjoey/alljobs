@@ -348,3 +348,17 @@ and one independent Verification occur only after the implementation tasks.
   Control Host and state directories to mode `700`; the attestation file is
   mode `600`. No database migration, Registry import, recovery proof, provider
   request, service restart, deployment, push, merge, or release occurred.
+
+## N3 readiness — 2026-09-18
+
+- The first read-only Registry check correctly rejected the application pooled
+  URL because the exact-host policy initially named only the direct endpoint.
+  The stopped Control Host config now names both verified direct and transaction
+  pooler hosts; it does not use a wildcard or IP allowlist.
+- The rerun confirmed managed TLS, PostgreSQL `18.6`, both expected login
+  identities, `caphub_migrator` database ownership, no role inheritance, and
+  no application migration or append-only update privilege. Its only expected
+  non-ready condition is the empty migration ledger: `001_registry`,
+  `002_read_models`, and `003_exports` remain pending.
+- No migration or Registry import was attempted after the required explicit
+  Production database-write authorization was found to be absent.
