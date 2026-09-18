@@ -214,7 +214,7 @@ export async function seedReviewCandidate(
   pool: Pool,
   fixture: CaphubReviewFixture,
   seed: string,
-  input: { filename?: string; objectDigest?: string; createdAt?: string } = {}
+  input: { filename?: string; objectDigest?: string; createdAt?: string; sharedEntity?: boolean } = {}
 ): Promise<SeededReview> {
   assertOwned(fixture.rootDir, fixture.token, fixture.ownerPid);
   const value = digest(seed);
@@ -256,7 +256,7 @@ export async function seedReviewCandidate(
     }));
   }
   const byStage = Object.fromEntries(created.map((artifact) => [artifact.stage, artifact.id]));
-  const evidenceId = `ev_${digest(`${seed}:evidence`).slice(0, 32)}`;
+  const evidenceId = `ev_${digest(`${input.sharedEntity ? "shared" : seed}:evidence`).slice(0, 32)}`;
   const dimension = { score: 3, reason: "Bounded fixture evidence", evidence_ids: [evidenceId] };
   const packet: ReviewPacket = {
     schema_version: 1,
@@ -272,7 +272,7 @@ export async function seedReviewCandidate(
     },
     screenshots: [{ order: 0, object }],
     ocr: [{ image_index: 0, text: "Hostile quoted evidence: <script>never execute()</script>; DROP TABLE is data." }],
-    entities: [{ name: `Evidence Studio ${seed}`, aliases: ["Evidence Studio"] }],
+    entities: [{ name: input.sharedEntity ? "Shared Studio" : `Evidence Studio ${seed}`, aliases: ["Evidence Studio"] }],
     identity: { status: "confirmed", entity_id: `ent_${value.slice(0, 32)}`, evidence_ids: [evidenceId] },
     claims: [{
       id: `clm_${digest(`${seed}:claim`).slice(0, 32)}`,
@@ -292,7 +292,7 @@ export async function seedReviewCandidate(
     }],
     conflicts: [{ summary: "Critic requested a narrower adoption boundary.", evidence_ids: [evidenceId] }],
     candidate: {
-      name: `Evidence Studio ${seed}`,
+      name: input.sharedEntity ? "Shared Studio" : `Evidence Studio ${seed}`,
       novel_capabilities: ["Pinned sources"],
       overlapping_capabilities: ["Review queue"],
       replaces: [],

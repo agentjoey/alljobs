@@ -16,6 +16,7 @@ import { PostgresAnalysisJobStore, PostgresCaptureStore } from "./postgres/caphu
 import { applyAutomationBackfill } from "../automation/backfill";
 import { getCaphubWorkItems } from "./work-items";
 import { getCaphubCaptureStatus, getCaphubReviewDetail } from "./review-workbench";
+import {digestCanonicalJson} from "../analysis/digest";
 
 const NOW = "2026-09-16T10:00:00.000Z";
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
@@ -192,6 +193,33 @@ afterEach(async () => {
 }, 30_000);
 
 describe.sequential("ReviewPacket Registry import", () => {
+  it("replays an approved legacy content-addressed import without replacing its authority",async()=>{
+    const seeded=await seedFilesystem();const packet=seeded.packet;
+    const id=(prefix:string,payload:unknown)=>`${prefix}${digestCanonicalJson(payload).slice(0,32)}`;
+    const candidateId=id("cand_",packet.candidate),candidateDigest=digestCanonicalJson(packet.candidate);
+    const requestId=id("rev_",{candidate:candidateId,digest:candidateDigest});
+    const records=[...packet.entities.map(payload=>({id:id("ent_",payload),kind:"entity",payload})),
+      ...packet.claims.map(payload=>({id:payload.id,kind:"claim",payload})),...packet.evidence.map(payload=>({id:payload.id,kind:"evidence",payload})),
+      {id:candidateId,kind:"candidate",payload:packet.candidate},{id:packet.packet_id,kind:"review_packet",payload:packet},
+      {id:seeded.job.id,kind:"analysis_job",payload:seeded.job}];
+    const db=await postgres.pool.connect();
+    try {await db.query("BEGIN");for(const record of records){
+      await db.query("INSERT INTO caphub.registry_records VALUES ($1,$2,1,$3,$3)",[record.id,record.kind,NOW]);
+      await db.query("INSERT INTO caphub.registry_versions (record_id,version,kind,schema_version,payload,payload_digest,previous_version,created_at) VALUES ($1,1,$2,1,$3,$4,NULL,$5)",[record.id,record.kind,JSON.stringify(record.payload),digestCanonicalJson(record.payload),NOW]);
+    }await db.query("COMMIT");}catch(error){await db.query("ROLLBACK");throw error;}finally{db.release();}
+    await new PostgresCaptureStore(postgres.pool).create(capture);
+    await postgres.pool.query(`INSERT INTO caphub.review_requests (request_id,review_kind,subject_kind,subject_id,subject_version,subject_digest,lock_version,state,approve_confirmation,reject_confirmation,created_at,updated_at)
+      VALUES ($1,'candidate','candidate',$2,1,$3,2,'APPROVED','legacy approve','legacy reject',$4,$4)`,[requestId,candidateId,candidateDigest,NOW]);
+    const packetDigest=digestCanonicalJson(packet),importId=id("imp_",{packet:packet.packet_id,digest:packetDigest});
+    const manifest={schema_version:1,id:importId,source_review_packet_id:packet.packet_id,source_review_packet_digest:packetDigest,
+      records:records.map(record=>({record_id:record.id,kind:record.kind,version:1,payload_digest:digestCanonicalJson(record.payload)})),review_request_id:requestId,imported_at:NOW};
+    await postgres.pool.query("INSERT INTO caphub.registry_imports VALUES ($1,$2,$3,$4,$5,$6)",[importId,packet.packet_id,packetDigest,JSON.stringify(manifest),requestId,NOW]);
+    const importer=createReviewPacketImporter({...seeded,pool:postgres.pool,clock:()=>"2026-09-19T00:00:00Z"});
+    expect((await importer.importReviewPacket({jobId:JOB_ID})).requestId).toBe(requestId);
+    expect((await importer.importReviewPacket({jobId:JOB_ID})).requestId).toBe(requestId);
+    expect((await postgres.pool.query("SELECT state,lock_version FROM caphub.review_requests WHERE request_id=$1",[requestId])).rows[0]).toEqual({state:"APPROVED",lock_version:2});
+    expect((await postgres.pool.query("SELECT count(*) FROM caphub.review_requests")).rows[0].count).toBe("1");
+  });
   it.each([false, true])("imports exact records and lineage once, then suspends the filesystem job with v2=%s", async (v2) => {
     const seeded = await seedFilesystem(v2);
     const importer = createReviewPacketImporter({ ...seeded, pool: postgres.pool, clock: () => NOW });

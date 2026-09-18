@@ -27,3 +27,10 @@ it("selects imported active review rather than superseded alias and reads a boun
  expect((await getCaphubCaptureStatus(pg.appPool,old.captureId))?.canonicalCaptureId).toBe(current.captureId);
  await expect(getCaphubCaptureStatus(pg.appPool,"bad")).rejects.toThrow();
 },30000);
+it("imports repeated entity/candidate content at a later time without sharing review authority",async()=>{
+ const first=await seedReviewCandidate(pg.pool,files,"same-capability-one",{sharedEntity:true,createdAt:"2026-09-03T00:00:00Z"});
+ const second=await seedReviewCandidate(pg.pool,files,"same-capability-two",{sharedEntity:true,createdAt:"2026-09-04T00:00:00Z"});
+ expect(second.requestId).not.toBe(first.requestId);expect(second.candidateId).not.toBe(first.candidateId);
+ expect((await getCaphubReviewDetail(pg.appPool,first.requestId)).kind).toBe("found");
+ expect((await getCaphubReviewDetail(pg.appPool,second.requestId)).kind).toBe("found");
+},30000);

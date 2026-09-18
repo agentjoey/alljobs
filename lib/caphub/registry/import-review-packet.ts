@@ -43,7 +43,7 @@ export interface ReviewPacketImporterDependencies {
   afterDatabaseCommit?(): Promise<void>;
 }
 
-function derivedId(prefix: "ent_" | "cand_" | "rev_" | "imp_" | "rae_", value: unknown): string {
+function derivedId(prefix: "ent_" | "clm_" | "ev_" | "cand_" | "rev_" | "imp_" | "rae_", value: unknown): string {
   return `${prefix}${digestCanonicalJson(registryJsonValueSchema.parse(value)).slice(0, 32)}`;
 }
 
@@ -244,7 +244,8 @@ function importRecords(
   capture: ReturnType<typeof captureRecordSchema.parse>,
   job: AnalysisJob,
   packet: ReviewPacket,
-  loadedArtifacts: Array<{ artifact: StageArtifact; payload: unknown }>
+  loadedArtifacts: Array<{ artifact: StageArtifact; payload: unknown }>,
+  identityMode: "packet" | "legacy" = "packet"
 ): {
   records: ImportRecord[];
   capture: ImportRecord;
@@ -281,7 +282,7 @@ function importRecords(
   };
   const entities = [...new Map(packet.entities.map((payload) => {
     const record: ImportRecord = {
-      id: derivedId("ent_", payload), kind: "entity", payload,
+      id: derivedId("ent_", identityMode === "packet" ? { packet_id: packet.packet_id, payload } : payload), kind: "entity", payload,
       version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
@@ -289,7 +290,7 @@ function importRecords(
   })).values()];
   const claims = [...new Map(packet.claims.map((payload) => {
     const record: ImportRecord = {
-      id: payload.id, kind: "claim", payload,
+      id: identityMode === "packet" ? derivedId("clm_", { packet_id: packet.packet_id, payload }) : payload.id, kind: "claim", payload,
       version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
@@ -297,14 +298,14 @@ function importRecords(
   })).values()];
   const evidence = [...new Map(packet.evidence.map((payload) => {
     const record: ImportRecord = {
-      id: payload.id, kind: "evidence", payload,
+      id: identityMode === "packet" ? derivedId("ev_", { packet_id: packet.packet_id, payload }) : payload.id, kind: "evidence", payload,
       version: 1,
       digest: digestCanonicalJson(payload), createdAt: packet.created_at
     };
     return [record.id, record];
   })).values()];
   const candidate: ImportRecord = {
-    id: derivedId("cand_", packet.candidate), kind: "candidate", version: 1, payload: packet.candidate,
+    id: derivedId("cand_", identityMode === "packet" ? { packet_id: packet.packet_id, payload: packet.candidate } : packet.candidate), kind: "candidate", version: 1, payload: packet.candidate,
     digest: digestCanonicalJson(packet.candidate), createdAt: packet.created_at
   };
   return {
@@ -342,16 +343,22 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
         }>("SELECT source_review_packet_digest, review_request_id, manifest FROM caphub.registry_imports WHERE source_review_packet_id = $1", [packet.packet_id]);
         if (existing.rows[0]) {
           const manifest = registryImportManifestSchema.parse(existing.rows[0].manifest);
+          const legacy = importRecords(capture, job, packet, artifacts, "legacy");
+          const legacyRequestId = derivedId("rev_", { candidate: legacy.candidate.id, digest: legacy.candidate.digest });
+          const storedRequestId = existing.rows[0].review_request_id;
+          const expected = storedRequestId === requestId ? built : storedRequestId === legacyRequestId ? legacy : null;
           if (existing.rows[0].source_review_packet_digest !== built.packet.digest
-            || existing.rows[0].review_request_id !== requestId
+            || !expected || manifest.review_request_id !== storedRequestId
+            || [...expected.entities,...expected.claims,...expected.evidence,expected.candidate].some(record => !manifest.records.some(entry =>
+              entry.record_id === record.id && entry.kind === record.kind && entry.payload_digest === record.digest))
             || manifest.id !== importId) {
             throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
           }
-          const repaired = waitingJob(job, requestId, manifest.imported_at);
+          const repaired = waitingJob(job, storedRequestId, manifest.imported_at);
           await markImportedRetention(dependencies.pool, capture.id, new Date(manifest.imported_at));
           await ensureRegistryWaitingJob(dependencies.pool, repaired);
           if (canonicalJson(repaired) !== canonicalJson(job)) await dependencies.jobs.put(repaired);
-          return { requestId, job: repaired };
+          return { requestId: storedRequestId, job: repaired };
         }
 
         await bindExistingVersions(dependencies.pool, built.records);
