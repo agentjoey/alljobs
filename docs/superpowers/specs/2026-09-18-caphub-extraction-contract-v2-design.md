@@ -1,7 +1,7 @@
 # Caphub Extraction Contract V2 Design
 
-**Status:** draft — Scheme B approved by the Human Owner; this written
-contract remains subject to final review before implementation planning.
+**Status:** approved — Scheme B and this written contract were confirmed by the
+Human Owner on 2026-09-18.
 
 **Date:** 2026-09-18
 
@@ -174,13 +174,14 @@ configuration, or executable instructions.
 `ExtractionDraftV2` contains only model-owned semantic fields:
 
 ```ts
-interface ExtractionSourceRefV2 {
-  kind: "image" | "ocr_block" | "indicator";
-  image_index: number;
-  ocr_block_index?: number;
-  indicator_kind?: "url" | "repository" | "package" | "command";
-  indicator_index?: number;
-}
+type ExtractionSourceRefV2 =
+  | { kind: "image"; image_index: number }
+  | { kind: "ocr_block"; image_index: number; ocr_block_index: number }
+  | {
+      kind: "indicator";
+      indicator_kind: "url" | "repository" | "package" | "command";
+      indicator_index: number;
+    };
 
 interface ExtractionDraftV2 {
   schema_version: 2;
