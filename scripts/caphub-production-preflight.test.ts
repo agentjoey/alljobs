@@ -48,8 +48,8 @@ function safeSnapshot(): ProductionPreflightSnapshot {
     recovery: { verified: false },
     providers: {
       minimaxConfigured: true,
-      kimiConfigured: true,
-      kimiLiveCompatibility: "pending"
+      deepseekConfigured: true,
+      deepseekLiveCompatibility: "pending"
     },
     exports: { masterEnabled: true, enabledTargets: [] },
     runtime: { registryEnabled: false, analysisEnabled: false }
@@ -122,6 +122,17 @@ describe("Caphub Production preflight", () => {
     })).toThrow("PREFLIGHT_TARGETS_ENABLED");
   });
 
+  it("requires redacted, typed DeepSeek provider readiness fields", () => {
+    const missing = safeSnapshot() as unknown as { providers: Record<string, unknown> };
+    delete missing.providers.deepseekConfigured;
+    expect(() => createProductionPreflightReport(missing as ProductionPreflightSnapshot))
+      .toThrow("PREFLIGHT_UNSAFE_REPORT");
+    expect(() => createProductionPreflightReport({
+      ...safeSnapshot(),
+      providers: { ...safeSnapshot().providers, deepseekLiveCompatibility: "fixture-secret" }
+    } as unknown as ProductionPreflightSnapshot)).toThrow("PREFLIGHT_UNSAFE_REPORT");
+  });
+
   it("accepts PostgreSQL 18 only as managed TLS evidence without exposing a listener address", () => {
     const managed = safeSnapshot();
     managed.postgres = {
@@ -156,7 +167,7 @@ describe("Caphub Production preflight", () => {
     }
   });
 
-  it("advances only from verified Registry/import/remote-object/recovery evidence and never treats pending Kimi as S4", () => {
+  it("advances only from verified Registry/import/remote-object/recovery evidence and never treats pending DeepSeek as S4", () => {
     const readyForCutover = safeSnapshot();
     readyForCutover.postgres = { ...readyForCutover.postgres, pendingMigrations: [], ready: true };
     readyForCutover.captureImport.matchesRegistry = true;
@@ -173,7 +184,7 @@ describe("Caphub Production preflight", () => {
     readyForCutover.postCutoverVerified = true;
     expect(createProductionPreflightReport(readyForCutover).readyFor).toBe("PA_C");
 
-    readyForCutover.providers.kimiLiveCompatibility = "passed";
+    readyForCutover.providers.deepseekLiveCompatibility = "passed";
     expect(createProductionPreflightReport(readyForCutover).readyFor).toBe("S4");
   });
 });

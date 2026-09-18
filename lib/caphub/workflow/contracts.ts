@@ -61,7 +61,7 @@ export interface ModelCallIdentityInput {
   jobId: string;
   captureId: string;
   stage: StructuredProviderStage;
-  provider: "minimax" | "kimi";
+  provider: "minimax" | "kimi" | "deepseek";
   model: string;
   attempt: 1 | 2;
   inputDigest: string;

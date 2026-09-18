@@ -26,8 +26,8 @@ export interface ProductionPreflightReport {
   recovery: { verified: boolean };
   providers: {
     minimaxConfigured: boolean;
-    kimiConfigured: boolean;
-    kimiLiveCompatibility: LiveCompatibility;
+    deepseekConfigured: boolean;
+    deepseekLiveCompatibility: LiveCompatibility;
   };
   exports: { masterEnabled: boolean; enabledTargets: string[] };
   readyFor: ReadyFor;
@@ -109,8 +109,8 @@ function deriveReadyFor(snapshot: ProductionPreflightSnapshot): ReadyFor {
     || !snapshot.recovery.verified) return "PA_B";
   if (!snapshot.postCutoverVerified) return "PA_D";
   if (!snapshot.runtime.registryEnabled || snapshot.runtime.analysisEnabled) return "PA_D";
-  if (snapshot.providers.kimiLiveCompatibility === "pending") return "PA_C";
-  if (snapshot.providers.kimiLiveCompatibility === "failed") return "S3";
+  if (snapshot.providers.deepseekLiveCompatibility === "pending") return "PA_C";
+  if (snapshot.providers.deepseekLiveCompatibility === "failed") return "S3";
   return "S4";
 }
 
@@ -125,8 +125,8 @@ export function createProductionPreflightReport(snapshot: ProductionPreflightSna
   assertBoolean(snapshot.objectTransfer.matchesRemote);
   assertBoolean(snapshot.recovery.verified);
   assertBoolean(snapshot.providers.minimaxConfigured);
-  assertBoolean(snapshot.providers.kimiConfigured);
-  if (!["pending", "passed", "failed"].includes(snapshot.providers.kimiLiveCompatibility)) unsafe();
+  assertBoolean(snapshot.providers.deepseekConfigured);
+  if (!["pending", "passed", "failed"].includes(snapshot.providers.deepseekLiveCompatibility)) unsafe();
   assertBoolean(snapshot.exports.masterEnabled);
   if (snapshot.exports.enabledTargets.length > 0) {
     throw new ProductionPreflightError("PREFLIGHT_TARGETS_ENABLED");
@@ -153,8 +153,8 @@ export function createProductionPreflightReport(snapshot: ProductionPreflightSna
     recovery: { verified: snapshot.recovery.verified },
     providers: {
       minimaxConfigured: snapshot.providers.minimaxConfigured,
-      kimiConfigured: snapshot.providers.kimiConfigured,
-      kimiLiveCompatibility: snapshot.providers.kimiLiveCompatibility
+      deepseekConfigured: snapshot.providers.deepseekConfigured,
+      deepseekLiveCompatibility: snapshot.providers.deepseekLiveCompatibility
     },
     exports: { masterEnabled: snapshot.exports.masterEnabled, enabledTargets: [] },
     readyFor: deriveReadyFor(snapshot)
@@ -359,7 +359,7 @@ async function collectFixedSnapshot(): Promise<ProductionPreflightSnapshot> {
   const exportsConfig = caphub?.exports;
   const enabledTargets = exportsConfig ? configuredTargets(exportsConfig) : [];
   const miniMaxEnv = caphub?.analysis.miniMaxSecretEnv ?? "MINIMAX_API_KEY";
-  const kimiEnv = caphub?.analysis.kimiApiSecretEnv ?? "KIMI_CODE_API_KEY";
+  const deepSeekEnv = caphub?.analysis.deepSeekApiSecretEnv ?? "DEEPSEEK_API_KEY";
 
   return {
     buildSha,
@@ -371,8 +371,8 @@ async function collectFixedSnapshot(): Promise<ProductionPreflightSnapshot> {
     recovery: readRecoveryEvidence(homeDir),
     providers: {
       minimaxConfigured: Boolean(process.env[miniMaxEnv]),
-      kimiConfigured: Boolean(process.env[kimiEnv]),
-      kimiLiveCompatibility: "pending"
+      deepseekConfigured: Boolean(process.env[deepSeekEnv]),
+      deepseekLiveCompatibility: "pending"
     },
     exports: { masterEnabled: Boolean(caphub?.enabled && registry.enabled && exportsConfig?.enabled), enabledTargets },
     runtime: {

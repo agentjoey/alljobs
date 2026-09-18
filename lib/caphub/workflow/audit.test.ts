@@ -39,4 +39,15 @@ describe("model-call audit", () => {
     expect(event).not.toHaveProperty("output");
     expect(serialized).not.toMatch(/api[_-]?key|reasoning|secret|prompt|response/i);
   });
+
+  it("keeps the active DeepSeek provider identity in deterministic redacted audits", () => {
+    const event = buildModelCallAuditEvent({
+      ...base,
+      stage: "research",
+      provider: "deepseek",
+      model: "deepseek-flash"
+    }, { type: "started" });
+
+    expect(event).toMatchObject({ provider: "deepseek", model: "deepseek-flash", type: "started" });
+  });
 });
