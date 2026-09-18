@@ -70,9 +70,13 @@ The approved Neon activation sequence N1–N4, PA-D, and PA-C are complete.
 Caphub is running from `codex/caphub-release` on the Control Host and is bound
 only to `127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200.
 MiniMax and Kimi `k3-256k` Provider compatibility is verified, and analysis is
-enabled while Registry remains enabled. No Capture analysis runs automatically;
-the first real Capture analysis still requires an explicit operator request and
-creates a human-review-only ReviewPacket. All targets/exports remain disabled.
+enabled while Registry remains enabled. No Capture analysis runs automatically.
+The first authorized trial Capture created
+`job_d21922e7bb363b4734573206709e70ab` but stopped closed during MiniMax
+extraction as `HUMAN_REVIEW_REQUIRED` / `INTERRUPTED_PROVIDER_CALL`; no
+extraction result, ReviewPacket, or Review Request exists, and it was not
+retried. Diagnose that interrupted-call path before any separately authorized
+new Capture analysis. All targets/exports remain disabled.
 
 ## Caphub development status — 2026-09-16
 

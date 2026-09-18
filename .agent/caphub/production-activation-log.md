@@ -523,3 +523,19 @@ and one independent Verification occur only after the implementation tasks.
   `/caphub` on the loopback-only listener. Registry remains enabled; exports
   and all target operations remain disabled. No Capture analysis, ReviewPacket,
   target/export operation, push, PR, `main` merge, tag, or release occurred.
+
+## First Capture-only analysis trial — 2026-09-18
+
+- Under the explicit per-Capture authorization, the operator-started analysis
+  for `cap_2c181320979840ab9448b974ed1ed105` created immutable job
+  `job_d21922e7bb363b4734573206709e70ab`. Capture validation and preprocessing
+  completed; no processing occurs automatically.
+- The MiniMax `MiniMax-M3` extraction stage recorded its first `started` event,
+  but no matching terminal audit event. The workflow therefore stopped closed
+  as `HUMAN_REVIEW_REQUIRED` at extraction with reason
+  `INTERRUPTED_PROVIDER_CALL`. The job is terminal and was not retried.
+- No extraction result, ReviewPacket artifact, Registry import, or Review
+  Request was created. No Kimi request, source fetch, target operation, export,
+  publication, installation, rollback, push, PR, `main` merge, tag, or release
+  occurred. The next action is an implementation-level diagnosis before any
+  separately authorized new Capture analysis.
