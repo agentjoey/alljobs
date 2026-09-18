@@ -411,3 +411,23 @@ and one independent Verification occur only after the implementation tasks.
 - N4 recovery proof, PA-C provider canary, and PA-D rebuild/reload/cutover are
   not performed by this record. No provider call, target write, service reload,
   push, merge, deployment, or release occurred.
+
+## N4 recovery proof — 2026-09-18
+
+- Under explicit Human N4 authorization, a persistent recovery branch named
+  `caphub-recovery-20260918` was created from the current Production branch.
+  It is a non-default branch; Production itself was not modified.
+- Read-only recovery validation confirmed the expected `caphub` database and
+  Caphub roles, the private `caphub-objects` bucket, exact three-entry migration
+  ledger, two Capture Registry records, two capture-received audit records, and
+  one immutable Capture object reference. Every Capture digest agrees with its
+  immutable key structure, and the private recovery bucket exposes the matching
+  inherited one-object set. The prior N2 independent object read/hash proof
+  remains the byte-level evidence for that immutable object.
+- The owner-only recovery attestation was recorded once as `verified: true`.
+  The final redacted preflight accepted Registry, object-transfer, and recovery
+  evidence and reports `readyFor: PA_D`.
+- The service remains stopped; analysis remains disabled; provider compatibility
+  remains pending; exports retain zero enabled targets. PA-C and PA-D are not
+  performed. No provider call, target write, reload, push, merge, deployment,
+  or release occurred.
