@@ -47,6 +47,8 @@ function base(job: AnalysisJob, completedArtifactIds = job.completed_artifact_id
   return {
     schema_version: 1 as const,
     id: job.id,
+    ...(job.analysis_contract_version ? { analysis_contract_version: job.analysis_contract_version } : {}),
+    ...(job.supersedes_job_id ? { supersedes_job_id: job.supersedes_job_id } : {}),
     capture_id: job.capture_id,
     input_digest: job.input_digest,
     completed_artifact_ids: [...completedArtifactIds],

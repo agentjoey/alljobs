@@ -63,7 +63,7 @@ interface PilotAnalysisResult {
   };
   second: PilotAnalysisResult["first"];
   candidateId: string;
-  providerCalls: { minimax: number; kimi: number };
+  providerCalls: { minimax: number; deepseek: number };
 }
 
 function digest(value: string | Uint8Array): string {

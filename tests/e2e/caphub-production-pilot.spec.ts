@@ -50,7 +50,7 @@ test("runs one isolated P1-P4 lifecycle while every target remains disabled", as
 
     const analyzed = await runPilotAnalysisAndImport(pool, fixture, captureId);
     expect(analyzed.first).toEqual(analyzed.second);
-    expect(analyzed.providerCalls).toEqual({ minimax: 1, kimi: 2 });
+    expect(analyzed.providerCalls).toEqual({ minimax: 1, deepseek: 3 });
     expect(analyzed.first.analysisStatus).toBe("WAITING_FOR_REVIEW");
 
     await page.goto(`/reviews?request=${analyzed.first.reviewRequestId}`);

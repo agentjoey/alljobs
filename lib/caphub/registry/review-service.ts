@@ -72,6 +72,8 @@ export function createReviewDecisionService(dependencies: {
     const next = analysisJobSchema.parse({
       schema_version: 1,
       id: current.id,
+      ...(current.analysis_contract_version ? { analysis_contract_version: current.analysis_contract_version } : {}),
+      ...(current.supersedes_job_id ? { supersedes_job_id: current.supersedes_job_id } : {}),
       capture_id: current.capture_id,
       input_digest: current.input_digest,
       completed_artifact_ids: current.completed_artifact_ids,

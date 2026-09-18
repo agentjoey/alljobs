@@ -23,7 +23,8 @@ import { captureIdSchema, captureRecordSchema } from "../domain/schemas";
 import type { CaptureRecord } from "../domain/types";
 import { preprocessCapture } from "../preprocess/preprocessor";
 import type { ImagePreprocessorDependencies } from "../preprocess/image";
-import type { StructuredProvider, StructuredProviderInput, StructuredProviderOutput } from "../providers/contracts";
+import type { StructuredProvider } from "../providers/contracts";
+import { runExtractionStageV2, type RunExtractionStageV2Request } from "../providers/extraction-stage-v2";
 import { runStructuredStage } from "../providers/structured-stage";
 import { buildResearchDossier, ResearchDossierError } from "../research/research";
 import type { ResearchSourceGateway } from "../research/source-gateway";
@@ -65,7 +66,8 @@ export interface AnalysisServiceDependencies {
   captures: Pick<CaptureStore, "get">;
   readObject(capture: CaptureRecord): Promise<Uint8Array>;
   preprocessDependencies: ImagePreprocessorDependencies;
-  extractionProvider: StructuredProvider;
+  extractionObserver: RunExtractionStageV2Request["miniMax"];
+  extractionStructurer: RunExtractionStageV2Request["deepSeek"];
   researchProvider: StructuredProvider;
   assessmentProvider: StructuredProvider;
   criticProvider: StructuredProvider;
@@ -101,8 +103,16 @@ async function payloadFor<T>(
   return schema.parse(payload);
 }
 
-function jobIdFor(capture: CaptureRecord): string {
+export const CAPHUB_ANALYSIS_CONTRACT_VERSION = "caphub-analysis-v2";
+
+function legacyJobIdFor(capture: CaptureRecord): string {
   return `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}`, "utf8").digest("hex").slice(0, 32)}`;
+}
+
+function v2JobIdFor(capture: CaptureRecord): string {
+  return `job_${createHash("sha256")
+    .update(`${capture.id}\0${capture.object.digest}\0${CAPHUB_ANALYSIS_CONTRACT_VERSION}`, "utf8")
+    .digest("hex").slice(0, 32)}`;
 }
 
 function resultFor(job: AnalysisJob): AnalysisServiceResult {
@@ -126,29 +136,6 @@ function reconstructBudget(events: ModelCallAuditEvent[]): JobModelBudget {
   };
 }
 
-function extractionTransport(provider: StructuredProvider): StructuredProvider {
-  return {
-    provider: provider.provider,
-    model: provider.model,
-    invoke(input: StructuredProviderInput): Promise<StructuredProviderOutput> {
-      if (input.kind !== "initial" || input.stage !== "extraction") return provider.invoke(input);
-      const record = input.input as Record<string, unknown>;
-      const encoded = record.normalizedImages as Array<Record<string, unknown>>;
-      return provider.invoke({
-        ...input,
-        input: {
-          ...record,
-          normalizedImages: encoded.map((image) => ({
-            index: image.index,
-            mediaType: image.mediaType,
-            data: new Uint8Array(Buffer.from(String(image.dataBase64), "base64"))
-          }))
-        }
-      });
-    }
-  };
-}
-
 async function normalizedModelImage(bytes: Uint8Array) {
   const normalized = await sharp(bytes).rotate().png({ compressionLevel: 9, adaptiveFiltering: false }).toBuffer();
   return { mediaType: "image/png" as const, dataBase64: normalized.toString("base64") };
@@ -156,7 +143,8 @@ async function normalizedModelImage(bytes: Uint8Array) {
 
 export function createAnalysisService(dependencies: AnalysisServiceDependencies): AnalysisService {
   const clockString = () => dependencies.clock().toISOString();
-  if (dependencies.extractionProvider.provider !== "minimax"
+  if (dependencies.extractionObserver.provider !== "minimax"
+    || dependencies.extractionStructurer.provider !== "deepseek"
     || dependencies.criticProvider.provider !== "minimax"
     || dependencies.researchProvider.provider !== "deepseek"
     || dependencies.assessmentProvider.provider !== "deepseek") {
@@ -180,13 +168,16 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
         throw new AnalysisServiceError("INVALID_CAPTURE_OBJECT");
       }
 
-      const jobId = jobIdFor(capture);
+      const jobId = v2JobIdFor(capture);
       let job = await dependencies.jobs.get(jobId);
       if (!job) {
+        const predecessor = await dependencies.jobs.get(legacyJobIdFor(capture));
         const now = clockString();
         job = {
           schema_version: 1,
           id: jobId,
+          analysis_contract_version: CAPHUB_ANALYSIS_CONTRACT_VERSION,
+          ...(predecessor ? { supersedes_job_id: predecessor.id } : {}),
           capture_id: capture.id,
           input_digest: digestCanonicalJson(capture),
           completed_artifact_ids: [],
@@ -207,7 +198,7 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
       const budget = reconstructBudget(await dependencies.audits.list(jobId));
       const sourceGateway = dependencies.sourceGateway();
       const runProvider = async <T>(options: {
-        stage: "extraction" | "research" | "assessment" | "critic";
+        stage: "research" | "assessment" | "critic";
         input: unknown;
         schema: z.ZodType<T>;
         provider: StructuredProvider;
@@ -249,28 +240,30 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
             const normalized = await normalizedModelImage(bytes);
             const input = {
               preprocess,
-              preprocess_artifact_id: preprocessArtifactId,
               normalizedImages: [{ index: 0, ...normalized }]
             };
             const inputDigest = digestCanonicalJson(input);
             dependencies.onExtractionInput?.(inputDigest, preprocessArtifactId);
-            const linkedSchema = extractionResultSchema.superRefine((value, issue) => {
-              if (value.capture_id !== capture.id || value.preprocess_artifact_id !== preprocessArtifactId) {
-                issue.addIssue({ code: "custom", message: "Extraction links do not match host artifacts" });
-              }
+            const outcome = await runExtractionStageV2({
+              jobId,
+              captureId: capture.id,
+              preprocessArtifactId,
+              input: {
+                preprocess,
+                normalizedImages: input.normalizedImages.map(({ index, mediaType, dataBase64 }) => ({
+                  index, mediaType, data: new Uint8Array(Buffer.from(dataBase64, "base64"))
+                }))
+              },
+              miniMax: dependencies.extractionObserver,
+              deepSeek: dependencies.extractionStructurer,
+              auditStore: dependencies.audits,
+              budget,
+              clock: clockString,
+              signal
             });
-            try {
-              const value = await runProvider({
-                stage: "extraction",
-                input,
-                schema: linkedSchema,
-                provider: extractionTransport(dependencies.extractionProvider)
-              });
-              return { kind: "success", inputDigest, payload: value };
-            } catch (error) {
-              if (error instanceof StageHumanReviewError) return { kind: "human_review", reason: error.reason };
-              throw error;
-            }
+            return outcome.kind === "success"
+              ? { kind: "success", inputDigest, payload: outcome.value }
+              : outcome;
           }
         },
         {
@@ -400,7 +393,7 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
               },
               modelContracts: [
                 { stage: "preprocess", provider: "deterministic", model: "caphub-preprocess-v1", schema_version: 1 },
-                { stage: "extraction", provider: "minimax", model: dependencies.extractionProvider.model, schema_version: 1 },
+                { stage: "extraction", provider: "minimax", model: dependencies.extractionObserver.model, schema_version: 2 },
                 { stage: "research", provider: "deepseek", model: dependencies.researchProvider.model, schema_version: 1 },
                 { stage: "assessment", provider: "deepseek", model: dependencies.assessmentProvider.model, schema_version: 1 },
                 ...(critic ? [{ stage: "critic" as const, provider: "minimax" as const, model: dependencies.criticProvider.model, schema_version: 1 as const }] : [])

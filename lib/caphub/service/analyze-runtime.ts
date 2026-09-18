@@ -72,7 +72,8 @@ export async function loadControlHostAnalysisService(options: {
       recognizeText: createPackagedTesseractRecognizer("eng"),
       decodeBarcodes: decodeBarcodesWithZxing
     },
-    extractionProvider: miniMax,
+    extractionObserver: miniMax,
+    extractionStructurer: deepSeek,
     researchProvider: deepSeek,
     assessmentProvider: deepSeek,
     criticProvider: miniMax,

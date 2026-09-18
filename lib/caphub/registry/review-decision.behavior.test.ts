@@ -17,7 +17,7 @@ const CANDIDATE_ID = `cand_${"5".repeat(32)}`;
 const PACKET_ID = `rvp_${"6".repeat(32)}`;
 const DIGEST = "7".repeat(64);
 
-describe.sequential("real review decision boundary", () => {
+describe.sequential.each([false, true])("real review decision boundary with v2=%s", (v2) => {
   let postgres: CaphubTestPostgres;
   let service: ReturnType<typeof createReviewDecisionService>;
 
@@ -28,6 +28,7 @@ describe.sequential("real review decision boundary", () => {
     const base = {
       schema_version: 1 as const,
       id: JOB_ID,
+      ...(v2 ? { analysis_contract_version: "caphub-analysis-v2" as const, supersedes_job_id: `job_${"f".repeat(32)}` } : {}),
       capture_id: CAPTURE_ID,
       input_digest: "8".repeat(64),
       completed_artifact_ids: [] as string[],
@@ -119,6 +120,8 @@ describe.sequential("real review decision boundary", () => {
     if (left.status !== "fulfilled" || right.status !== "fulfilled") throw new Error("missing concurrent receipt");
     expect(left.value.result.decision.id).toBe(right.value.result.decision.id);
     expect(left.value.job).toMatchObject({ status: "reviewed", review_decision_id: `dec_${"9".repeat(32)}` });
+    if (v2) expect(left.value.job).toMatchObject({ analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: `job_${"f".repeat(32)}` });
+    else expect(left.value.job).not.toHaveProperty("analysis_contract_version");
 
     const decisions = await postgres.pool.query<{ count: string }>("SELECT count(*) FROM caphub.review_decisions");
     const audits = await postgres.pool.query<{ count: string }>(

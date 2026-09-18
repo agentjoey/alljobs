@@ -384,6 +384,29 @@ describe("P2 workflow record schemas", () => {
     updated_at: NOW
   };
 
+  it("reads historical jobs unchanged and accepts distinct v2 predecessor lineage", () => {
+    const historical = { ...jobBase, status: "queued" };
+    expect(analysisJobSchema.parse(historical)).toEqual(historical);
+    const versioned = {
+      ...historical,
+      analysis_contract_version: "caphub-analysis-v2",
+      supersedes_job_id: `job_${"f".repeat(32)}`
+    };
+    expect(analysisJobSchema.parse(versioned)).toEqual(versioned);
+    expect(analysisJobSchema.parse({ ...historical, analysis_contract_version: "caphub-analysis-v1" }))
+      .toHaveProperty("analysis_contract_version", "caphub-analysis-v1");
+  });
+
+  it("rejects self-supersession and predecessor lineage outside the v2 contract", () => {
+    for (const lineage of [
+      { analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: JOB_ID },
+      { supersedes_job_id: `job_${"f".repeat(32)}` },
+      { analysis_contract_version: "caphub-analysis-v1", supersedes_job_id: `job_${"f".repeat(32)}` }
+    ]) {
+      expect(analysisJobSchema.safeParse({ ...jobBase, status: "queued", ...lineage }).success).toBe(false);
+    }
+  });
+
   it("uses terminal-state unions that require their state-specific evidence", () => {
     expect(analysisJobSchema.parse({ ...jobBase, status: "queued" }).status).toBe("queued");
     expect(analysisJobSchema.parse({

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Pool } from "pg";
 import { createProductionAnalysisWorkflow } from "../../lib/caphub/service/production-workflow";
@@ -17,31 +16,37 @@ import { readCaphubReviewFixture } from "./caphub-review-registry-fixtures";
 
 const NOW = "2026-09-17T12:00:00.000Z";
 
-function digest(value: string): string {
-  return createHash("sha256").update(value, "utf8").digest("hex");
-}
-
 class PilotMiniMax implements StructuredProvider {
   readonly provider = "minimax" as const;
   readonly model = "MiniMax-M3";
   calls = 0;
 
-  async invoke(input: StructuredProviderInput): Promise<StructuredProviderOutput> {
+  async observe() {
     this.calls += 1;
-    if (input.kind !== "initial" || input.stage !== "extraction") throw new Error("unexpected fixture MiniMax call");
-    const source = input.input as Record<string, unknown>;
-    const preprocess = source.preprocess as { capture_id: string };
+    const text = "Image 0 shows Pilot Capability and OCR block 0 names it.";
+    return { text, usage: { inputTokens: 10, outputTokens: 10 }, finishReason: "stop", outputBytes: Buffer.byteLength(text) };
+  }
+
+  async invoke(): Promise<StructuredProviderOutput> {
+    throw new Error("unexpected fixture MiniMax critic call");
+  }
+}
+
+class PilotDeepSeek implements StructuredProvider {
+  readonly provider = "deepseek" as const;
+  readonly model = "deepseek-flash";
+  calls = 0;
+
+  async structureExtraction() {
+    this.calls += 1;
     return {
-      value: {
-        schema_version: 1,
-        capture_id: preprocess.capture_id,
-        preprocess_artifact_id: source.preprocess_artifact_id,
+      output: {
+        schema_version: 2,
         claims: [{
-          id: `clm_${digest("production-pilot:claim").slice(0, 32)}`,
           statement: "Pilot Capability provides bounded third-party capability metadata.",
           basis: "visible",
           confidence: 0.9,
-          evidence_ids: [`ev_${digest("production-pilot:screenshot").slice(0, 32)}`]
+          source_refs: [{ kind: "image", image_index: 0 }]
         }],
         entities: [{ name: "Pilot Capability", aliases: ["Pilot"] }],
         experience_fragments: [],
@@ -51,16 +56,9 @@ class PilotMiniMax implements StructuredProvider {
       usage: { inputTokens: 10, outputTokens: 10 }
     };
   }
-}
-
-class PilotKimi implements StructuredProvider {
-  readonly provider = "kimi" as const;
-  readonly model = "k3-256k";
-  calls = 0;
-
   async invoke(input: StructuredProviderInput): Promise<StructuredProviderOutput> {
     this.calls += 1;
-    if (input.kind !== "initial") throw new Error("unexpected fixture Kimi correction");
+    if (input.kind !== "initial") throw new Error("unexpected fixture DeepSeek correction");
     const source = input.input as Record<string, unknown>;
     if (input.stage === "research") {
       const extraction = source.extraction as { capture_id: string; claims: Array<{ id: string }> };
@@ -94,7 +92,7 @@ class PilotKimi implements StructuredProvider {
         usage: { inputTokens: 10, outputTokens: 10 }
       };
     }
-    if (input.stage !== "assessment") throw new Error("unexpected fixture Kimi stage");
+    if (input.stage !== "assessment") throw new Error("unexpected fixture DeepSeek stage");
     const dossier = source.dossier as { capture_id: string; evidence: Array<{ id: string }> };
     const evidenceId = dossier.evidence[0]!.id;
     const dimension = { score: 3, reason: "Fixture evidence supports bounded adoption.", evidence_ids: [evidenceId] };
@@ -181,7 +179,7 @@ async function main(): Promise<void> {
     const jobs = new PostgresAnalysisJobStore(pool);
     const artifacts = new PostgresStageArtifactStore(pool);
     const miniMax = new PilotMiniMax();
-    const kimi = new PilotKimi();
+    const deepSeek = new PilotDeepSeek();
     const analysis = createAnalysisService({
       config: { caphubEnabled: true, analysisEnabled: true },
       captures,
@@ -195,9 +193,10 @@ async function main(): Promise<void> {
         }],
         decodeBarcodes: async () => []
       },
-      extractionProvider: miniMax,
-      researchProvider: kimi,
-      assessmentProvider: kimi,
+      extractionObserver: miniMax,
+      extractionStructurer: deepSeek,
+      researchProvider: deepSeek,
+      assessmentProvider: deepSeek,
       criticProvider: miniMax,
       sourceGateway: pilotSourceGateway,
       jobs,
@@ -218,13 +217,13 @@ async function main(): Promise<void> {
       first,
       second,
       job,
-      providerCalls: { minimax: miniMax.calls, kimi: kimi.calls }
+      providerCalls: { minimax: miniMax.calls, deepseek: deepSeek.calls }
     })}`);
     process.stdout.write(`${JSON.stringify({
       first,
       second,
       candidateId: request.rows[0].subject_id,
-      providerCalls: { minimax: miniMax.calls, kimi: kimi.calls }
+      providerCalls: { minimax: miniMax.calls, deepseek: deepSeek.calls }
     })}\n`);
   } finally {
     await pool.end();

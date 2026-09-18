@@ -2,7 +2,7 @@
 import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadControlHostAnalysisService } from "./analyze-runtime";
 
 const homes: string[] = [];
@@ -21,6 +21,7 @@ function controlHostHome(caphub: unknown): string {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   while (homes.length > 0) rmSync(homes.pop()!, { recursive: true, force: true });
 });
 
@@ -34,7 +35,9 @@ describe("fixed Control Host analysis composition", () => {
       .rejects.toMatchObject({ code: "ANALYSIS_DISABLED" });
   });
 
-  it("constructs the fixed API-mode service without making a provider call", async () => {
+  it("constructs the fixed observer and structurer roles without making a provider call", async () => {
+    const transport = vi.fn(async () => { throw new Error("Unexpected provider call"); });
+    vi.stubGlobal("fetch", transport);
     const home = controlHostHome({
       enabled: true,
       analysis: { enabled: true }
@@ -48,9 +51,10 @@ describe("fixed Control Host analysis composition", () => {
     });
     await expect(service.start("not-a-capture-id"))
       .rejects.toMatchObject({ code: "INVALID_CAPTURE_ID" });
+    expect(transport).not.toHaveBeenCalled();
   });
 
-  it("requires only the fixed DeepSeek secret for research and assessment", async () => {
+  it("requires the fixed DeepSeek secret for extraction structuring, research and assessment", async () => {
     const home = controlHostHome({ enabled: true, analysis: { enabled: true } });
     await expect(loadControlHostAnalysisService({
       home,

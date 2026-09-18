@@ -66,7 +66,7 @@ const capture: CaptureRecord = {
   created_at: NOW
 };
 
-async function seedFilesystem() {
+async function seedFilesystem(v2 = false) {
   const root = fixtureRoot();
   const captures = new FilesystemCaptureStore(root);
   const jobs = new FilesystemAnalysisJobStore(root);
@@ -163,6 +163,7 @@ async function seedFilesystem() {
   const job: AnalysisJob = {
     schema_version: 1,
     id: JOB_ID,
+    ...(v2 ? { analysis_contract_version: "caphub-analysis-v2" as const, supersedes_job_id: `job_${"f".repeat(32)}` } : {}),
     capture_id: CAPTURE_ID,
     input_digest: "8".repeat(64),
     completed_artifact_ids: [...created.map(({ id }) => id), packetArtifact.id],
@@ -187,13 +188,15 @@ afterEach(async () => {
 }, 30_000);
 
 describe.sequential("ReviewPacket Registry import", () => {
-  it("imports exact records and lineage once, then suspends the filesystem job", async () => {
-    const seeded = await seedFilesystem();
+  it.each([false, true])("imports exact records and lineage once, then suspends the filesystem job with v2=%s", async (v2) => {
+    const seeded = await seedFilesystem(v2);
     const importer = createReviewPacketImporter({ ...seeded, pool: postgres.pool, clock: () => NOW });
     const first = await importer.importReviewPacket({ jobId: JOB_ID });
     const second = await importer.importReviewPacket({ jobId: JOB_ID });
     expect(second).toEqual(first);
     expect(first.job).toMatchObject({ status: "WAITING_FOR_REVIEW", review_request_id: first.requestId });
+    if (v2) expect(first.job).toMatchObject({ analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: `job_${"f".repeat(32)}` });
+    else expect(first.job).not.toHaveProperty("analysis_contract_version");
     await expect(seeded.jobs.get(JOB_ID)).resolves.toEqual(first.job);
     await expect(new PostgresAnalysisJobStore(postgres.pool).get(JOB_ID)).resolves.toEqual(first.job);
 

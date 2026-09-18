@@ -131,6 +131,8 @@ const TERMINAL_JOB_STATES = new Set<AnalysisJob["status"]>(["reviewed", "failed"
 
 function sameJobIdentity(left: AnalysisJob, right: AnalysisJob): boolean {
   return left.id === right.id
+    && left.analysis_contract_version === right.analysis_contract_version
+    && left.supersedes_job_id === right.supersedes_job_id
     && left.capture_id === right.capture_id
     && left.input_digest === right.input_digest
     && left.created_at === right.created_at

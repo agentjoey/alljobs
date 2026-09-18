@@ -69,6 +69,24 @@ async function setup(value = root()) {
 }
 
 describe("resumable analysis workflow", () => {
+  it.each(["completed", "HUMAN_REVIEW_REQUIRED", "failed"] as const)("preserves v2 lineage through running and %s transitions", async (status) => {
+    const stores = await setup();
+    const lineage = { analysis_contract_version: "caphub-analysis-v2" as const, supersedes_job_id: `job_${"f".repeat(32)}` };
+    await stores.jobs.put({ ...queued(), ...lineage });
+    const stageHandlers = handlers([]).map((handler) => ({
+      ...handler,
+      async run(context: Parameters<AnalysisStageHandler["run"]>[0]) {
+        expect(await stores.jobs.get(JOB_ID)).toMatchObject({ status: "running", ...lineage });
+        if (status === "failed") throw new Error("fixture stage failure");
+        if (status === "HUMAN_REVIEW_REQUIRED") return { kind: "human_review" as const, reason: "fixture review" };
+        return handler.run(context);
+      }
+    }));
+    const runner = new AnalysisWorkflowRunner({ ...stores, handlers: stageHandlers, clock: () => NOW });
+    expect(await runner.runAnalysisJob(JOB_ID, new AbortController().signal)).toMatchObject({ status, ...lineage });
+    expect(await stores.jobs.get(JOB_ID)).toMatchObject({ status, ...lineage });
+  });
+
   it("treats imported waiting and reviewed jobs as terminal workflow states", async () => {
     const stores = await setup();
     const artifactId = `art_${"d".repeat(64)}`;

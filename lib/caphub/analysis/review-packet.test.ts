@@ -165,6 +165,18 @@ const input = {
 };
 
 describe("deterministic review-only packet composition", () => {
+  it("accepts extraction contract v2 while preserving downstream v1 contracts", () => {
+    const packet = composeReviewPacket({
+      ...input,
+      modelContracts: input.modelContracts.map((contract) => contract.stage === "extraction"
+        ? { ...contract, schema_version: 2 as const }
+        : contract)
+    });
+    expect(packet.schema_version).toBe(1);
+    expect(packet.model_contracts.map(({ stage, schema_version }) => [stage, schema_version]))
+      .toEqual([["preprocess", 1], ["extraction", 2], ["research", 1]]);
+  });
+
   it("preserves immutable source objects, OCR, entities, Claims, evidence, conflicts, alternatives and dimensions", () => {
     const packet = composeReviewPacket(input);
     expect(packet.stage_artifact_ids).toEqual(ARTIFACT_IDS);
