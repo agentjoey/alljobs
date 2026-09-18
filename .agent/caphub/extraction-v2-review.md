@@ -2,7 +2,7 @@
 
 Date: 2026-09-18
 
-Final verdict: **PASS after the focused R1/R2 re-review.** Both original
+Final verdict: **PASS after the focused R1/R2 re-review and final-code Codex acceptance.** Both original
 Important findings are addressed; no new Blocker, Important, or Optional
 finding was reported in the fix diff.
 
@@ -16,6 +16,13 @@ finding was reported in the fix diff.
 - Focused re-review: `039a726..fd341fe`, limited to the five-file fix,
   original findings, regression assertions, and affected contracts. It was not
   a second global review.
+- Final-code acceptance: `9f3f1121b53060d63cef80b1bb5125079a0c4161`.
+  The only post-review production change adds the two already-fixed bounded
+  observation limits to strict host-config parsing with direct regression
+  coverage. Codex inspected that diff and the complete extraction boundary,
+  then ran the 20-file / 221-test affected matrix, final production build,
+  deployment invariants, and the single final-build browser path. No code
+  finding remained; only stale evidence binding required documentation repair.
 
 The coherent review covered MiniMax/DeepSeek data separation, no-tools and
 no-retry boundaries, raw-data persistence/logging, deterministic host
@@ -86,10 +93,10 @@ those results, inspected every changed assertion, and independently repeated
 the relevant fake-transport probes. Both findings are closed, with no further
 code correction requested.
 
-The original full gate/build/browser evidence remains bound to `039a726`, and
-post-fix affected tests/static checks to `fd341fe`. The re-review does not
-assert a post-fix production build/browser run. Exact commands, screenshot
-bindings, and warnings are in [verification](extraction-v2-verification.md).
+The historical full gate remains bound to `039a726`, the R1/R2 correction to
+`fd341fe`, and the final focused acceptance/build/browser evidence to
+`9f3f112`. Exact commands, screenshot bindings, and warnings are in
+[verification](extraction-v2-verification.md).
 
 ## Preserved gates
 

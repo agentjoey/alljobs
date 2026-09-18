@@ -2,7 +2,7 @@
 
 Date: 2026-09-18
 
-Final code candidate: `fd341fe3bea50967d8329c9e520b54eddeeffde6`.
+Final code candidate: `9f3f1121b53060d63cef80b1bb5125079a0c4161`.
 
 Outcome: **PASS for the recorded local gates and affected fix verification.**
 The full gate and post-fix evidence have different source bindings below.
@@ -23,12 +23,22 @@ This is not a claim of live V2 compatibility or production acceptance.
 | `fd341fe` | `pnpm typecheck` | PASS |
 | `fd341fe` | Focused ESLint command below | PASS, no output |
 | `fd341fe` | `git diff --check`; fix-range diff check | PASS |
+| `9f3f1121b53060d63cef80b1bb5125079a0c4161` | Task 7 matrix plus strict config regression | 20 files / 221 tests PASS, 6.04s |
+| `9f3f112` | `pnpm typecheck` | PASS |
+| `9f3f112` | Focused ESLint over changed production surfaces | 0 errors / 1 existing `config.ts` warning |
+| `9f3f112` | `pnpm build` | Next.js 16.3.3 webpack build PASS; compile 7.5s |
+| `9f3f112` | `pnpm run verify:deploy` | Deployment configuration invariants PASS |
+| `9f3f112` | Focused final-build browser scenario | 1/1 PASS, 20.7s |
+| `9f3f112` | `git diff --check 9dc596b..9f3f112` | PASS |
 
 Each pre-fix Task 7 gate ran once. The full 19-file matrix, full lint,
 production build, deployment verification, and browser scenario were **not
 rerun after the R1/R2 fix**. The affected checks and focused independent
 re-review are the post-fix evidence; they are not relabeled as a second full
-gate. Final production build/rebinding remains part of the separate cutover.
+gate. The later final Codex acceptance reran only the coherent affected matrix
+and the required final-build boundary. It did not rerun the full repository
+suite. Production deployment and live-provider/Capture behavior remain
+separate gates.
 
 Environment: Node.js `v24.14.0`, pnpm `10.33.0`, Vitest `4.1.10`.
 Committed `package-lock.json` SHA-256:
@@ -94,12 +104,41 @@ subsequent full affected command passed 96/96 across 8 files; static checks
 returned exit 0. Valid HTTPS extraction and the unchanged critic path remain
 covered. See the [review record](extraction-v2-review.md) for exact outcomes.
 
+## Exact final-code acceptance commands
+
+```bash
+pnpm exec vitest run lib/planning/config.test.ts \
+  lib/caphub/analysis/extraction-v2.test.ts lib/caphub/analysis/schemas.test.ts \
+  lib/caphub/analysis/review-packet.test.ts lib/caphub/providers/minimax.test.ts \
+  lib/caphub/providers/prompts.test.ts lib/caphub/providers/deepseek.test.ts \
+  lib/caphub/providers/deepseek-responses.test.ts \
+  lib/caphub/providers/extraction-stage-v2.test.ts lib/caphub/workflow/audit.test.ts \
+  lib/caphub/workflow/filesystem.test.ts lib/caphub/workflow/runner.test.ts \
+  lib/caphub/service/analyze.test.ts lib/caphub/service/analyze.behavior.test.ts \
+  lib/caphub/service/analyze-runtime.test.ts \
+  lib/caphub/registry/postgres/caphub-stores.test.ts \
+  lib/caphub/registry/postgres/caphub-stores.behavior.test.ts \
+  lib/caphub/registry/queries.test.ts lib/caphub/registry/queries.postgres.test.ts \
+  components/caphub/reviews/review-center.test.tsx
+pnpm typecheck
+pnpm exec eslint lib/planning/config.ts lib/planning/config.test.ts \
+  lib/caphub/analysis/extraction-v2.ts lib/caphub/providers/minimax.ts \
+  lib/caphub/providers/deepseek.ts lib/caphub/providers/extraction-stage-v2.ts \
+  lib/caphub/service/analyze.ts lib/caphub/registry/queries.ts \
+  app/reviews/page.tsx components/caphub/reviews/review-center.tsx
+git diff --check 9dc596be1c6f43563367bdf273b09d3730af0549 \
+  9f3f1121b53060d63cef80b1bb5125079a0c4161
+pnpm build
+pnpm run verify:deploy
+pnpm run test:e2e:caphub-review-registry --grep "analysis stops"
+```
+
 ## Browser and screenshot provenance
 
-Browser source: `039a7266ccddec37f9be06f1c4908878c6c2d9e6`.
-Build ID: `O7hQbl7BBbWwJFzt-4nzR`.
+Current browser source: `9f3f1121b53060d63cef80b1bb5125079a0c4161`.
+Build ID: `3OxkPJBHUSOc0UiA8Vr4u`.
 `.next/BUILD_ID` SHA-256:
-`de5ca68e5bc0102844dc54d26529f676cf70537651f88edd1f2986c671f19403`.
+`c194799830fd095546e7d313e373aef0a6b0236c8aabe655d28c4ac2ab499a67`.
 
 The fixture ran `next start -p 3470 -H 127.0.0.1` with temporary storage,
 local-only PostgreSQL, analysis disabled, and HTTPS proxy `127.0.0.1:3471`.
@@ -110,14 +149,17 @@ overflow, and zero Axe WCAG 2/2.1 A/AA violations at 1440 and true 390 CSS pixel
 
 | Screenshot | Dimensions | SHA-256 |
 | --- | --- | --- |
-| [Desktop](extraction-v2-screenshots/analysis-stops-1440.png) | 1440 × 2050 | `bb99f382358ec0f1887a25a307aab653549e1f354f986e6c2515733fb800f07f` |
-| [Mobile](extraction-v2-screenshots/analysis-stops-390.png) | 390 × 4078 | `97b844ff60962c9d85641495e85b2928c05d2766a3e6b125ed33fe64a3e757c8` |
+| [Desktop](extraction-v2-screenshots/analysis-stops-1440.png) | 1440 × 2050 | `377b4a2cb0fe6c59c140b4e5586c38c559c604bc4ff601a46f71a2bc209c4ef0` |
+| [Mobile](extraction-v2-screenshots/analysis-stops-390.png) | 390 × 4078 | `1c271badd96d8bfd4bb2d5727603623ff9781e2d86689deba92c86a17588f691` |
 
 `scripts/shot.mjs` captured the same build's
 `http://127.0.0.1:3470/reviews` using CDP width 1440/390, scale 1, mobile 0/1.
-Both images were visually inspected and regenerated byte-identically to the
-committed Task 6 files. These are pre-fix build screenshots, not post-fix build
-evidence. R1/R2 changed provider/composition code and tests, not the UI files.
+Both current-build images were visually inspected. The browser scenario also
+verified no mutation or external request, Registry version stability, Capture
+keyboard navigation, responsive layout, and zero selected Axe violations.
+The first sandboxed attempt was blocked by local PostgreSQL shared-memory
+policy; the same command passed outside that sandbox with an owned disposable
+cluster and loopback-only servers.
 
 ## Evidence limits and operations
 

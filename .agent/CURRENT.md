@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-18 by Codex during Extraction V2 local evidence closeout
+Last Updated:   2026-09-18 by Codex during Extraction V2 final acceptance and rollout preparation
 
 ## Current decision
 
@@ -66,25 +66,25 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Extraction V2 local implementation and evidence closeout are complete on
+Extraction V2 local implementation and final-code acceptance are complete on
 `codex/caphub-release` through code commit
-`fd341fe3bea50967d8329c9e520b54eddeeffde6`. The two Important findings from the
+`9f3f1121b53060d63cef80b1bb5125079a0c4161`. The two Important findings from the
 final scoped review are addressed, and their focused independent re-review
 passed. See `.agent/caphub/extraction-v2-implementation-log.md`,
 `extraction-v2-verification.md`, and `extraction-v2-review.md`.
 
-The full Task 7 local gate and build/screenshots are bound to pre-fix `039a726`;
-post-fix evidence is 8 files / 96 tests, typecheck, focused ESLint, and scoped
-re-review at `fd341fe`. No post-fix full matrix, production build, or browser
-rerun is claimed. Any final deployment build must be bound to the final code.
+The final-code acceptance passed the affected Task 7 matrix plus configuration
+regression as 20 files / 221 tests, typecheck, focused ESLint, webpack build,
+deployment invariants, and the single final-build Analysis-stops E2E. Current
+1440px and true 390px screenshots were visually inspected and rebound.
 
-The next external action requires its own authorization: one synthetic live V2
-probe, then a separately approved Control Host rebuild/reload, then one
-separately approved real Capture V2 canary. Preserve `127.0.0.1:3456`, disabled
+The Human Owner instructed Codex to continue toward complete production launch.
+The rollout order is one bounded synthetic live V2 probe, Control Host
+rebuild/reload, then one authorized real Capture V2 canary. Preserve
+`127.0.0.1:3456`, disabled
 exports/targets, and immutable terminal V1 jobs; a Capture rerun must be a new
-V2 job with explicit lineage. No live V2 probe, production change, Capture
-action, or release operation occurred in this implementation. Linear and other
-external coordination were intentionally not performed in this execution.
+V2 job with explicit lineage. No live V2 probe, production change, or Capture
+action has yet occurred for this V2 rollout.
 
 ## Caphub Extraction V2 — local closeout (2026-09-18)
 

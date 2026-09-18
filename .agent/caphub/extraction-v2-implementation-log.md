@@ -8,7 +8,7 @@ Production and live-provider gates remain separate.
 Branch/worktree: `codex/caphub-release` /
 `/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-release`.
 
-Final code: `fd341fe3bea50967d8329c9e520b54eddeeffde6`.
+Final code: `9f3f1121b53060d63cef80b1bb5125079a0c4161`.
 This evidence batch changes documentation only; it does not change that code.
 
 ## Approved scope and commit chain
@@ -31,6 +31,8 @@ documents are:
 | `730e40602884b9d3c3b00bbcd25642945d186c29` | Versioned analysis/runtime integration and immutable lineage through Registry/import/review |
 | `039a7266ccddec37f9be06f1c4908878c6c2d9e6` | Read-only Analysis stops, bounded Registry projection, browser and screenshot evidence |
 | `fd341fe3bea50967d8329c9e520b54eddeeffde6` | R1/R2 fixes: HTTPS/V1 output validation and real SDK authentication/billing error normalization |
+| `2e9433b` | Durable local verification, review, and implementation closeout records |
+| `9f3f1121b53060d63cef80b1bb5125079a0c4161` | Accept the two bounded visual-observation limits in strict Control Host configuration |
 
 MiniMax sees normalized images and returns untrusted text held only in memory.
 DeepSeek receives that observation and deterministic preprocessing data, never
@@ -74,10 +76,13 @@ RED then GREEN; the affected suite passed 8 files / 96 tests, with typecheck,
 focused ESLint, and diff checks passing. Focused independent re-review passed
 with R1/R2 addressed and no new finding.
 
-The full 19-file matrix/build/browser gate was **not rerun after `fd341fe`**.
-Screenshots retain their exact pre-fix build binding; they are not represented
-as screenshots of a post-fix build. Final deployment build/rebinding is still
-required before a production cutover.
+During final Codex acceptance at `9f3f112`, the exact affected Task 7 matrix
+plus the configuration regression passed as 20 files / 221 tests. Typecheck,
+focused ESLint, production webpack build, deployment invariants, and the
+single final-build Analysis-stops browser scenario also passed. Fresh 1440px
+and true 390px screenshots were visually inspected and rebound to the final
+code. The acceptance found no code Blocker or Important issue; the stale
+source binding in these evidence records was the only required correction.
 
 ## Preserved boundaries and handoff
 
