@@ -356,9 +356,25 @@ and one independent Verification occur only after the implementation tasks.
   The stopped Control Host config now names both verified direct and transaction
   pooler hosts; it does not use a wildcard or IP allowlist.
 - The rerun confirmed managed TLS, PostgreSQL `18.6`, both expected login
-  identities, `caphub_migrator` database ownership, no role inheritance, and
-  no application migration or append-only update privilege. Its only expected
-  non-ready condition is the empty migration ledger: `001_registry`,
-  `002_read_models`, and `003_exports` remain pending.
+  identities, `caphub_migrator` database ownership, no direct application-to-
+  migrator membership, and no application migration or append-only update
+  privilege. Its only expected non-ready condition was the empty migration
+  ledger: `001_registry`, `002_read_models`, and `003_exports` remained pending.
 - No migration or Registry import was attempted after the required explicit
   Production database-write authorization was found to be absent.
+
+## N3 least-privilege stop — 2026-09-18
+
+- With explicit N3 authorization, migrations `001_registry`, `002_read_models`,
+  and `003_exports` applied with their bound checksums. The pre-import
+  readiness check then failed closed: `caphub_app` can migrate and update
+  append-only tables.
+- Direct privilege inspection found the cause: Neon automatically made both
+  `caphub_app` and `caphub_migrator` members of `neon_superuser` with role
+  inheritance enabled. This grants the application database `CREATE`,
+  migration-table write, and append-only update/delete authority despite the
+  migration's explicit table grants.
+- Registry import is intentionally not run. Resolving this requires an
+  administrator-controlled way to remove that privileged membership and set
+  non-inheriting least-privilege role attributes, or an explicitly approved
+  revision of the security contract.
