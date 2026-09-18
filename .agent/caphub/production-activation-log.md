@@ -670,3 +670,26 @@ and one independent Verification occur only after the implementation tasks.
   was retained.
 - Production reload and the single authorized V3 Capture canary are pending;
   exports and targets remain disabled.
+
+## Analysis Contract V3 canary and V4 correction (2026-09-18)
+
+- `com.agentjoey.alljobs` reloaded successfully from the V3 build, listened
+  only on `127.0.0.1:3456`, and returned HTTP 200 for `/caphub` and `/reviews`.
+- The single authorized V3 analysis for
+  `cap_379e2508ead34c349fcb303bcd39eff2` created
+  `job_4782630f05b514c1d795849da23cd508` with correct V2 lineage. Extraction
+  and the one MiniMax web search succeeded. DeepSeek research failed schema
+  validation on its initial and correction outputs, so the immutable job
+  stopped at research as `HUMAN_REVIEW_REQUIRED` / `SCHEMA_INVALID_TWICE`.
+  No ReviewPacket, import, or Review Request was created.
+- The local V4 corrective commit `866e6d4` limits providers to model-owned
+  drafts, composes authoritative fields on the host, supplies original input
+  to a single correction without retaining rejected output, and creates a new
+  V4 job that supersedes V3.
+- V4 verification passed 20 focused files / 135 tests, typecheck, focused
+  ESLint, deployment invariants, and webpack build. Build ID is
+  `fx9z2aq8zWKkWF5IIXKfM`, SHA-256
+  `37a66478c3ef171e34196158c28f96905d828876db40bb294a1cf92ef8e35689`.
+- V4 has not been loaded and no V4 provider request has occurred. Exports and
+  targets remain disabled; a new explicit reload/canary authorization is the
+  next production gate.

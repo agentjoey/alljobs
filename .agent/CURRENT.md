@@ -66,28 +66,28 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Caphub Analysis Contract V3 autonomous web research is implemented on
-`codex/caphub-release` through code commit
-`3d91d26d4123a0ef209d6f37fb0059a7e0f5c284`. A Capture with no explicit source
-URL can now use one audited MiniMax-M3 server-side `web_search`, normalize its
-HTTPS citations as inline evidence, and continue through DeepSeek research and
-assessment. Active V3 jobs preserve immutable V1/V2 history and supersede the
-latest prior contract job.
+Caphub V3 autonomous web research was deployed and its single authorized
+canary ran for `cap_379e2508ead34c349fcb303bcd39eff2`. Extraction and the
+single MiniMax web search succeeded, but DeepSeek research returned
+schema-invalid drafts twice. Immutable job
+`job_4782630f05b514c1d795849da23cd508` stopped closed at research as
+`HUMAN_REVIEW_REQUIRED`; no ReviewPacket or Review Request was created.
 
-Pre-production verification passed 16 focused files / 120 tests, typecheck,
-focused ESLint, deployment invariants, and a webpack production build. Three
-authorized live MiniMax requests were made during compatibility diagnosis: the
-first exposed the real multi-message response shape, the second recorded only
-structural metadata, and the final post-fix probe succeeded with eight bounded
-HTTPS citations. No automatic retry occurred and no raw source/provider body,
-query, prompt, or credential was retained.
+The minimal corrective Analysis Contract V4 is implemented locally through
+commit `866e6d4`. Providers now generate model-owned drafts and the host composes
+authoritative IDs, evidence, lineage, and timestamps. A correction can
+regenerate from the original stage input without retaining the rejected output.
+V4 creates a new deterministic job and supersedes V3.
 
-The next action is the already authorized local-production reload followed by
-exactly one V3 canary for existing Capture
-`cap_379e2508ead34c349fcb303bcd39eff2`. Keep the listener on
-`127.0.0.1:3456`, keep exports/targets disabled, and record only metadata-level
-Registry, audit, lineage, and Review Center evidence. Do not push, merge, tag,
-or publish a release.
+V4 verification passed 20 focused files / 135 tests, typecheck, focused ESLint,
+deployment invariants, and webpack build. Build ID is
+`fx9z2aq8zWKkWF5IIXKfM`, SHA-256
+`37a66478c3ef171e34196158c28f96905d828876db40bb294a1cf92ef8e35689`.
+
+The next action requires a new explicit authorization: reload
+`com.agentjoey.alljobs` from the V4 build and execute exactly one V4 canary for
+the same Capture. Preserve `127.0.0.1:3456`, disabled exports/targets, and all
+V1–V3 history. Do not push, merge, tag, or publish a release.
 
 ## Caphub Extraction V2 — local closeout (2026-09-18)
 

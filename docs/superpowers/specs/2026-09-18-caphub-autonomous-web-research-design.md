@@ -1,7 +1,7 @@
 # Caphub Autonomous Web Research Design
 
 **Date:** 2026-09-18  
-**Status:** Approved direction; written design pending Human Owner review  
+**Status:** Approved; V3 canary completed and V4 corrective contract implemented locally
 **Scope:** Replace Caphub's source-URL-dependent research entry with one bounded MiniMax-M3 server-side web search, while keeping DeepSeek responsible for structured research and assessment.
 
 ## Decision
@@ -87,6 +87,30 @@ Set the active contract to `caphub-analysis-v3`. The V3 job identifier hashes th
 
 This version change is required because adding autonomous search changes the inputs, provider-call graph, evidence provenance, and observable outcome of the research stage. It also permits the existing real Capture to be re-analyzed without creating a duplicate Capture record.
 
+## V3 canary finding and Analysis Contract V4
+
+The authorized V3 production canary proved image extraction and autonomous
+search, but DeepSeek research stopped after two schema-invalid model-owned
+outputs. The integration required the model to reproduce host-owned fields
+such as Capture/artifact IDs, normalized evidence, and timestamps, then
+overwrote those fields on the host. Its correction request included only an
+input digest and validation paths, so it could not regenerate values linked to
+the real evidence and claim IDs.
+
+V4 is the minimal corrective contract:
+
+- research, assessment, and critic providers return only model-owned draft
+  fields;
+- the host injects and validates immutable identity, lineage, normalized
+  evidence, artifact references, ranks, and timestamps;
+- a schema correction receives the original stage input and validation paths,
+  but never receives or persists the rejected provider output;
+- a V4 job has a new deterministic identity and supersedes V3, preserving the
+  terminal V3 record and all prior artifacts.
+
+Search behavior, provider assignments, source handling, budgets, export state,
+and the Review Center import path are otherwise unchanged.
+
 ## Configuration and deployment
 
 - Reuse the existing private `MINIMAX_API_KEY`; add no credential.
@@ -101,10 +125,10 @@ Development follows RED-GREEN TDD and real-boundary BDD:
 
 1. Adapter tests prove the exact `web_search` request, citation parsing, HTTPS filtering, limits, no retry, abort behavior, and redacted errors.
 2. Research tests prove a no-URL extraction can reach DeepSeek using inline search evidence, while empty/malformed evidence stops before DeepSeek.
-3. Service behavior tests prove V3 lineage, one search call, audit events, shared budgets, downstream ReviewPacket creation, and immutable V2 preservation.
+3. Service behavior tests prove V4-over-V3 lineage, one search call, audit events, shared budgets, host composition of model drafts, downstream ReviewPacket creation, and immutable V1–V3 preservation.
 4. Focused tests, typecheck, focused lint, production build, and deployment verification pass.
 5. A no-Capture synthetic live search probe confirms the configured MiniMax credential and response shape.
-6. After production reload, the existing Capture `cap_379e2508ead34c349fcb303bcd39eff2` receives one V3 canary run. Acceptance requires a research artifact with cited evidence, downstream assessment and ReviewPacket artifacts, a Review Center item, and complete provider audit events.
+6. The completed V3 canary remains immutable evidence of the research-schema failure. After a separately authorized production reload, the same Capture may receive one V4 canary. Acceptance requires a research artifact with cited evidence, downstream assessment and ReviewPacket artifacts, a Review Center item, and complete provider audit events.
 
 No push, merge, tag, release, or traffic change is part of this design unless separately authorized.
 

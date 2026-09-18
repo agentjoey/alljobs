@@ -543,3 +543,27 @@
   git log --oneline --decorate -8
   ```
   Expected: clean `codex/caphub-release`; no push, merge, tag, release, or main-checkout mutation.
+
+---
+
+### Task 6: V3 Canary Correction and V4 Closeout
+
+**Finding:** The single V3 production canary completed extraction and MiniMax
+web search, then stopped at DeepSeek research with
+`SCHEMA_INVALID_TWICE`. No ReviewPacket or Review Request was created.
+
+- [x] Characterize the terminal V3 job using metadata-only Registry evidence;
+  do not retry it.
+- [x] Add model-owned research, assessment, and critic draft schemas; host-owned
+  identifiers, evidence, lineage, and timestamps remain host-composed.
+- [x] Let one schema-correction call regenerate from the original stage input
+  and issue paths without retaining the rejected response.
+- [x] Bump the active deterministic job contract to V4 and prefer V3 as its
+  immutable predecessor.
+- [x] Verify with 20 focused files / 135 tests, typecheck, focused ESLint,
+  deployment invariants, and a webpack production build.
+- [ ] Reload `com.agentjoey.alljobs` from the V4 final build under explicit
+  authorization.
+- [ ] Run exactly one separately authorized V4 canary for
+  `cap_379e2508ead34c349fcb303bcd39eff2` and verify the Review Center item.
+- [ ] Record the final V4 runtime evidence and branch boundary.
