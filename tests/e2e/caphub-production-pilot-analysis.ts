@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import { createProductionAnalysisWorkflow } from "../../lib/caphub/service/production-workflow";
 import { createAnalysisService } from "../../lib/caphub/service/analyze";
@@ -16,9 +17,9 @@ import { readCaphubReviewFixture } from "./caphub-review-registry-fixtures";
 
 const NOW = "2026-09-17T12:00:00.000Z";
 
-class PilotMiniMax implements StructuredProvider {
+export class PilotMiniMax implements StructuredProvider {
   readonly provider = "minimax" as const;
-  readonly model = "MiniMax-M3";
+  readonly model = "MiniMax-M3" as const;
   calls = 0;
 
   async observe() {
@@ -49,9 +50,9 @@ class PilotMiniMax implements StructuredProvider {
   }
 }
 
-class PilotDeepSeek implements StructuredProvider {
+export class PilotDeepSeek implements StructuredProvider {
   readonly provider = "deepseek" as const;
-  readonly model = "deepseek-flash";
+  readonly model = "deepseek-flash" as const;
   calls = 0;
 
   async structureExtraction() {
@@ -80,14 +81,9 @@ class PilotDeepSeek implements StructuredProvider {
     if (input.stage === "research") {
       const extraction = source.extraction as { capture_id: string; claims: Array<{ id: string }> };
       const evidence = source.evidence as Array<{ id: string; content?: string }>;
-      const evidenceRecords = evidence.map(({ content: _content, ...record }) => record);
       return {
         value: {
-          schema_version: 1,
-          capture_id: extraction.capture_id,
-          extraction_artifact_id: source.extraction_artifact_id,
           identity: { status: "confirmed", entity_id: "ent_pilot-capability", evidence_ids: [evidence[0]!.id] },
-          evidence: evidenceRecords,
           claim_checks: extraction.claims.map((claim) => ({
             claim_id: claim.id,
             status: "corroborated",
@@ -103,8 +99,7 @@ class PilotDeepSeek implements StructuredProvider {
           data_destinations: [],
           permissions: [],
           license: "MIT",
-          security_findings: [],
-          researched_at: NOW
+          security_findings: []
         },
         usage: { inputTokens: 10, outputTokens: 10 }
       };
@@ -115,9 +110,6 @@ class PilotDeepSeek implements StructuredProvider {
     const dimension = { score: 3, reason: "Fixture evidence supports bounded adoption.", evidence_ids: [evidenceId] };
     return {
       value: {
-        schema_version: 1,
-        capture_id: dossier.capture_id,
-        dossier_artifact_id: source.dossier_artifact_id,
         candidate: {
           name: "Pilot Capability",
           novel_capabilities: ["Third-party capability metadata"],
@@ -144,15 +136,14 @@ class PilotDeepSeek implements StructuredProvider {
         disposition: "adopt",
         disposition_reason: "Use the reviewed third-party capability metadata without installation.",
         resident_capability: false,
-        unresolved_questions: [],
-        assessed_at: NOW
+        unresolved_questions: []
       },
       usage: { inputTokens: 10, outputTokens: 10 }
     };
   }
 }
 
-function pilotSourceGateway(search: ResearchSearchPort): ResearchSourceGateway {
+export function pilotSourceGateway(search: ResearchSearchPort): ResearchSourceGateway {
   return {
     search,
     async fetch(url) {
@@ -241,7 +232,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main().catch((error) => {
   process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : "pilot analysis failed"}\n`);
   process.exitCode = 1;
 });

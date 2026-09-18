@@ -1,0 +1,168 @@
+{
+  "environment": "owned local PostgreSQL; fake HTTP providers; not production Neon latency",
+  "coldConnection": {
+    "firstByteMs": 42,
+    "usefulMs": 46,
+    "completeMs": 47,
+    "state": "queue",
+    "registryMs": 9
+  },
+  "queue": [
+    {
+      "firstByteMs": 9,
+      "usefulMs": 11,
+      "completeMs": 11,
+      "state": "queue",
+      "registryMs": 4
+    },
+    {
+      "firstByteMs": 3,
+      "usefulMs": 4,
+      "completeMs": 4,
+      "state": "queue",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 3,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 2,
+      "completeMs": 2,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 2,
+      "completeMs": 2,
+      "state": "queue",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 2,
+      "completeMs": 3,
+      "state": "queue",
+      "registryMs": 1
+    }
+  ],
+  "detail": [
+    {
+      "firstByteMs": 5,
+      "usefulMs": 8,
+      "completeMs": 9,
+      "state": "detail",
+      "registryMs": 4
+    },
+    {
+      "firstByteMs": 3,
+      "usefulMs": 5,
+      "completeMs": 5,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 3,
+      "usefulMs": 4,
+      "completeMs": 4,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 4,
+      "completeMs": 4,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 4,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 4,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "detail",
+      "registryMs": 2
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "detail",
+      "registryMs": 1
+    },
+    {
+      "firstByteMs": 2,
+      "usefulMs": 3,
+      "completeMs": 3,
+      "state": "detail",
+      "registryMs": 1
+    }
+  ]
+}
