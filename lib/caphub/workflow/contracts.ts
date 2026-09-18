@@ -60,7 +60,7 @@ export type StructuredStageResult<T> =
   | { kind: "success"; value: T }
   | { kind: "human_review"; reason: StructuredStageHumanReviewReason };
 
-export type ModelCallOperation = "visual_observation" | "schema_structuring" | "structured_generation";
+export type ModelCallOperation = "visual_observation" | "schema_structuring" | "structured_generation" | "web_search";
 
 export interface ModelCallIdentityInput {
   jobId: string;

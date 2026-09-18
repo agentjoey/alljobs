@@ -446,7 +446,7 @@ const modelCallAuditBaseShape = {
   stage: z.enum(["extraction", "research", "assessment", "critic"]),
   provider: z.enum(["minimax", "kimi", "deepseek"]),
   model: nonEmptyTextSchema,
-  operation: z.enum(["visual_observation", "schema_structuring", "structured_generation"]).optional(),
+  operation: z.enum(["visual_observation", "schema_structuring", "structured_generation", "web_search"]).optional(),
   contract_version: z.string().trim().min(1).max(128).optional(),
   auth_mode: z.enum(["api_key", "local_login"]).optional(),
   attempt: z.union([z.literal(1), z.literal(2)]),
