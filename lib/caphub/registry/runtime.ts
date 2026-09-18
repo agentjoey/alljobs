@@ -180,7 +180,9 @@ function registryPoolOptions(
   return {
     ...connection,
     max: registry.maxConnections,
-    statement_timeout: registry.statementTimeoutMs,
+    statement_timeout: Math.min(registry.statementTimeoutMs, 3500),
+    connectionTimeoutMillis: 1000,
+    query_timeout: 4000,
     application_name: "alljobs-caphub-registry",
     idleTimeoutMillis: 30_000
   };

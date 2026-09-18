@@ -546,6 +546,8 @@ export function createRegistryQueries(pool: Pool) {
           LEFT JOIN caphub.registry_versions packet
             ON packet.record_id=packet_record.record_id AND packet.version=packet_record.current_version
           WHERE source.record_id=$1 AND source.version=1
+          ORDER BY job_record.created_at DESC NULLS LAST,job_record.record_id DESC,
+            packet_record.created_at DESC NULLS LAST,packet_record.record_id DESC
           LIMIT 1
         `, [captureId]);
         const job = asObject(related.rows[0]?.job_payload);

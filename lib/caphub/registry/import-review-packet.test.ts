@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import type { CaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import { startCaphubTestPostgres } from "../../../tests/helpers/caphub-postgres";
 import type { AnalysisJob, ReviewPacket, StageArtifact } from "../analysis/types";
@@ -13,6 +14,8 @@ import { applyRegistryMigrations } from "./migrate";
 import { createReviewPacketImporter } from "./import-review-packet";
 import { PostgresAnalysisJobStore, PostgresCaptureStore } from "./postgres/caphub-stores";
 import { applyAutomationBackfill } from "../automation/backfill";
+import { getCaphubWorkItems } from "./work-items";
+import { getCaphubCaptureStatus, getCaphubReviewDetail } from "./review-workbench";
 
 const NOW = "2026-09-16T10:00:00.000Z";
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
@@ -248,6 +251,14 @@ describe.sequential("ReviewPacket Registry import", () => {
       expect(row.imported_at.toISOString()).toBe(NOW);
       expect(row.eligible_at.toISOString()).toBe("2026-10-16T10:00:00.000Z");
     }
+    const work = await getCaphubWorkItems(postgres.appPool,{});
+    expect(work.items).toHaveLength(1);
+    expect(work.items[0]).toMatchObject({ state: "waiting_for_review",captureId: CAPTURE_ID,historyCount: 1 });
+    const status = await getCaphubCaptureStatus(postgres.appPool,alias.id);
+    expect(status).toMatchObject({ canonicalCaptureId: CAPTURE_ID,state: "waiting_for_review" });
+    const detail = await getCaphubReviewDetail(postgres.appPool,work.items[0].reviewRequestId!);
+    expect(detail).toMatchObject({ kind: "found", filename: "fixture.png", captureId: CAPTURE_ID });
+    expect(JSON.stringify(detail)).not.toContain("sha256/aa/");
   });
 
   it("rejects a missing referenced artifact without partial Registry writes", async () => {
