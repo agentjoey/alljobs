@@ -40,6 +40,7 @@ function safeSnapshot(): ProductionPreflightSnapshot {
       pendingMigrations: ["002_read_models", "003_exports"],
       appCanMigrate: false,
       appCanUpdateAppendOnly: false,
+      databasePrivilegeBoundary: "database_role_least_privilege",
       ready: false
     },
     captureImport: { sourceDigest: DIGEST, captureCount: 3, matchesRegistry: false },
@@ -127,7 +128,8 @@ describe("Caphub Production preflight", () => {
       ...managed.postgres,
       postgresVersion: "18.0",
       connectionMode: "tls_verify_full",
-      tcpListenAddresses: "managed_tls"
+      tcpListenAddresses: "managed_tls",
+      databasePrivilegeBoundary: "neon_project_admin_accepted"
     };
     expect(createProductionPreflightReport(managed).postgres).toMatchObject({
       postgresVersion: "18.0",
@@ -138,6 +140,10 @@ describe("Caphub Production preflight", () => {
     expect(() => createProductionPreflightReport({
       ...managed,
       postgres: { ...managed.postgres, connectionMode: "local_socket", tcpListenAddresses: "" }
+    })).toThrow("PREFLIGHT_UNSAFE_REPORT");
+    expect(() => createProductionPreflightReport({
+      ...managed,
+      postgres: { ...managed.postgres, databasePrivilegeBoundary: "database_role_least_privilege" }
     })).toThrow("PREFLIGHT_UNSAFE_REPORT");
   });
 

@@ -76,6 +76,12 @@ function assertPostgres(report: RegistryReadinessReport): RegistryReadinessRepor
   assertBoolean(report.appCanMigrate);
   assertBoolean(report.appCanUpdateAppendOnly);
   assertBoolean(report.ready);
+  const expectedPrivilegeBoundary = report.postgresVersion === "unavailable"
+    ? "unavailable"
+    : report.connectionMode === "tls_verify_full"
+      ? "neon_project_admin_accepted"
+      : "database_role_least_privilege";
+  if (report.databasePrivilegeBoundary !== expectedPrivilegeBoundary) unsafe();
   for (const migration of report.appliedMigrations) {
     if (!MIGRATION_ID_PATTERN.test(migration.id) || !SHA256_PATTERN.test(migration.checksum)) unsafe();
   }
@@ -91,6 +97,7 @@ function assertPostgres(report: RegistryReadinessReport): RegistryReadinessRepor
     pendingMigrations: [...report.pendingMigrations],
     appCanMigrate: report.appCanMigrate,
     appCanUpdateAppendOnly: report.appCanUpdateAppendOnly,
+    databasePrivilegeBoundary: report.databasePrivilegeBoundary,
     ready: report.ready
   };
 }
@@ -167,6 +174,7 @@ function unavailableRegistry(connectionMode: "local_socket" | "tls_verify_full")
     pendingMigrations: ["001_registry", "002_read_models", "003_exports"],
     appCanMigrate: false,
     appCanUpdateAppendOnly: false,
+    databasePrivilegeBoundary: "unavailable",
     ready: false
   };
 }

@@ -15,6 +15,17 @@ import {
 } from "./operations";
 
 const tempRoots: string[] = [];
+const APPEND_ONLY_TABLES = [
+  "schema_migrations",
+  "registry_versions",
+  "lineage_nodes",
+  "registry_lineage",
+  "capture_idempotency",
+  "registry_imports",
+  "review_decisions",
+  "decision_consumers",
+  "audit_events"
+] as const;
 
 function privateHome(): string {
   const root = realpathSync(mkdtempSync(join(realpathSync(tmpdir()), "caphub-operations-")));
@@ -185,6 +196,58 @@ describe.sequential("Registry migration and readiness operations", () => {
       pendingMigrations: [],
       appCanMigrate: false,
       appCanUpdateAppendOnly: false,
+      databasePrivilegeBoundary: "database_role_least_privilege",
+      ready: true
+    });
+  });
+
+  it("rejects inherited administration in local socket mode", async () => {
+    await postgres.pool.query("CREATE ROLE neon_superuser NOLOGIN");
+    await postgres.pool.query("ALTER ROLE caphub_app INHERIT");
+    await postgres.pool.query("GRANT neon_superuser TO caphub_app");
+    await migrationPool.query("GRANT CREATE ON SCHEMA caphub TO neon_superuser");
+    await migrationPool.query("GRANT INSERT, UPDATE, DELETE ON caphub.schema_migrations TO neon_superuser");
+    await migrationPool.query(
+      `GRANT UPDATE, DELETE ON ${APPEND_ONLY_TABLES.map((table) => `caphub.${table}`).join(", ")} TO neon_superuser`
+    );
+    await appPool.end();
+    appPool = new Pool({
+      host: postgres.socketDir,
+      port: postgres.port,
+      database: "caphub",
+      user: "caphub_app",
+      ssl: false,
+      max: 1
+    });
+    const report = await checkRegistryReadiness({
+      appPool,
+      migrationPool,
+      connectionMode: "local_socket",
+      expectedSocketDir: postgres.socketDir
+    });
+
+    expect(report).toMatchObject({
+      databasePrivilegeBoundary: "database_role_least_privilege",
+      appCanMigrate: true,
+      appCanUpdateAppendOnly: true,
+      ready: false
+    });
+  });
+
+  it("reports the accepted Neon project-admin boundary for managed TLS", async () => {
+    const report = await checkRegistryReadiness({
+      appPool,
+      migrationPool,
+      connectionMode: "tls_verify_full",
+      expectedSocketDir: postgres.socketDir
+    });
+
+    expect(report).toMatchObject({
+      connectionMode: "tls_verify_full",
+      tcpListenAddresses: "managed_tls",
+      databasePrivilegeBoundary: "neon_project_admin_accepted",
+      appCanMigrate: true,
+      appCanUpdateAppendOnly: true,
       ready: true
     });
   });

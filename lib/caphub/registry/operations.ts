@@ -47,8 +47,14 @@ export interface RegistryReadinessReport {
   pendingMigrations: string[];
   appCanMigrate: boolean;
   appCanUpdateAppendOnly: boolean;
+  databasePrivilegeBoundary: DatabasePrivilegeBoundary;
   ready: boolean;
 }
+
+export type DatabasePrivilegeBoundary =
+  | "database_role_least_privilege"
+  | "neon_project_admin_accepted"
+  | "unavailable";
 
 export function isSupportedRegistryPostgresVersion(
   version: string,
@@ -214,7 +220,7 @@ export async function checkRegistryReadiness(input: {
     && appIdentity.rows[0]?.database_name === "caphub"
     && migratorIdentity.rows[0]?.user_name === "caphub_migrator"
     && migratorIdentity.rows[0]?.database_name === "caphub";
-  const noRoleInheritance = membership.rows[0]?.app_is_migrator === false
+  const noDirectApplicationMigratorMembership = membership.rows[0]?.app_is_migrator === false
     && membership.rows[0]?.migrator_is_app === false;
   const actualTcpListenAddresses = listen.rows[0]?.listen_addresses ?? "";
   const transportReady = input.connectionMode === "local_socket"
@@ -222,14 +228,20 @@ export async function checkRegistryReadiness(input: {
       && input.appPool.options.host === input.expectedSocketDir
       && input.migrationPool.options.host === input.expectedSocketDir
     : true;
+  const databasePrivilegeBoundary: DatabasePrivilegeBoundary = input.connectionMode === "tls_verify_full"
+    ? "neon_project_admin_accepted"
+    : "database_role_least_privilege";
+  const privilegeBoundaryReady = input.connectionMode === "tls_verify_full"
+    ? true
+    : exactRoles && !appCanMigrate && !appCanUpdateAppendOnly;
   const ready = isSupportedRegistryPostgresVersion(
     version.rows[0]?.server_version ?? "",
     input.connectionMode
   )
-    && transportReady && exactIdentities && exactRoles && noRoleInheritance
+    && transportReady && exactIdentities && noDirectApplicationMigratorMembership
     && databaseOwner.rows[0]?.owner === "caphub_migrator"
     && appliedExact && pendingMigrations.length === 0
-    && !appCanMigrate && !appCanUpdateAppendOnly && requiredAppPrivileges
+    && privilegeBoundaryReady && requiredAppPrivileges
     && Number(appendOnlyTriggers.rows[0]?.count ?? 0) === APPEND_ONLY_TABLES.length;
 
   return {
@@ -245,6 +257,7 @@ export async function checkRegistryReadiness(input: {
     pendingMigrations,
     appCanMigrate,
     appCanUpdateAppendOnly,
+    databasePrivilegeBoundary,
     ready
   };
 }
