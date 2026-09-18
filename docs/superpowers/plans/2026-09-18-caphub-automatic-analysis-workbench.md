@@ -12,6 +12,14 @@
 
 ## Global constraints
 
+### Execution status — 2026-09-18
+
+- [x] Tasks 0–9: isolated implementation, real temporary PostgreSQL/final-build browser acceptance, disabled operational assets.
+- [x] Task 10 local integration: one full test run with an obsolete UI assertion corrected by focused rerun; subsequent affected regressions, typecheck, lint, build, screenshots and scoped independent review complete. Detailed results: `.agent/caphub/automatic-analysis-verification.md`.
+- [ ] Task 11: exact production release authorization, migration/backfill, deployment/worker activation, real-provider canary and production latency verification. Retention remains disabled pending exact dry-run targets.
+
+The original granular checklists below describe the execution recipe; this dated summary and evidence record are the current completion ledger. Candidate `104c24d`; no claim of production completion. Local timing is not a substitute for Neon production timing.
+
 - Preserve Human-owned main changes. The existing `.worktrees/caphub-release` is a live production working directory: do not implement, install dependencies, or build there.
 - Create `.worktrees/caphub-automatic-analysis` from the committed plan; use branch `codex/caphub-automatic-analysis-impl` and real dependencies.
 - Approved spec supersedes the older operator-only analysis and permanent original-image retention rules for this scope. Existing Human decision controls remain supported.

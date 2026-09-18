@@ -364,4 +364,8 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 ## 路线图完成定义
 
+### 2026-09-18 Automatic analysis follow-up
+
+自动分析工作台本地实现及定点验收完成（`codex/caphub-automatic-analysis-impl` / `104c24d`），包含 Caphub 内审查、持久队列、同名冲突人工确认、精简快速读取、成功导入后 30 天原图清理。最终 build 浏览器链路使用临时 PostgreSQL 与假 provider 验证通过，独立风险审查通过。生产开关仍关闭；Task 11 的迁移、worker 激活、上线与真实 canary 待授权，不能视为已上线。证据及交接见 `.agent/caphub/automatic-analysis-handoff.md`。Linear AGE-252 已追加事实进展，原 P3 Done 状态不代表本次 follow-up 已发布；P5/P6 状态不变。
+
 Caphub MVP 只有在 P0–P5 均通过各自 Human release gate，且设计文档第 22 节验收条件全部具备运行证据时才可宣称完成。P6 是持续运营能力；其首个受控 release 通过后进入持续迭代，但任何 UpdateProposal 仍保留人工审批。阶段文档、代码、测试、build、截图、review 和 production smoke 必须绑定同一 exact commit/build。
