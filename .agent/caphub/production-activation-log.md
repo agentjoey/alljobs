@@ -610,3 +610,16 @@ and one independent Verification occur only after the implementation tasks.
   operation, push, merge, tag, or release occurred during this diagnosis. A
   separately authorized synthetic no-Capture MiniMax diagnostic is the next
   safe way to establish current provider-path behavior.
+
+## MiniMax no-Capture compatibility diagnostic — passed (2026-09-18)
+
+- Under explicit authorization, one synthetic text-only request ran through
+  the active Caphub MiniMax standard provider path with model `MiniMax-M3`, no
+  tools, no retry, a 30-second deadline, and strict JSON parsing. It completed
+  with a schema-valid result using 187 input tokens and 6 output tokens.
+- No Capture was read or created; the terminal prior job was not retried. No
+  prompt, raw provider output, credential, or reasoning content was retained,
+  and no service/configuration change, Registry write, export/target action,
+  push, merge, tag, or release occurred.
+- The evidence confirms current text provider/transport compatibility, not the
+  missing terminal audit's root cause or the image-specific extraction path.

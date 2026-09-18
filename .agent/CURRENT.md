@@ -230,3 +230,17 @@ successful 1024-token contract diagnosis below.
 - The terminal job was not retried and no provider request or Capture action
   was performed during diagnosis. A separately authorized no-Capture MiniMax
   synthetic diagnostic is required before considering a new Capture analysis.
+
+## MiniMax no-Capture compatibility diagnostic — passed (2026-09-18)
+
+- With explicit authorization, one synthetic text-only request used the active
+  Caphub MiniMax standard provider path: `MiniMax-M3`, no tools, no retry, a
+  30-second deadline, and a strict JSON response contract. It completed with
+  a schema-valid result using 187 input tokens and 6 output tokens.
+- No Capture was read or created, no job was retried, and no prompt, provider
+  response, credential, or reasoning content was retained. No service or
+  configuration change, Registry write, export/target action, push, merge,
+  tag, or release occurred.
+- This establishes current text provider/transport compatibility only. It does
+  not reconstruct the missing terminal audit for the prior image-extraction
+  job and does not by itself validate an image-specific extraction request.
