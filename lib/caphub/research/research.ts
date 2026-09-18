@@ -92,6 +92,36 @@ function normalizeIdentity(
   return fallbackIdentity(extraction, evidence);
 }
 
+function normalizeClaimChecks(
+  proposed: unknown,
+  extraction: ExtractionResult,
+  evidence: EvidenceRecord[]
+) {
+  const evidenceIds = new Set(evidence.map((item) => item.id));
+  const fallbackEvidenceIds = evidence[0] ? [evidence[0].id] : [];
+  const checks = Array.isArray(proposed) ? proposed : [];
+  return extraction.claims.map((claim) => {
+    const matches = checks.filter((candidate) => candidate
+      && typeof candidate === "object"
+      && !Array.isArray(candidate)
+      && (candidate as Record<string, unknown>).claim_id === claim.id);
+    if (matches.length !== 1) {
+      return { claim_id: claim.id, status: "unverified" as const, evidence_ids: fallbackEvidenceIds };
+    }
+    const candidate = matches[0] as Record<string, unknown>;
+    const cited = Array.isArray(candidate.evidence_ids)
+      ? [...new Set(candidate.evidence_ids.filter((id): id is string => typeof id === "string" && evidenceIds.has(id)))]
+      : [];
+    const status = candidate.status;
+    if ((status !== "corroborated" && status !== "contradicted" && status !== "unverified")
+      || (status !== "unverified" && cited.length === 0)) {
+      return { claim_id: claim.id, status: "unverified" as const, evidence_ids: fallbackEvidenceIds };
+    }
+    return { claim_id: claim.id, status: status as "corroborated" | "contradicted" | "unverified",
+      evidence_ids: cited.length > 0 ? cited : fallbackEvidenceIds };
+  });
+}
+
 function searchRequestFor(extraction: ExtractionResult): ResearchSearchRequest {
   const entities = [...new Set(extraction.entities.flatMap((entity) => [entity.name, ...entity.aliases]))].slice(0, 12);
   const entityDomains = [...new Set(extraction.entities.flatMap((entity) => entity.domain
@@ -183,6 +213,7 @@ export async function buildResearchDossier(options: {
       extraction_artifact_id: options.extractionArtifactId,
       identity: normalizeIdentity(proposed.identity, options.extraction, records),
       evidence: records,
+      claim_checks: normalizeClaimChecks(proposed.claim_checks, options.extraction, records),
       researched_at: options.clock()
     });
     const expectedClaimIds = new Set(options.extraction.claims.map((claim) => claim.id));

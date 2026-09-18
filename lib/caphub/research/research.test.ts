@@ -3,7 +3,7 @@ import type { ExtractionResult } from "../analysis/types";
 import type { ResearchInvocationOptions } from "./research";
 import type { StructuredProviderOutput } from "../providers/contracts";
 import type { ResearchSourceGateway, SourceCandidate } from "./source-gateway";
-import { buildResearchDossier, ResearchDossierError } from "./research";
+import { buildResearchDossier } from "./research";
 
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
 const EXTRACTION_ARTIFACT_ID = `art_${"2".repeat(64)}`;
@@ -201,7 +201,7 @@ describe("buildResearchDossier", () => {
     }
   });
 
-  it("rejects claim checks that are not closed over the extracted claim set", async () => {
+  it("conservatively closes incomplete claim checks over the extracted claim set", async () => {
     const worker = {
       async research(input: unknown): Promise<StructuredProviderOutput> {
         const evidenceId = (input as { evidence: Array<{ id: string }> }).evidence[0].id;
@@ -229,6 +229,12 @@ describe("buildResearchDossier", () => {
       worker,
       clock: () => "2026-09-16T09:00:00.000Z",
       signal: new AbortController().signal
-    })).rejects.toMatchObject({ code: "RESEARCH_INVALID_OUTPUT" } satisfies Partial<ResearchDossierError>);
+    })).resolves.toMatchObject({
+      claim_checks: [{
+        claim_id: extraction.claims[0].id,
+        status: "unverified",
+        evidence_ids: [expect.stringMatching(/^ev_[a-f0-9]{32}$/)]
+      }]
+    });
   });
 });
