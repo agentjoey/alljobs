@@ -366,6 +366,8 @@ describe("control host Caphub analysis config", () => {
       limits: {
         ...CAPHUB_ANALYSIS_LIMITS,
         maxImages: 4,
+        maxVisualObservationOutputTokens: 900,
+        maxVisualObservationBytes: 32_768,
         providerTimeoutMs: { minimax: 30_000, kimi: 60_000, deepseek: 60_000 },
         maxInputBytes: {
           extraction: 1_048_576,
@@ -382,9 +384,15 @@ describe("control host Caphub analysis config", () => {
       }
     });
     expect(reduced.limits.maxImages).toBe(4);
+    expect(reduced.limits.maxVisualObservationOutputTokens).toBe(900);
+    expect(reduced.limits.maxVisualObservationBytes).toBe(32_768);
 
     for (const limits of [
       { ...CAPHUB_ANALYSIS_LIMITS, maxImages: CAPHUB_ANALYSIS_LIMITS.maxImages + 1 },
+      { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationOutputTokens: 1_801 },
+      { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationBytes: 65_537 },
+      { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationOutputTokens: 0 },
+      { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationBytes: 1.5 },
       { ...CAPHUB_ANALYSIS_LIMITS, maxTotalTokensPerJob: CAPHUB_ANALYSIS_LIMITS.maxTotalTokensPerJob + 1 },
       {
         ...CAPHUB_ANALYSIS_LIMITS,
@@ -410,6 +418,18 @@ describe("control host Caphub analysis config", () => {
     ]) {
       expect(() => controlHostCaphubAnalysisConfigSchema.parse({ limits })).toThrow();
     }
+  });
+
+  it("defaults new observation ceilings in older explicit analysis limits", () => {
+    const {
+      maxVisualObservationOutputTokens: _tokens,
+      maxVisualObservationBytes: _bytes,
+      ...legacyLimits
+    } = CAPHUB_ANALYSIS_LIMITS;
+    expect(controlHostCaphubAnalysisConfigSchema.parse({ limits: legacyLimits }).limits).toMatchObject({
+      maxVisualObservationOutputTokens: 1_800,
+      maxVisualObservationBytes: 65_536
+    });
   });
 
   it("rejects unknown analysis and nested limit fields", () => {

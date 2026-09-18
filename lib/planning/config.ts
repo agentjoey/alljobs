@@ -73,6 +73,10 @@ const controlHostCaphubAnalysisLimitsSchema = z.object({
   maxPixelsPerImage: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxPixelsPerImage),
   preprocessingTimeoutMs: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.preprocessingTimeoutMs),
   ocrTimeoutMsPerImage: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.ocrTimeoutMsPerImage),
+  maxVisualObservationOutputTokens: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens)
+    .default(CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens),
+  maxVisualObservationBytes: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxVisualObservationBytes)
+    .default(CAPHUB_ANALYSIS_LIMITS.maxVisualObservationBytes),
   providerTimeoutMs: z.object({
     minimax: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.minimax),
     kimi: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi),
