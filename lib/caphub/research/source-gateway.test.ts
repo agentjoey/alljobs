@@ -41,7 +41,7 @@ function setup(responses: PinnedHttpsResponse[], overrides: Record<string, unkno
 describe("ResearchSourceGateway", () => {
   it("is disabled by default", async () => {
     const gateway = new DisabledResearchSourceGateway();
-    await expect(gateway.search("query", new AbortController().signal))
+    await expect(gateway.search({ query: "query", entityDomains: [] }, new AbortController().signal))
       .rejects.toMatchObject({ code: "SOURCE_ACCESS_DISABLED" });
     await expect(gateway.fetch("https://allowed.example", new AbortController().signal))
       .rejects.toMatchObject({ code: "SOURCE_ACCESS_DISABLED" });
@@ -51,6 +51,22 @@ describe("ResearchSourceGateway", () => {
     const policy = new ExactHttpsSourcePolicy({ allowedOrigins: [], resolve: async () => ["8.8.8.8"] });
     expect(() => new LiveResearchSourceGateway({ policy, transport: { request: vi.fn() } }))
       .toThrowError(expect.objectContaining({ code: "SOURCE_ACCESS_DISABLED" }));
+  });
+
+  it("supports model search without a fetch allowlist", async () => {
+    const search = vi.fn(async (request: { query: string }) => [{
+      url: "https://docs.example.com/tool",
+      title: "Official docs",
+      sourceKind: "unknown" as const,
+      claims: [request.query],
+      content: "Cited result content"
+    }]);
+    const gateway = new LiveResearchSourceGateway({ search });
+    await expect(gateway.search({ query: "Example Tool", entityDomains: [] }, new AbortController().signal))
+      .resolves.toHaveLength(1);
+    await expect(gateway.fetch("https://docs.example.com/tool", new AbortController().signal))
+      .rejects.toMatchObject({ code: "SOURCE_ACCESS_DISABLED" });
+    expect(search).toHaveBeenCalledTimes(1);
   });
 
   it("reauthorizes bounded redirects and preserves the vetted peer", async () => {
@@ -119,9 +135,9 @@ describe("ResearchSourceGateway", () => {
       search: async () => candidates
     }).gateway;
     for (let index = 0; index < 4; index += 1) {
-      await bounded.search(`query-${index}`, new AbortController().signal);
+      await bounded.search({ query: `query-${index}`, entityDomains: [] }, new AbortController().signal);
     }
-    await expect(bounded.search("query-5", new AbortController().signal))
+    await expect(bounded.search({ query: "query-5", entityDomains: [] }, new AbortController().signal))
       .rejects.toMatchObject({ code: "SOURCE_QUERY_LIMIT" });
     for (let index = 0; index < 8; index += 1) {
       await bounded.fetch("https://allowed.example", new AbortController().signal);

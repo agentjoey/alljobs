@@ -44,12 +44,17 @@ export interface PinnedHttpsTransport {
 }
 
 export interface ResearchSourceGateway {
-  search(query: string, signal: AbortSignal): Promise<readonly SourceCandidate[]>;
+  search(request: ResearchSearchRequest, signal: AbortSignal): Promise<readonly SourceCandidate[]>;
   fetch(url: string, signal: AbortSignal): Promise<FetchedSource>;
 }
 
+export interface ResearchSearchRequest {
+  query: string;
+  entityDomains: readonly string[];
+}
+
 export type ResearchSearchPort = (
-  query: string,
+  request: ResearchSearchRequest,
   signal: AbortSignal
 ) => Promise<readonly SourceCandidate[]>;
 
@@ -73,7 +78,7 @@ export class ResearchSourceError extends Error {
 }
 
 export class DisabledResearchSourceGateway implements ResearchSourceGateway {
-  async search(_query: string, _signal: AbortSignal): Promise<readonly SourceCandidate[]> {
+  async search(_request: ResearchSearchRequest, _signal: AbortSignal): Promise<readonly SourceCandidate[]> {
     throw new ResearchSourceError("SOURCE_ACCESS_DISABLED");
   }
 
@@ -193,7 +198,7 @@ function isRedirect(status: number): boolean {
 }
 
 export class LiveResearchSourceGateway implements ResearchSourceGateway {
-  private readonly policy: ExactHttpsSourcePolicy;
+  private readonly policy?: ExactHttpsSourcePolicy;
   private readonly transport: PinnedHttpsTransport;
   private readonly searchPort?: ResearchSearchPort;
   private readonly timeoutMs: number;
@@ -201,12 +206,12 @@ export class LiveResearchSourceGateway implements ResearchSourceGateway {
   private fetches = 0;
 
   constructor(options: {
-    policy: ExactHttpsSourcePolicy;
+    policy?: ExactHttpsSourcePolicy;
     transport?: PinnedHttpsTransport;
     search?: ResearchSearchPort;
     timeoutMs?: number;
   }) {
-    if (options.policy.allowedOriginCount === 0) {
+    if ((!options.policy || options.policy.allowedOriginCount === 0) && !options.search) {
       throw new ResearchSourceError("SOURCE_ACCESS_DISABLED");
     }
     this.policy = options.policy;
@@ -215,16 +220,17 @@ export class LiveResearchSourceGateway implements ResearchSourceGateway {
     this.timeoutMs = options.timeoutMs ?? CAPHUB_ANALYSIS_LIMITS.sourceFetchTimeoutMs;
   }
 
-  async search(query: string, signal: AbortSignal): Promise<readonly SourceCandidate[]> {
+  async search(request: ResearchSearchRequest, signal: AbortSignal): Promise<readonly SourceCandidate[]> {
     if (!this.searchPort) throw new ResearchSourceError("SOURCE_ACCESS_DISABLED");
     if (this.searches >= CAPHUB_ANALYSIS_LIMITS.maxSearchQueries) {
       throw new ResearchSourceError("SOURCE_QUERY_LIMIT");
     }
     this.searches += 1;
-    return (await this.searchPort(query, signal)).slice(0, CAPHUB_ANALYSIS_LIMITS.maxFetchedSources);
+    return (await this.searchPort(request, signal)).slice(0, CAPHUB_ANALYSIS_LIMITS.maxFetchedSources);
   }
 
   async fetch(value: string, signal: AbortSignal): Promise<FetchedSource> {
+    if (!this.policy) throw new ResearchSourceError("SOURCE_ACCESS_DISABLED");
     if (this.fetches >= CAPHUB_ANALYSIS_LIMITS.maxFetchedSources) {
       throw new ResearchSourceError("SOURCE_FETCH_LIMIT");
     }
@@ -233,6 +239,8 @@ export class LiveResearchSourceGateway implements ResearchSourceGateway {
   }
 
   private async fetchWithRedirects(value: string, externalSignal: AbortSignal): Promise<FetchedSource> {
+    const policy = this.policy;
+    if (!policy) throw new ResearchSourceError("SOURCE_ACCESS_DISABLED");
     const controller = new AbortController();
     let timedOut = false;
     const onAbort = () => controller.abort(externalSignal.reason);
@@ -252,7 +260,7 @@ export class LiveResearchSourceGateway implements ResearchSourceGateway {
       for (let redirects = 0; ; redirects += 1) {
         let target: AuthorizedHttpsTarget;
         try {
-          target = await this.policy.authorize(current);
+          target = await policy.authorize(current);
         } catch (error) {
           throw new ResearchSourceError("SOURCE_BLOCKED", { cause: error });
         }

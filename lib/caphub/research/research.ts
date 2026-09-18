@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
-import { digestCanonicalJson } from "../analysis/digest";
+import { canonicalJson, digestCanonicalJson } from "../analysis/digest";
 import { researchDossierSchema } from "../analysis/schemas";
 import type { EvidenceRecord, ExtractionResult, ResearchDossier } from "../analysis/types";
 import type { StructuredProviderOutput } from "../providers/contracts";
-import { ResearchSourceError, type ResearchSourceGateway, type SourceCandidate, type SourceKind } from "./source-gateway";
+import {
+  ResearchSourceError,
+  type ResearchSearchRequest,
+  type ResearchSourceGateway,
+  type SourceCandidate,
+  type SourceKind
+} from "./source-gateway";
 
 export interface ResearchInvocationOptions {
   inputDigest: string;
@@ -86,8 +92,19 @@ function normalizeIdentity(
   return fallbackIdentity(extraction, evidence);
 }
 
-function queriesFor(extraction: ExtractionResult): string[] {
-  return [...new Set(extraction.entities.flatMap((entity) => [entity.name, ...entity.aliases]))].slice(0, 4);
+function searchRequestFor(extraction: ExtractionResult): ResearchSearchRequest {
+  const entities = [...new Set(extraction.entities.flatMap((entity) => [entity.name, ...entity.aliases]))].slice(0, 12);
+  const entityDomains = [...new Set(extraction.entities.flatMap((entity) => entity.domain
+    ? [entity.domain.toLowerCase()]
+    : []))].slice(0, 8);
+  return {
+    query: canonicalJson({
+      entities,
+      claims: extraction.claims.slice(0, 24).map((claim) => claim.statement),
+      unresolved_questions: extraction.unresolved_questions.slice(0, 16)
+    }),
+    entityDomains
+  };
 }
 
 export async function buildResearchDossier(options: {
@@ -99,13 +116,10 @@ export async function buildResearchDossier(options: {
   signal: AbortSignal;
 }): Promise<ResearchDossier> {
   const candidates: SourceCandidate[] = [];
-  for (const query of queriesFor(options.extraction)) {
-    try {
-      candidates.push(...await options.gateway.search(query, options.signal));
-    } catch (error) {
-      if (!(error instanceof ResearchSourceError) || error.code !== "SOURCE_ACCESS_DISABLED") throw error;
-      break;
-    }
+  try {
+    candidates.push(...await options.gateway.search(searchRequestFor(options.extraction), options.signal));
+  } catch (error) {
+    if (!(error instanceof ResearchSourceError) || error.code !== "SOURCE_ACCESS_DISABLED") throw error;
   }
   for (const url of options.extraction.explicit_urls) {
     if (!candidates.some((candidate) => candidate.url === url)) {
@@ -116,19 +130,33 @@ export async function buildResearchDossier(options: {
   const uniqueCandidates = [...new Map(candidates.map((candidate) => [candidate.url, candidate])).values()].slice(0, 8);
   const modelEvidence: Array<EvidenceRecord & { content: string }> = [];
   for (const candidate of uniqueCandidates) {
-    const fetched = await options.gateway.fetch(candidate.url, options.signal);
+    let sourceUrl = candidate.url;
+    let content = candidate.content?.trim();
+    if (!content) {
+      try {
+        const fetched = await options.gateway.fetch(candidate.url, options.signal);
+        sourceUrl = fetched.url;
+        content = fetched.text;
+      } catch (error) {
+        if (error instanceof ResearchSourceError
+          && (error.code === "SOURCE_ACCESS_DISABLED" || error.code === "SOURCE_BLOCKED")) {
+          continue;
+        }
+        throw error;
+      }
+    }
     const claims = candidate.claims.filter((claim) => claim.trim().length > 0);
-    const contentDigest = createHash("sha256").update(fetched.text, "utf8").digest("hex");
+    const contentDigest = createHash("sha256").update(content, "utf8").digest("hex");
     const record: EvidenceRecord = {
-      id: evidenceId({ url: fetched.url, contentDigest, claims }),
+      id: evidenceId({ url: sourceUrl, contentDigest, claims }),
       tier: tierFor(candidate.sourceKind),
-      source_url: fetched.url,
+      source_url: sourceUrl,
       title: candidate.title,
       checked_at: options.clock(),
       content_digest: contentDigest,
       claims: claims.length > 0 ? claims : [candidate.title]
     };
-    modelEvidence.push({ ...record, content: fetched.text });
+    modelEvidence.push({ ...record, content });
   }
   if (modelEvidence.length === 0) throw new ResearchDossierError("RESEARCH_EVIDENCE_REQUIRED");
 

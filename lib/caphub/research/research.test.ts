@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ExtractionResult } from "../analysis/types";
 import type { ResearchInvocationOptions } from "./research";
 import type { StructuredProviderOutput } from "../providers/contracts";
@@ -82,6 +82,59 @@ function proposed(evidenceId: string, identity: unknown) {
 }
 
 describe("buildResearchDossier", () => {
+  it("uses one inline cited search result when the Capture has no source URL", async () => {
+    const search = vi.fn(async () => [candidate({
+      content: "cited result content",
+      claims: ["The product supports agents"]
+    })]);
+    const fetch = vi.fn(async () => { throw new Error("inline evidence must not be fetched"); });
+    let modelInput: unknown;
+    const worker = {
+      async research(input: unknown): Promise<StructuredProviderOutput> {
+        modelInput = input;
+        const evidenceId = (input as { evidence: Array<{ id: string }> }).evidence[0].id;
+        return {
+          value: proposed(evidenceId, {
+            status: "confirmed",
+            entity_id: "ent_example-one",
+            evidence_ids: [evidenceId]
+          }),
+          usage: { inputTokens: 10, outputTokens: 5 }
+        };
+      }
+    };
+
+    const dossier = await buildResearchDossier({
+      extraction: { ...extraction, explicit_urls: [] },
+      extractionArtifactId: EXTRACTION_ARTIFACT_ID,
+      gateway: { search, fetch },
+      worker,
+      clock: () => "2026-09-16T09:00:00.000Z",
+      signal: new AbortController().signal
+    });
+
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.stringify(modelInput)).toContain("cited result content");
+    expect(dossier.evidence[0]).toMatchObject({
+      source_url: "https://allowed.example/product",
+      tier: "A"
+    });
+  });
+
+  it("stops before DeepSeek when neither search nor explicit fetch yields evidence", async () => {
+    const research = vi.fn();
+    await expect(buildResearchDossier({
+      extraction: { ...extraction, explicit_urls: [] },
+      extractionArtifactId: EXTRACTION_ARTIFACT_ID,
+      gateway: { async search() { return []; }, async fetch() { throw new Error("unexpected fetch"); } },
+      worker: { research },
+      clock: () => "2026-09-16T09:00:00.000Z",
+      signal: new AbortController().signal
+    })).rejects.toMatchObject({ code: "RESEARCH_EVIDENCE_REQUIRED" });
+    expect(research).not.toHaveBeenCalled();
+  });
+
   it("normalizes immutable evidence and keeps hostile source text inert", async () => {
     let modelInput: unknown;
     const worker = {
