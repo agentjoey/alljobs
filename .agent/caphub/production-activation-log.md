@@ -593,3 +593,20 @@ and one independent Verification occur only after the implementation tasks.
   operation, push, merge, tag, or public release occurred as part of cutover.
   Analysis remains disabled; a new Capture analysis still requires separate
   authorization after the MiniMax interruption is diagnosed.
+
+## MiniMax interrupted-call diagnosis — evidence limit (2026-09-18)
+
+- A read-only Registry inspection of
+  `job_d21922e7bb363b4734573206709e70ab` found one completed preprocess
+  artifact and exactly one MiniMax extraction `started` event. No corresponding
+  terminal model audit event exists. The immutable job is terminal as
+  `HUMAN_REVIEW_REQUIRED`, stage `extraction`, reason
+  `INTERRUPTED_PROVIDER_CALL`.
+- In the relevant execution window, application logs contain no job/capture or
+  provider-failure reference, and launchd has no matching alljobs lifecycle
+  record. The available evidence therefore cannot attribute the interruption
+  to a provider, credential, application error, or service restart.
+- No retry, Capture operation, provider request, Registry write, target/export
+  operation, push, merge, tag, or release occurred during this diagnosis. A
+  separately authorized synthetic no-Capture MiniMax diagnostic is the next
+  safe way to establish current provider-path behavior.

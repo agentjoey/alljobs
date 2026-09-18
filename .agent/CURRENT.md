@@ -215,3 +215,18 @@ successful 1024-token contract diagnosis below.
 - No Capture, provider request, Registry write, export/target operation, push,
   merge, tag, or public release occurred during cutover. Analysis stays
   disabled pending a new specific Capture authorization.
+
+## MiniMax interrupted-call diagnosis — inconclusive, no retry (2026-09-18)
+
+- Read-only Registry evidence for `job_d21922e7bb363b4734573206709e70ab`
+  confirms that preprocessing completed, extraction recorded one MiniMax
+  `started` audit event, and no terminal model audit event was persisted. The
+  runner therefore correctly sealed the job as `HUMAN_REVIEW_REQUIRED` at
+  extraction with reason `INTERRUPTED_PROVIDER_CALL`.
+- The relevant application logs contain no job/capture/provider failure entry,
+  and the matching launchd time window contains no alljobs lifecycle event.
+  These facts do not support attributing the interruption to MiniMax,
+  credentials, or the DeepSeek cutover; the actual cause is unavailable.
+- The terminal job was not retried and no provider request or Capture action
+  was performed during diagnosis. A separately authorized no-Capture MiniMax
+  synthetic diagnostic is required before considering a new Capture analysis.
