@@ -9,6 +9,7 @@ import {
 } from "@/lib/caphub/storage/audit-log";
 import { loadControlHostRegistryRuntime } from "@/lib/caphub/registry/runtime";
 import { createCapturePostRoute } from "./route-factory";
+import { createAutomatedIntake } from "@/lib/caphub/automation/intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,9 @@ export async function POST(request: Request): Promise<Response> {
       maxUploadBytes: config.maxUploadBytes
     });
     return createCapturePostRoute({
-      receive: service.receive,
+      receive: registry ? createAutomatedIntake({ pool: registry.pool, objects: registry.objects,
+        clock: () => new Date(), idFactory: () => `cap_${randomUUID().replaceAll("-", "")}`,
+        maxUploadBytes: config.maxUploadBytes }) : service.receive,
       maxUploadBytes: config.maxUploadBytes,
       allowedOrigins: config.allowedOrigins
     })(request);

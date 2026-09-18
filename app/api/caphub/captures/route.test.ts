@@ -14,6 +14,7 @@ import {
 } from "@/lib/caphub/service/capture";
 import { captureReceivedEventId } from "@/lib/caphub/storage/audit-log";
 import { createCapturePostRoute } from "./route-factory";
+import { FilenameConflictError } from "@/lib/caphub/automation/intake";
 
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
 const IDEMPOTENCY_KEY = "capture.request-20260916:route-a";
@@ -23,6 +24,22 @@ const DIGEST = createHash("sha256").update(IMAGE_BYTES).digest("hex");
 const ALLOWED_ORIGIN = "https://alljobs.agentjoey.ai";
 const ROUTE_URL = "http://127.0.0.1:3456/api/caphub/captures";
 const previousHome = process.env.ALLJOBS_HOME;
+
+it("returns a safe filename conflict and passes an explicit confirmation to intake", async () => {
+  const receive = vi.fn().mockRejectedValueOnce(new FilenameConflictError("FILENAME_CONFLICT", captureRecord()))
+    .mockResolvedValueOnce({ kind: "created", capture: captureRecord() });
+  const route = createCapturePostRoute({ receive, maxUploadBytes: 1000, allowedOrigins: [ALLOWED_ORIGIN] });
+  const conflict = await route(request(form()));
+  expect(conflict.status).toBe(409);
+  const body = await conflict.json();
+  expect(body.error.existing).toEqual({ id: CAPTURE_ID, filename: "browser-capture.png", digest: DIGEST, createdAt: CREATED_AT });
+  expect(JSON.stringify(body)).not.toContain("sha256/");
+  const confirmed = form();
+  confirmed.set("expected_current_capture_id", CAPTURE_ID);
+  confirmed.set("expected_current_object_digest", DIGEST);
+  expect((await route(request(confirmed))).status).toBe(201);
+  expect(receive.mock.calls[1][0]).toMatchObject({ expectedCurrentCaptureId: CAPTURE_ID, expectedCurrentObjectDigest: DIGEST });
+});
 
 function captureRecord(overrides: Partial<CaptureRecord> = {}): CaptureRecord {
   return {

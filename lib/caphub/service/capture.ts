@@ -106,7 +106,7 @@ function serviceError(code: CaptureServiceErrorCode, message: string): CaptureSe
   return new CaptureServiceError(code, message);
 }
 
-function validateInput(input: ReceiveCaptureInput, maxUploadBytes: number): ValidatedCaptureInput {
+export function validateCaptureInput(input: ReceiveCaptureInput, maxUploadBytes: number): ValidatedCaptureInput {
   const parsed = receiveCaptureInputSchema.safeParse(input);
   if (!parsed.success) {
     throw serviceError("INVALID_INPUT", "Capture input is invalid");
@@ -212,7 +212,7 @@ export function createCaptureService(dependencies: CaptureServiceDependencies): 
 
   return {
     async receive(rawInput: ReceiveCaptureInput): Promise<ReceiveCaptureResult> {
-      const input = validateInput(rawInput, maxUploadBytes);
+      const input = validateCaptureInput(rawInput, maxUploadBytes);
       const digest = digestBytes(input.bytes);
       const existing = await findByIdempotencyKey(input.idempotencyKey);
       if (existing) return duplicateOrConflict(existing, input, digest);

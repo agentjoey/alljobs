@@ -1,4 +1,5 @@
 import type { CaptureRecord } from "@/lib/caphub/domain/types";
+import { FilenameConflictError, type AutomatedCaptureInput } from "@/lib/caphub/automation/intake";
 import {
   CaptureServiceError,
   type CaptureService
@@ -8,12 +9,12 @@ const SAFE_HEADERS = {
   "cache-control": "no-store",
   "x-content-type-options": "nosniff"
 };
-const ALLOWED_FIELDS = new Set(["image", "idempotency_key", "note", "source_url"]);
+const ALLOWED_FIELDS = new Set(["image", "idempotency_key", "note", "source_url", "expected_current_capture_id", "expected_current_object_digest"]);
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_MULTIPART_OVERHEAD_BYTES = 32 * 1024;
 
 export interface CapturePostRouteDependencies {
-  receive: CaptureService["receive"];
+  receive: (input: AutomatedCaptureInput) => ReturnType<CaptureService["receive"]>;
   maxUploadBytes: number;
   allowedOrigins?: readonly string[];
 }
@@ -134,7 +135,9 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
     const idempotencyKey = singleString(formData, "idempotency_key", true);
     const note = singleString(formData, "note", false);
     const sourceUrlValue = singleString(formData, "source_url", false);
-    const optionalFields = [formData.getAll("note"), formData.getAll("source_url")];
+    const expectedCurrentCaptureId = singleString(formData, "expected_current_capture_id", false);
+    const expectedCurrentObjectDigest = singleString(formData, "expected_current_object_digest", false);
+    const optionalFields = ["note", "source_url", "expected_current_capture_id", "expected_current_object_digest"].map(field => formData.getAll(field));
     const optionalFieldsValid = optionalFields.every(
       (values) => values.length <= 1 && values.every((value) => typeof value === "string")
     );
@@ -168,6 +171,8 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
         filename: image.name,
         mimeType: image.type,
         bytes,
+        ...(expectedCurrentCaptureId === undefined ? {} : { expectedCurrentCaptureId }),
+        ...(expectedCurrentObjectDigest === undefined ? {} : { expectedCurrentObjectDigest }),
         ...(note === undefined ? {} : { note }),
         ...(sourceUrlValue === undefined || sourceUrlValue.length === 0
           ? {}
@@ -178,6 +183,9 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
         headers: SAFE_HEADERS
       });
     } catch (error) {
+      if (error instanceof FilenameConflictError) return Response.json({ error: {
+        code: error.code, message: "This filename has different image content. Confirm a new version.", existing: error.existing
+      } }, { status: 409, headers: SAFE_HEADERS });
       if (error instanceof CaptureServiceError) return serviceFailure(error);
       return safeError(500, "INTERNAL_ERROR", "Capture request could not be completed.");
     }
