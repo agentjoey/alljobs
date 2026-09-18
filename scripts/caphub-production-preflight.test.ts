@@ -6,6 +6,7 @@ import {
   createProductionPreflightReport,
   readObjectTransferEvidence,
   runProductionPreflight,
+  sourceCapturesMatchRegistry,
   type ProductionPreflightSnapshot
 } from "./caphub-production-preflight";
 
@@ -57,6 +58,17 @@ function safeSnapshot(): ProductionPreflightSnapshot {
 }
 
 describe("Caphub Production preflight", () => {
+  it("accepts a Registry that preserves every filesystem rollback Capture and has later Registry-only Captures", () => {
+    expect(sourceCapturesMatchRegistry([
+      { capture_id: "cap_11111111111111111111111111111111", capture_digest: DIGEST },
+      { capture_id: "cap_22222222222222222222222222222222", capture_digest: "b".repeat(64) }
+    ], [
+      { record_id: "cap_11111111111111111111111111111111", payload_digest: DIGEST },
+      { record_id: "cap_22222222222222222222222222222222", payload_digest: "b".repeat(64) },
+      { record_id: "cap_33333333333333333333333333333333", payload_digest: "c".repeat(64) }
+    ])).toBe(true);
+  });
+
   it("accepts only a private canonical object-transfer attestation", () => {
     const home = privateHome();
     const activation = join(home, "state", "caphub", "activation");

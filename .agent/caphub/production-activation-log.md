@@ -624,7 +624,7 @@ and one independent Verification occur only after the implementation tasks.
 - The evidence confirms current text provider/transport compatibility, not the
   missing terminal audit's root cause or the image-specific extraction path.
 
-## LaunchAgent persistence repair — DeepSeek still blocked (2026-09-18)
+## LaunchAgent persistence repair — runtime ready (2026-09-18)
 
 - The private `com.agentjoey.alljobs` LaunchAgent file was found to be an
   invalid 45-byte JSON argument array, while launchd still retained a cached
@@ -632,8 +632,17 @@ and one independent Verification occur only after the implementation tasks.
   as a valid mode-`0600` XML LaunchAgent. Its verified program, working
   directory, logs, lifecycle flags, and non-empty Registry/Object Storage/
   MiniMax environment values were preserved; the service was not reloaded.
-- `DEEPSEEK_API_KEY` was not available in the active service or user launchd
-  environment and was not guessed or copied from another source. Analysis is
-  therefore fail-closed until the Human Owner supplies that private value and
-  a no-Capture runtime-readiness check passes. No Capture/provider request,
-  Registry write, export/target action, push, merge, tag, or release occurred.
+- The Human Owner supplied a replacement `DEEPSEEK_API_KEY`; all eight required
+  private environment values are non-empty. After the lower-level bootstrap
+  path returned an I/O error, the repository's documented `launchctl load`
+  path loaded the repaired service. Loopback `/caphub` returned 200 and the
+  running service has a non-empty DeepSeek key.
+- A no-Capture runtime composition check passed: it performed one read-only
+  Registry query and constructed Registry, Object Storage, MiniMax, and
+  DeepSeek runtime dependencies with zero provider/Capture operations. The
+  preflight comparison was corrected to require the filesystem rollback source
+  to be a matching Registry subset rather than an exact Registry inventory;
+  later Registry-only Captures are valid. Live preflight now reports PostgreSQL
+  ready, source Capture consistency, remote object/recovery evidence, both
+  provider keys present, and no enabled export target. A new real Capture
+  analysis remains separately authorized and operator-started.

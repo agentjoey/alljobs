@@ -245,7 +245,7 @@ successful 1024-token contract diagnosis below.
   not reconstruct the missing terminal audit for the prior image-extraction
   job and does not by itself validate an image-specific extraction request.
 
-## LaunchAgent persistence repair — DeepSeek still blocked (2026-09-18)
+## LaunchAgent persistence repair — runtime ready (2026-09-18)
 
 - The private `com.agentjoey.alljobs` file had become an invalid 45-byte JSON
   argument array while launchd retained a cached, running definition. Under
@@ -253,9 +253,16 @@ successful 1024-token contract diagnosis below.
   LaunchAgent, preserving the active service's verified program, working
   directory, logs, lifecycle flags, and non-empty Registry/Object Storage/
   MiniMax environment values. The service was not reloaded during repair.
-- `DEEPSEEK_API_KEY` was absent from both the active service and the user
-  launchd environment, so it could not be reconstructed or guessed. Analysis
-  remains fail-closed until the Human Owner supplies that private value and a
-  no-Capture runtime-readiness check passes. No Capture, provider request,
-  Registry mutation, export/target action, push, merge, tag, or release
-  occurred during this repair.
+- The Human Owner supplied a replacement `DEEPSEEK_API_KEY`; all eight required
+  private environment values are now non-empty. The documented `launchctl load`
+  path reloaded the repaired service after the lower-level bootstrap path
+  returned an I/O error. Loopback `/caphub` is 200, the running service has the
+  DeepSeek key, and the no-Capture runtime composition check passed with one
+  read-only Registry query and zero provider/Capture operations.
+- A preflight bug incorrectly required Registry to exactly equal the older
+  filesystem rollback source. It now verifies that every rollback-source
+  Capture matches Registry while allowing later Registry-only Captures. The
+  live preflight reports PostgreSQL ready, source Capture consistency, remote
+  object-transfer and recovery evidence, both provider keys present, and no
+  export target enabled. A new real Capture analysis remains a separately
+  authorized, operator-started action.

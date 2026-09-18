@@ -244,6 +244,14 @@ function configuredTargets(config: {
   return TARGETS.filter((target) => values[target]);
 }
 
+export function sourceCapturesMatchRegistry(
+  source: readonly { capture_id: string; capture_digest: string }[],
+  registry: readonly { record_id: string; payload_digest: string }[]
+): boolean {
+  const registryDigests = new Map(registry.map(({ record_id, payload_digest }) => [record_id, payload_digest]));
+  return source.every(({ capture_id, capture_digest }) => registryDigests.get(capture_id) === capture_digest);
+}
+
 async function collectRegistry(input: {
   homeDir: string;
   registry: {
@@ -305,10 +313,10 @@ async function collectRegistry(input: {
       WHERE r.kind = 'capture'
       ORDER BY r.record_id
     `);
-    const expected = [...input.captures].sort((left, right) => left.capture_id.localeCompare(right.capture_id));
-    const matches = rows.rows.length === expected.length && rows.rows.every((row, index) => (
-      row.record_id === expected[index]?.capture_id && row.payload_digest === expected[index]?.capture_digest
-    ));
+    // New Production Captures are Registry-only; the filesystem tree is a
+    // read-only rollback source. Every source Capture must match, but Registry
+    // records created after cutover must not make the source look corrupted.
+    const matches = sourceCapturesMatchRegistry(input.captures, rows.rows);
     return { report, matches };
   } catch {
     return { report: unavailableRegistry(input.registry.connectionMode), matches: false };
