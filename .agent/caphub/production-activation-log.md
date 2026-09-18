@@ -557,8 +557,23 @@ and one independent Verification occur only after the implementation tasks.
   The scoped code review checked fixed endpoint/model, no secret/raw-output
   leakage, safe error classification, no hidden retries/tools, stage roles, and
   Registry historical compatibility; no blocker or important issue remains.
-- This is not a production cutover. No DeepSeek credential was installed or
-  read, no live DeepSeek diagnostic/request was made, and no LaunchAgent,
-  service reload, Capture, export/target operation, push, merge, or release
-  occurred. A private credential-presence check, one no-Capture synthetic
-  diagnostic, and a separately authorized rebuild/reload remain required.
+- At that local-verification point this was not a production cutover: no
+  credential had been installed or read and no DeepSeek request had been made.
+  The subsequent separately authorized diagnostic is recorded below; no
+  LaunchAgent reload, Capture, export/target operation, push, merge, or
+  release occurred.
+
+## DeepSeek no-Capture structured-output diagnosis — passed (2026-09-18)
+
+- Under explicit authorization, one synthetic request was sent through the
+  Caphub `DeepSeekResponsesAdapter` to the fixed DeepSeek Responses endpoint.
+  It used model `deepseek-flash`, the fixed JSON schema protocol, no tools,
+  non-streaming mode, no retry, and a 30-second deadline.
+- The terminal state was `completed`; the parsed object was schema-valid. The
+  redacted evidence is 95 input tokens and 5 output tokens. No prompt, raw
+  response, credential, headers, or reasoning content is retained.
+- No Capture was read or created, and no LaunchAgent reload, deployed config
+  change, service restart, Registry write, export/target operation, push,
+  merge, or release occurred. The provider compatibility gate is satisfied;
+  a separately authorized rebuild/reload is still required and must retain
+  analysis disabled pending a new per-Capture authorization.

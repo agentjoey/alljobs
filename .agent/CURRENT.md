@@ -187,9 +187,20 @@ successful 1024-token contract diagnosis below.
   final scoped review found no blocking or important issue: fixed origin/model,
   error mapping, no tools/retries, stage assignment, audit compatibility, and
   historical decoding were checked.
-- No `DEEPSEEK_API_KEY` was added, no DeepSeek request was issued, and no
-  LaunchAgent, deployed configuration, service, Capture, target/export, push,
-  merge, or release changed. The next gated actions are credential presence
-  only, one synthetic no-Capture Responses API diagnostic, then an explicitly
-  authorized rebuild/reload with analysis disabled until a separate Capture
-  action is approved.
+- At the end of local implementation, no `DEEPSEEK_API_KEY` had been added and
+  no DeepSeek request had been issued. The subsequent separately authorized
+  diagnostic is recorded below; no LaunchAgent reload, deployed configuration,
+  service, Capture, target/export, push, merge, or release changed.
+
+## DeepSeek no-Capture contract diagnosis — passed (2026-09-18)
+
+- With explicit authorization, one synthetic DeepSeek Responses API request
+  used the fixed `deepseek-flash` model, no tools, non-streaming JSON schema,
+  and a 30-second deadline. It completed with a schema-valid result using 95
+  input tokens and 5 output tokens.
+- No credential, prompt, response body, or reasoning content was retained.
+  No Capture was read or created, and no service reload, deployed config
+  change, export/target operation, push, merge, or release occurred.
+- The required live provider compatibility gate is now evidenced. A separate
+  rebuild/reload authorization is still required; it must retain analysis
+  disabled until a new, separately authorized Capture action.
