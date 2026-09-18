@@ -6,6 +6,7 @@ import { applyRegistryMigrations } from "../registry/migrate";
 import { createAutomatedIntake } from "./intake";
 import type { CaptureMimeType } from "../domain/types";
 import { createCapturePostRoute } from "../../../app/api/caphub/captures/route-factory";
+import { AnalysisRequests } from "../registry/postgres/analysis-requests";
 
 let fixture: CaphubTestPostgres;
 beforeAll(async () => { fixture = await startCaphubTestPostgres(); await applyRegistryMigrations(fixture.pool); }, 30000);
@@ -19,6 +20,22 @@ const receive = (input: Parameters<ReturnType<typeof createAutomatedIntake>>[0])
   idFactory: () => `cap_${randomUUID().replaceAll("-", "")}`, clock: () => new Date("2026-09-18T00:00:00Z")
 })(input);
 const input = (filename: string, key: string, text = "same") => ({ filename, idempotencyKey: `intake-fixture-${key}`, mimeType: "image/png", bytes: new TextEncoder().encode(text) });
+
+it("repairs a failed enqueue on identical upload retry without another object write", async () => {
+  const requests = new AnalysisRequests(fixture.appPool);
+  const ensureAnalysisRequest = vi.fn().mockRejectedValueOnce(new Error("queue unavailable"))
+    .mockImplementation((id: string) => requests.ensure(id, new Date()));
+  const intake = createAutomatedIntake({ pool: fixture.appPool, objects: { putImmutable }, maxUploadBytes: 1000,
+    idFactory: () => `cap_${randomUUID().replaceAll("-", "")}`, clock: () => new Date(), ensureAnalysisRequest });
+  const request = input("enqueue.png", "enqueue");
+  const first = await intake(request);
+  expect(first.analysis?.enqueue).toBe("failed");
+  const writes = putImmutable.mock.calls.length;
+  expect((await intake(request)).analysis?.enqueue).toBe("saved");
+  expect((await intake(request)).capture.id).toBe(first.capture.id);
+  expect(putImmutable.mock.calls.length).toBe(writes);
+  expect((await fixture.pool.query("SELECT * FROM caphub.analysis_requests WHERE capture_id=$1", [first.capture.id])).rowCount).toBe(1);
+});
 
 it("receives actual multipart uploads through the route and returns the same public canonical receipt", async () => {
   const route = createCapturePostRoute({ receive, maxUploadBytes: 1000, allowedOrigins: ["http://localhost"] });

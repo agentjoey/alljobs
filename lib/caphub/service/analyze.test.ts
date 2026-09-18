@@ -93,7 +93,7 @@ describe("analysis contract job identity", () => {
     const v3Bytes = hasPredecessor ? readFileSync(analysisJobRecordPath(root, v3Id)) : null;
     const writes: unknown[] = [];
     const dependencies = minimalDependencies({
-      captures: { get: async () => capture }, readObject: async () => bytes,
+      captures: { get: async () => capture }, readObject: vi.fn(async () => bytes),
       jobs: { get: (id: string) => jobs.get(id), put: async (job: Parameters<typeof jobs.put>[0]) => { writes.push(job); await jobs.put(job); } },
       artifacts: new FilesystemStageArtifactStore(root), audits: new FilesystemModelCallAuditStore(root)
     });
@@ -109,6 +109,7 @@ describe("analysis contract job identity", () => {
     if (hasPredecessor) expect(versioned).toHaveProperty("supersedes_job_id", v3Id);
     else expect(versioned).not.toHaveProperty("supersedes_job_id");
     const snapshot = readFileSync(analysisJobRecordPath(root, v4Id));
+    dependencies.readObject.mockRejectedValueOnce(new Error("raw object expired"));
     expect(await service.start(CAPTURE_ID)).toEqual(first);
     expect(readFileSync(analysisJobRecordPath(root, v4Id))).toEqual(snapshot);
     if (v3Bytes) expect(readFileSync(analysisJobRecordPath(root, v3Id))).toEqual(v3Bytes);

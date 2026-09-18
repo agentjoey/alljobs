@@ -308,6 +308,7 @@ describe("control host Caphub analysis config", () => {
       deepSeekApiModel: "deepseek-flash",
       deepSeekApiSecretEnv: "DEEPSEEK_API_KEY",
       sourceAllowedOrigins: [],
+      autoStart: false,
       limits: CAPHUB_ANALYSIS_LIMITS
     });
   });

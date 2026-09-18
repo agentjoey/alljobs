@@ -18,6 +18,7 @@
     "maxUploadBytes": 10485760,
     "analysis": {
       "enabled": false,
+      "autoStart": false,
       "concurrency": 1,
       "miniMaxBaseUrl": "https://api.minimax.io/v1",
       "miniMaxModel": "MiniMax-M3",

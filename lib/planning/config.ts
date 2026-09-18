@@ -107,6 +107,7 @@ const controlHostCaphubAnalysisLimitsSchema = z.object({
 
 export const controlHostCaphubAnalysisConfigSchema = z.object({
   enabled: z.boolean().default(false),
+  autoStart: z.boolean().default(false),
   concurrency: z.literal(CAPHUB_ANALYSIS_LIMITS.concurrency).default(CAPHUB_ANALYSIS_LIMITS.concurrency),
   miniMaxBaseUrl: z.literal("https://api.minimax.io/v1").default("https://api.minimax.io/v1"),
   miniMaxModel: z.literal("MiniMax-M3").default("MiniMax-M3"),

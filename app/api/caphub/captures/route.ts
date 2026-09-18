@@ -10,6 +10,7 @@ import {
 import { loadControlHostRegistryRuntime } from "@/lib/caphub/registry/runtime";
 import { createCapturePostRoute } from "./route-factory";
 import { createAutomatedIntake } from "@/lib/caphub/automation/intake";
+import { AnalysisRequests } from "@/lib/caphub/registry/postgres/analysis-requests";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +67,9 @@ export async function POST(request: Request): Promise<Response> {
     return createCapturePostRoute({
       receive: registry ? createAutomatedIntake({ pool: registry.pool, objects: registry.objects,
         clock: () => new Date(), idFactory: () => `cap_${randomUUID().replaceAll("-", "")}`,
+        ...(config.analysis.enabled && config.analysis.autoStart ? {
+          ensureAnalysisRequest: (id: string) => new AnalysisRequests(registry.pool).ensure(id, new Date())
+        } : {}),
         maxUploadBytes: config.maxUploadBytes }) : service.receive,
       maxUploadBytes: config.maxUploadBytes,
       allowedOrigins: config.allowedOrigins

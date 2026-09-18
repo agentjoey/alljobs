@@ -19,6 +19,7 @@
     "assistant:smoke": "tsx scripts/assistant-smoke.ts",
     "caphub:analyze": "tsx --conditions=react-server scripts/caphub-analyze.ts",
     "caphub:automation-backfill": "tsx --conditions=react-server scripts/caphub-automation-backfill.ts",
+    "caphub:worker": "tsx --conditions=react-server scripts/caphub-worker.ts",
     "caphub:project": "tsx --conditions=react-server scripts/caphub-project.ts",
     "caphub:export": "tsx --conditions=react-server scripts/caphub-export.ts",
     "caphub:publish": "tsx --conditions=react-server scripts/caphub-publish.ts",

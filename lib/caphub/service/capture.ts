@@ -34,9 +34,9 @@ export interface ReceiveCaptureInput {
   sourceUrl?: string;
 }
 
-export type ReceiveCaptureResult =
+export type ReceiveCaptureResult = (
   | { kind: "created"; capture: CaptureRecord }
-  | { kind: "duplicate"; capture: CaptureRecord };
+  | { kind: "duplicate"; capture: CaptureRecord }) & { analysis?: { enqueue: "saved" | "failed" } };
 
 export type CaptureServiceErrorCode =
   | "INVALID_INPUT"

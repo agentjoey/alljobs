@@ -169,6 +169,11 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
       const rawCapture = await dependencies.captures.get(parsedId.data);
       if (!rawCapture) throw new AnalysisServiceError("CAPTURE_NOT_FOUND");
       const capture = captureRecordSchema.parse(rawCapture);
+      const jobId = versionedJobIdFor(capture, CAPHUB_ANALYSIS_CONTRACT_VERSION);
+      let job = await dependencies.jobs.get(jobId);
+      if (job && ["completed", "WAITING_FOR_REVIEW", "reviewed", "failed", "HUMAN_REVIEW_REQUIRED"].includes(job.status)) {
+        return resultFor(job);
+      }
       const bytes = await dependencies.readObject(capture);
       if (!(bytes instanceof Uint8Array)
         || bytes.byteLength !== capture.object.bytes
@@ -176,8 +181,6 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
         throw new AnalysisServiceError("INVALID_CAPTURE_OBJECT");
       }
 
-      const jobId = versionedJobIdFor(capture, CAPHUB_ANALYSIS_CONTRACT_VERSION);
-      let job = await dependencies.jobs.get(jobId);
       if (!job) {
         const predecessor = await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v3"))
           ?? await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v2"))
@@ -197,14 +200,6 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
         };
         await dependencies.jobs.put(job);
       }
-      if (job.status === "completed"
-        || job.status === "WAITING_FOR_REVIEW"
-        || job.status === "reviewed"
-        || job.status === "failed"
-        || job.status === "HUMAN_REVIEW_REQUIRED") {
-        return resultFor(job);
-      }
-
       const budget = reconstructBudget(await dependencies.audits.list(jobId));
       const sourceGateway = dependencies.sourceGateway(async (request, searchSignal) => {
         const outcome = await runWebSearchStage({

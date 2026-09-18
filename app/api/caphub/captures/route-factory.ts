@@ -178,7 +178,7 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
           ? {}
           : { sourceUrl: sourceUrlValue })
       });
-      return Response.json({ kind: result.kind, capture: publicCapture(result.capture) }, {
+      return Response.json({ kind: result.kind, capture: publicCapture(result.capture), ...(result.analysis ? { analysis: result.analysis } : {}) }, {
         status: result.kind === "created" ? 201 : 200,
         headers: SAFE_HEADERS
       });

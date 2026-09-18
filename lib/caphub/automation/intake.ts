@@ -22,6 +22,7 @@ export class FilenameConflictError extends Error {
 interface Dependencies {
   pool: Pool; objects: CaptureObjectStore; maxUploadBytes: number;
   idFactory(): string; clock(): Date;
+  ensureAnalysisRequest?(captureId: string): Promise<void>;
 }
 function fingerprint(input: ReturnType<typeof validateCaptureInput>, digest: string) {
   return digestCanonicalJson({ format: "capture-input-v1", filename: input.filename, mimeType: input.mimeType,
@@ -29,7 +30,7 @@ function fingerprint(input: ReturnType<typeof validateCaptureInput>, digest: str
 }
 
 export function createAutomatedIntake(deps: Dependencies) {
-  return async function receive(raw: AutomatedCaptureInput): Promise<ReceiveCaptureResult> {
+  async function persist(raw: AutomatedCaptureInput): Promise<ReceiveCaptureResult> {
     const { expectedCurrentCaptureId, expectedCurrentObjectDigest, ...base } = raw;
     const input = validateCaptureInput(base, deps.maxUploadBytes);
     let filenameKey: string;
@@ -114,5 +115,15 @@ export function createAutomatedIntake(deps: Dependencies) {
       if (error instanceof CaptureServiceError || error instanceof FilenameConflictError) throw error;
       throw new CaptureServiceError("STORAGE_UNAVAILABLE", "Capture intake unavailable");
     } finally { db.release(); }
+  }
+  return async (raw: AutomatedCaptureInput): Promise<ReceiveCaptureResult> => {
+    const result = await persist(raw);
+    if (!deps.ensureAnalysisRequest) return result;
+    try {
+      await deps.ensureAnalysisRequest(result.capture.id);
+      return { ...result, analysis: { enqueue: "saved" } };
+    } catch {
+      return { ...result, analysis: { enqueue: "failed" } };
+    }
   };
 }
