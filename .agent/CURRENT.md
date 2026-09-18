@@ -69,10 +69,11 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 The approved Neon activation sequence N1–N4 and PA-D are complete. Caphub is
 running from `codex/caphub-release` on the Control Host and is bound only to
 `127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200 from the
-final webpack Production build. The next separate Human gate is PA-C: one
-bounded real Kimi canary. Capture input, provider calls, analysis, targets,
-exports, publication, push, PR, `main` merge, tags, and releases remain
-separately controlled.
+final webpack Production build. PA-C's one permitted Kimi `k3-256k` canary did
+not return a schema-valid structured result and was not retried. Caphub is
+therefore in S3: Capture/Registry remain available, while analysis and all
+targets/exports remain disabled. Any later provider compatibility investigation
+or real analysis requires a new Human authorization.
 
 ## Caphub development status — 2026-09-16
 
@@ -122,6 +123,15 @@ separately controlled.
 - PA-C is still a separate Human gate. No real provider request, Capture input,
   analysis, target/export operation, Git push, PR, `main` merge, tag, or public
   release occurred in PA-D.
+
+## Caphub PA-C provider outcome
+
+- The Human authorized one Kimi `k3-256k` synthetic structured-output canary.
+  The only real request did not produce a schema-valid result; it was not
+  retried and no raw provider output was retained.
+- Caphub automatically returned to S3. The service is healthy and loopback
+  only; Registry remains enabled, while analysis and all export/target gates
+  are disabled. MiniMax stays configured but has made no real request.
 
 ## P0 Backlog retirement (live)
 

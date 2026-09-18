@@ -53,3 +53,12 @@ The final deployment evidence is recorded in
 This completion does not authorize a provider canary (PA-C), Capture input,
 analysis, a target, export, publication, Git push, PR, `main` merge, tag, or
 release.
+
+## PA-C outcome — 2026-09-18
+
+The separately authorized one-request Kimi `k3-256k` compatibility canary did
+not return a schema-valid structured result. It was not retried. In accordance
+with the approved failure handling, Caphub returned to S3: Capture/Registry and
+read-only previews remain available, while analysis and every export/target
+operation are disabled. The exact evidence is in
+`.agent/caphub/production-activation-log.md`.

@@ -457,3 +457,25 @@ and one independent Verification occur only after the implementation tasks.
 - No provider request, source fetch, Capture write, target operation,
   publish/install/rollback, push, PR, merge to `main`, tag, or public release
   was performed. Analysis stays disabled; exports retain zero enabled targets.
+
+## PA-C Kimi compatibility canary — 2026-09-18
+
+- Under explicit Human authorization, the private Kimi credential reference was
+  installed alongside the existing MiniMax reference. The provider references
+  were verified as present without reading or recording either value.
+- Analysis was enabled only long enough to activate the configured runtime. The
+  fixed configuration remains MiniMax `MiniMax-M3` and Kimi API mode at
+  `https://api.kimi.com/coding/v1` with model `k3-256k`; Registry remained
+  enabled and every export/target remained disabled.
+- The first local invocation attempt stopped during TypeScript evaluation before
+  a provider request could be constructed. It did not count as a canary.
+- The single permitted real Kimi canary then made one synthetic direct-HTTP
+  structured-output request with no tools and `maxRetries: 0`. It did not
+  return the required schema-valid result. No retry was attempted, and no raw
+  provider response, credential, prompt payload, or Capture data was retained
+  in evidence.
+- Per PA-C failure handling, analysis was immediately disabled and the service
+  restarted into S3. Final host verification returned HTTP 200 for `/caphub`
+  with loopback-only listening; Registry remains enabled and exports remain
+  disabled. MiniMax is configured but no real MiniMax request or Capture
+  analysis was made after the Kimi failure.
