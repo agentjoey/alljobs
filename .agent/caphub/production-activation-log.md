@@ -623,3 +623,17 @@ and one independent Verification occur only after the implementation tasks.
   push, merge, tag, or release occurred.
 - The evidence confirms current text provider/transport compatibility, not the
   missing terminal audit's root cause or the image-specific extraction path.
+
+## LaunchAgent persistence repair — DeepSeek still blocked (2026-09-18)
+
+- The private `com.agentjoey.alljobs` LaunchAgent file was found to be an
+  invalid 45-byte JSON argument array, while launchd still retained a cached
+  running definition. With explicit authorization it was atomically rebuilt
+  as a valid mode-`0600` XML LaunchAgent. Its verified program, working
+  directory, logs, lifecycle flags, and non-empty Registry/Object Storage/
+  MiniMax environment values were preserved; the service was not reloaded.
+- `DEEPSEEK_API_KEY` was not available in the active service or user launchd
+  environment and was not guessed or copied from another source. Analysis is
+  therefore fail-closed until the Human Owner supplies that private value and
+  a no-Capture runtime-readiness check passes. No Capture/provider request,
+  Registry write, export/target action, push, merge, tag, or release occurred.
