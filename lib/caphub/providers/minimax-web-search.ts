@@ -42,6 +42,12 @@ const messageSchema = z.object({
   content: z.array(z.unknown())
 }).passthrough();
 
+const webSearchCallSchema = z.object({
+  type: z.literal("web_search_call"),
+  status: z.literal("completed"),
+  action: z.object({ type: z.literal("search") }).passthrough()
+}).passthrough();
+
 const completedResponseSchema = z.object({
   status: z.literal("completed"),
   output: z.array(z.unknown()),
@@ -108,16 +114,19 @@ function parseCompletedResponse(value: unknown, input: MiniMaxWebSearchInput): M
     .map((item) => messageSchema.safeParse(item))
     .filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof messageSchema>> => item.success)
     .map((item) => item.data);
-  if (messages.length !== 1) throw new ProviderInvocationError("INVALID_OUTPUT");
-  const parts = messages[0].content
+  const completedSearches = parsed.data.output
+    .map((item) => webSearchCallSchema.safeParse(item))
+    .filter((item) => item.success);
+  if (messages.length === 0 || completedSearches.length === 0) throw new ProviderInvocationError("INVALID_OUTPUT");
+  const parts = messages.flatMap((message) => message.content
     .map((item) => outputTextSchema.safeParse(item))
     .filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof outputTextSchema>> => item.success)
-    .map((item) => item.data);
-  if (parts.length !== 1 || parts[0].text.trim().length === 0) {
+    .map((item) => item.data));
+  if (parts.length === 0 || parts.every((part) => part.text.trim().length === 0)) {
     throw new ProviderInvocationError("INVALID_OUTPUT");
   }
   const domains = normalizedDomainSet(input.entityDomains);
-  const candidates = [...new Map(parts[0].annotations
+  const candidates = [...new Map(parts.flatMap((part) => part.annotations)
     .map((annotation) => normalizeCitation(annotation, domains))
     .filter((candidate): candidate is SourceCandidate => candidate !== null)
     .map((candidate) => [candidate.url, candidate] as const)).values()]

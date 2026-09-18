@@ -146,6 +146,40 @@ describe("MiniMaxWebSearchProvider", () => {
     }
   });
 
+  it("accepts the real multi-message search and open-page sequence", async () => {
+    const payload = response([], {
+      output: [
+        { type: "message", role: "assistant", status: "completed", content: [{
+          type: "output_text", text: "I will search.", annotations: []
+        }] },
+        { type: "web_search_call", status: "completed", action: { type: "search", query: "Example Tool" } },
+        { type: "message", role: "assistant", status: "completed", content: [{
+          type: "output_text", text: "Search result.", annotations: [validCitation]
+        }] },
+        { type: "web_search_call", status: "completed", action: { type: "open_page", url: "https://docs.example.com/tool" } },
+        { type: "message", role: "assistant", status: "completed", content: [{
+          type: "output_text", text: "Final result.", annotations: [
+            { ...validCitation, url: "https://docs.example.com/tool#duplicate" },
+            { ...validCitation, url: "https://github.com/example/tool", title: "Repository", content: "Repository source." }
+          ]
+        }] }
+      ]
+    });
+    const provider = new MiniMaxWebSearchProvider({
+      apiKey: "fixture-secret",
+      fetch: async () => Response.json(payload)
+    });
+
+    await expect(provider.search({ query: "Example Tool", entityDomains: ["docs.example.com"] }, {
+      signal: new AbortController().signal
+    })).resolves.toMatchObject({
+      candidates: [
+        { url: "https://docs.example.com/tool", sourceKind: "official" },
+        { url: "https://github.com/example/tool", sourceKind: "repository" }
+      ]
+    });
+  });
+
   it.each([
     [401, "AUTHENTICATION"],
     [402, "BILLING"],
