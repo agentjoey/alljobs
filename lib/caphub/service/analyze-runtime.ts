@@ -1,14 +1,9 @@
 import "server-only";
 
-import { realpath } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { loadControlHostConfig } from "../../planning/config";
 import { createPackagedTesseractRecognizer, decodeBarcodesWithZxing } from "../preprocess/image";
-import { KimiProvider } from "../providers/kimi";
-import { KimiApiAdapter } from "../providers/kimi-api";
-import { createKimiLocalRun, KimiLocalAdapter } from "../providers/kimi-local";
+import { DeepSeekProvider } from "../providers/deepseek";
+import { DeepSeekResponsesAdapter } from "../providers/deepseek-responses";
 import { MiniMaxProvider } from "../providers/minimax";
 import {
   DisabledResearchSourceGateway,
@@ -33,41 +28,6 @@ function requiredSecret(
   const value = env[name];
   if (!value) throw new Error(`Required Control Host secret environment variable is not set: ${name}`);
   return value;
-}
-
-async function resolveKimiExecutable(): Promise<string> {
-  const candidates = [
-    join(homedir(), ".local", "bin", "kimi"),
-    "/opt/homebrew/bin/kimi",
-    "/usr/local/bin/kimi"
-  ];
-  for (const candidate of candidates) {
-    try {
-      return await realpath(candidate);
-    } catch {
-      // Continue through the fixed trusted installation locations.
-    }
-  }
-  throw new Error("Kimi local-login executable is unavailable in a fixed Control Host location");
-}
-
-async function createKimiProvider(options: {
-  mode: "api_key" | "local_login";
-  secretEnv: string;
-  env: Readonly<Record<string, string | undefined>>;
-}) {
-  if (options.mode === "api_key") {
-    return new KimiProvider({
-      mode: "api_key",
-      adapter: new KimiApiAdapter({ apiKey: requiredSecret(options.env, options.secretEnv) })
-    });
-  }
-  const run = createKimiLocalRun({
-    executablePath: await resolveKimiExecutable(),
-    sourceHome: join(homedir(), ".kimi"),
-    agentProfilePath: fileURLToPath(new URL("../providers/profiles/kimi-research.md", import.meta.url))
-  });
-  return new KimiProvider({ mode: "local_login", adapter: new KimiLocalAdapter({ run }) });
 }
 
 function createSourceGateway(allowedOrigins: readonly string[]): ResearchSourceGateway {
@@ -96,10 +56,10 @@ export async function loadControlHostAnalysisService(options: {
   const miniMax = new MiniMaxProvider({
     apiKey: requiredSecret(env, caphub.analysis.miniMaxSecretEnv)
   });
-  const kimi = await createKimiProvider({
-    mode: caphub.analysis.kimiMode,
-    secretEnv: caphub.analysis.kimiApiSecretEnv,
-    env
+  const deepSeek = new DeepSeekProvider({
+    adapter: new DeepSeekResponsesAdapter({
+      apiKey: requiredSecret(env, caphub.analysis.deepSeekApiSecretEnv)
+    })
   });
   const captures = registry?.captures ?? new FilesystemCaptureStore(root);
   const objects = registry?.objects ?? new LocalCaptureObjectStore(root);
@@ -113,8 +73,8 @@ export async function loadControlHostAnalysisService(options: {
       decodeBarcodes: decodeBarcodesWithZxing
     },
     extractionProvider: miniMax,
-    researchProvider: kimi,
-    assessmentProvider: kimi,
+    researchProvider: deepSeek,
+    assessmentProvider: deepSeek,
     criticProvider: miniMax,
     sourceGateway: () => createSourceGateway(caphub.analysis.sourceAllowedOrigins),
     jobs: registry?.jobs ?? new FilesystemAnalysisJobStore(root),

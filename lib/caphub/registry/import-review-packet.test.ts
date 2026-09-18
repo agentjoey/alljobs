@@ -144,7 +144,10 @@ async function seedFilesystem() {
     disposition_reason: "Fixture only",
     critic: null,
     platform_previews: [],
-    model_contracts: [{ stage: "research", provider: "kimi", model: "k3-256k", schema_version: 1 }],
+    model_contracts: [
+      { stage: "research", provider: "kimi", model: "k3-256k", schema_version: 1 },
+      { stage: "assessment", provider: "deepseek", model: "deepseek-flash", schema_version: 1 }
+    ],
     unresolved_questions: [],
     human_review_required: true,
     created_at: NOW

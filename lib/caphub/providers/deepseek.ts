@@ -29,6 +29,11 @@ export interface DeepSeekStageAdapter {
   generate(request: DeepSeekStageRequest): Promise<DeepSeekStageResult>;
 }
 
+export interface DeepSeekInvocationOptions {
+  inputDigest: string;
+  signal: AbortSignal;
+}
+
 function schemaFor(stage: DeepSeekStage): ZodType<unknown> {
   return stage === "research" ? researchDossierSchema : capabilityAssessmentSchema;
 }
@@ -95,5 +100,25 @@ export class DeepSeekProvider implements StructuredProvider {
       signal: input.signal
     });
     return { value: result.output, usage: result.usage };
+  }
+
+  research(input: unknown, options: DeepSeekInvocationOptions): Promise<StructuredProviderOutput> {
+    return this.invoke({
+      kind: "initial",
+      stage: "research",
+      inputDigest: options.inputDigest,
+      input,
+      signal: options.signal
+    });
+  }
+
+  assess(input: unknown, options: DeepSeekInvocationOptions): Promise<StructuredProviderOutput> {
+    return this.invoke({
+      kind: "initial",
+      stage: "assessment",
+      inputDigest: options.inputDigest,
+      input,
+      signal: options.signal
+    });
   }
 }

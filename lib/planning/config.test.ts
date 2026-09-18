@@ -304,10 +304,9 @@ describe("control host Caphub analysis config", () => {
       miniMaxBaseUrl: "https://api.minimax.io/v1",
       miniMaxModel: "MiniMax-M3",
       miniMaxSecretEnv: "MINIMAX_API_KEY",
-      kimiMode: "api_key",
-      kimiApiBaseUrl: "https://api.kimi.com/coding/v1",
-      kimiApiModel: "k3-256k",
-      kimiApiSecretEnv: "KIMI_CODE_API_KEY",
+      deepSeekApiBaseUrl: "https://api.deepseek.com",
+      deepSeekApiModel: "deepseek-flash",
+      deepSeekApiSecretEnv: "DEEPSEEK_API_KEY",
       sourceAllowedOrigins: [],
       limits: CAPHUB_ANALYSIS_LIMITS
     });
@@ -316,7 +315,7 @@ describe("control host Caphub analysis config", () => {
   it("allows only concurrency one and secret environment-variable names", () => {
     expect(() => controlHostCaphubAnalysisConfigSchema.parse({ concurrency: 2 })).toThrow();
 
-    for (const field of ["miniMaxSecretEnv", "kimiApiSecretEnv"] as const) {
+    for (const field of ["miniMaxSecretEnv", "deepSeekApiSecretEnv"] as const) {
       for (const value of ["lowercase", "1LEADING", "HAS-DASH", "HAS SPACE", ""]) {
         expect(() => controlHostCaphubAnalysisConfigSchema.parse({ [field]: value })).toThrow();
       }
@@ -324,18 +323,18 @@ describe("control host Caphub analysis config", () => {
 
     const parsed = controlHostCaphubAnalysisConfigSchema.parse({
       miniMaxSecretEnv: "CAPHUB_MINIMAX_TOKEN",
-      kimiApiSecretEnv: "CAPHUB_KIMI_TOKEN"
+      deepSeekApiSecretEnv: "CAPHUB_DEEPSEEK_TOKEN"
     });
     expect(parsed.miniMaxSecretEnv).toBe("CAPHUB_MINIMAX_TOKEN");
-    expect(parsed.kimiApiSecretEnv).toBe("CAPHUB_KIMI_TOKEN");
+    expect(parsed.deepSeekApiSecretEnv).toBe("CAPHUB_DEEPSEEK_TOKEN");
   });
 
   it("fixes provider endpoints and models without accepting literal credentials", () => {
     const mutations = [
       { miniMaxBaseUrl: "https://example.com/v1" },
       { miniMaxModel: "MiniMax-M2" },
-      { kimiApiBaseUrl: "https://api.kimi.com/v1" },
-      { kimiApiModel: "kimi-for-coding" },
+      { deepSeekApiBaseUrl: "https://example.test" },
+      { deepSeekApiModel: "deepseek-v4.1-flash" },
       { apiKey: "literal-secret" }
     ];
 
@@ -367,7 +366,7 @@ describe("control host Caphub analysis config", () => {
       limits: {
         ...CAPHUB_ANALYSIS_LIMITS,
         maxImages: 4,
-        providerTimeoutMs: { minimax: 30_000, kimi: 60_000 },
+        providerTimeoutMs: { minimax: 30_000, kimi: 60_000, deepseek: 60_000 },
         maxInputBytes: {
           extraction: 1_048_576,
           research: 524_288,
@@ -391,7 +390,7 @@ describe("control host Caphub analysis config", () => {
         ...CAPHUB_ANALYSIS_LIMITS,
         providerTimeoutMs: {
           ...CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs,
-          kimi: CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi + 1
+          deepseek: CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.deepseek + 1
         }
       },
       {

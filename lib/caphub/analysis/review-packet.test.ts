@@ -159,7 +159,7 @@ const input = {
   modelContracts: [
     { stage: "preprocess" as const, provider: "deterministic" as const, model: "caphub-preprocess-v1", schema_version: 1 as const },
     { stage: "extraction" as const, provider: "minimax" as const, model: "MiniMax-M3", schema_version: 1 as const },
-    { stage: "research" as const, provider: "kimi" as const, model: "k3-256k", schema_version: 1 as const }
+    { stage: "research" as const, provider: "deepseek" as const, model: "deepseek-flash", schema_version: 1 as const }
   ],
   clock: () => NOW
 };

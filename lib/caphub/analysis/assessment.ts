@@ -7,11 +7,11 @@ import type {
   ResearchDossier
 } from "./types";
 import type { StructuredProviderOutput } from "../providers/contracts";
-import type { KimiInvocationOptions } from "../providers/kimi";
+import type { DeepSeekInvocationOptions } from "../providers/deepseek";
 import type { MiniMaxInvocationOptions } from "../providers/minimax";
 
 export interface AssessmentWorker {
-  assess(input: unknown, options: KimiInvocationOptions): Promise<StructuredProviderOutput>;
+  assess(input: unknown, options: DeepSeekInvocationOptions): Promise<StructuredProviderOutput>;
 }
 
 export interface CriticWorker {

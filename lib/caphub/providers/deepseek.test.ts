@@ -42,6 +42,16 @@ describe("DeepSeekProvider", () => {
     })).rejects.toMatchObject({ code: "PERMISSION" });
   });
 
+  it("offers the active research and assessment worker methods", async () => {
+    const provider = new DeepSeekProvider({ adapter: adapter({ schema_version: 1 }) });
+    await expect(provider.research({}, { inputDigest: "d".repeat(64), signal })).resolves.toMatchObject({
+      usage: { inputTokens: 3, outputTokens: 2 }
+    });
+    await expect(provider.assess({}, { inputDigest: "e".repeat(64), signal })).resolves.toMatchObject({
+      usage: { inputTokens: 3, outputTokens: 2 }
+    });
+  });
+
   it("keeps correction requests source-free while carrying only validation paths", async () => {
     const prompts: string[] = [];
     const provider = new DeepSeekProvider({

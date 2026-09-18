@@ -5,8 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CaptureRecord } from "../domain/types";
 import { createRasterFixture, objectRefFor } from "../preprocess/fixtures";
 import type { StructuredProvider, StructuredProviderInput, StructuredProviderOutput } from "../providers/contracts";
-import { KimiProvider } from "../providers/kimi";
-import { KimiApiAdapter, type KimiApiTransportRequest } from "../providers/kimi-api";
+import { DeepSeekProvider, type DeepSeekStageRequest } from "../providers/deepseek";
 import { authorizeKimiProxyTarget } from "../providers/kimi-egress-proxy";
 import { runSandboxedKimiFixture } from "../providers/kimi-runner";
 import { LiveResearchSourceGateway } from "../research/source-gateway";
@@ -93,12 +92,10 @@ function parsePromptInput(prompt: string): Record<string, unknown> {
   return JSON.parse(match[1]) as Record<string, unknown>;
 }
 
-function createFixtureKimi(requests: KimiApiTransportRequest[]): KimiProvider {
-  return new KimiProvider({
-    mode: "api_key",
-    adapter: new KimiApiAdapter({
-      apiKey: "fixture-key",
-      transport: async (request) => {
+function createFixtureDeepSeek(requests: DeepSeekStageRequest[]): DeepSeekProvider {
+  return new DeepSeekProvider({
+    adapter: {
+      async generate(request) {
         requests.push(request);
         const source = parsePromptInput(request.prompt);
         if (request.stage === "research") {
@@ -175,7 +172,7 @@ function createFixtureKimi(requests: KimiApiTransportRequest[]): KimiProvider {
           usage: { inputTokens: 10, outputTokens: 10 }
         };
       }
-    })
+    }
   });
 }
 
@@ -199,8 +196,8 @@ describe("Capture to ReviewPacket behavior", () => {
       created_at: NOW
     };
     const miniMax = new FixtureMiniMax();
-    const kimiRequests: KimiApiTransportRequest[] = [];
-    const kimi = createFixtureKimi(kimiRequests);
+    const deepSeekRequests: DeepSeekStageRequest[] = [];
+    const deepSeek = createFixtureDeepSeek(deepSeekRequests);
     const sourceGateway = new LiveResearchSourceGateway({
       policy: new ExactHttpsSourcePolicy({
         allowedOrigins: ["https://docs.example.com"],
@@ -241,8 +238,8 @@ describe("Capture to ReviewPacket behavior", () => {
         decodeBarcodes: async () => []
       },
       extractionProvider: miniMax,
-      researchProvider: kimi,
-      assessmentProvider: kimi,
+      researchProvider: deepSeek,
+      assessmentProvider: deepSeek,
       criticProvider: miniMax,
       sourceGateway: () => sourceGateway,
       jobs,
@@ -253,20 +250,15 @@ describe("Capture to ReviewPacket behavior", () => {
     });
 
     const first = await service.start(CAPTURE_ID);
-    const calls = { miniMax: miniMax.calls, kimi: kimiRequests.length };
+    const calls = { miniMax: miniMax.calls, deepseek: deepSeekRequests.length };
     const second = await service.start(CAPTURE_ID);
     expect(second).toEqual(first);
     expect(first).toMatchObject({ status: "completed" });
     expect(first.reviewPacketArtifactId).toMatch(/^art_[a-f0-9]{64}$/);
-    expect({ miniMax: miniMax.calls, kimi: kimiRequests.length }).toEqual(calls);
-    expect(calls).toEqual({ miniMax: 3, kimi: 2 });
-    expect(kimiRequests.every((request) =>
-      request.baseURL === "https://api.kimi.com/coding/v1"
-      && request.model === "k3-256k"
-      && request.structuredOutput
-      && request.maxRetries === 0
-      && !("tools" in request)
-    )).toBe(true);
+    expect({ miniMax: miniMax.calls, deepseek: deepSeekRequests.length }).toEqual(calls);
+    expect(calls).toEqual({ miniMax: 3, deepseek: 2 });
+    expect(deepSeekRequests.map((request) => request.stage)).toEqual(["research", "assessment"]);
+    expect(deepSeekRequests.map((request) => request.maxOutputTokens)).toEqual([8_192, 6_144]);
 
     const packet = await artifacts.readPayload(first.reviewPacketArtifactId!);
     expect(packet).toMatchObject({ human_review_required: true });

@@ -22,10 +22,9 @@
       "miniMaxBaseUrl": "https://api.minimax.io/v1",
       "miniMaxModel": "MiniMax-M3",
       "miniMaxSecretEnv": "MINIMAX_API_KEY",
-      "kimiMode": "api_key",
-      "kimiApiBaseUrl": "https://api.kimi.com/coding/v1",
-      "kimiApiModel": "k3-256k",
-      "kimiApiSecretEnv": "KIMI_CODE_API_KEY",
+      "deepSeekApiBaseUrl": "https://api.deepseek.com",
+      "deepSeekApiModel": "deepseek-flash",
+      "deepSeekApiSecretEnv": "DEEPSEEK_API_KEY",
       "sourceAllowedOrigins": []
     },
     "registry": {

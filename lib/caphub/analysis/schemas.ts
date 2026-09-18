@@ -339,7 +339,7 @@ export const reviewPacketSchema = z.object({
   platform_previews: z.array(platformPreviewSchema),
   model_contracts: z.array(z.object({
     stage: analysisStageSchema,
-    provider: z.enum(["deterministic", "minimax", "kimi"]),
+    provider: z.enum(["deterministic", "minimax", "kimi", "deepseek"]),
     model: nonEmptyTextSchema,
     schema_version: z.literal(1)
   }).strict()),
@@ -438,7 +438,7 @@ const modelCallAuditBaseShape = {
   job_id: analysisJobIdSchema,
   capture_id: captureIdSchema,
   stage: z.enum(["extraction", "research", "assessment", "critic"]),
-  provider: z.enum(["minimax", "kimi"]),
+  provider: z.enum(["minimax", "kimi", "deepseek"]),
   model: nonEmptyTextSchema,
   auth_mode: z.enum(["api_key", "local_login"]).optional(),
   attempt: z.union([z.literal(1), z.literal(2)]),

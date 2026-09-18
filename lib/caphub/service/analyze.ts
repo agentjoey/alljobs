@@ -158,8 +158,8 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
   const clockString = () => dependencies.clock().toISOString();
   if (dependencies.extractionProvider.provider !== "minimax"
     || dependencies.criticProvider.provider !== "minimax"
-    || dependencies.researchProvider.provider !== "kimi"
-    || dependencies.assessmentProvider.provider !== "kimi") {
+    || dependencies.researchProvider.provider !== "deepseek"
+    || dependencies.assessmentProvider.provider !== "deepseek") {
     throw new Error("analysis providers do not match their fixed stage responsibilities");
   }
 
@@ -401,8 +401,8 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
               modelContracts: [
                 { stage: "preprocess", provider: "deterministic", model: "caphub-preprocess-v1", schema_version: 1 },
                 { stage: "extraction", provider: "minimax", model: dependencies.extractionProvider.model, schema_version: 1 },
-                { stage: "research", provider: "kimi", model: dependencies.researchProvider.model, schema_version: 1 },
-                { stage: "assessment", provider: "kimi", model: dependencies.assessmentProvider.model, schema_version: 1 },
+                { stage: "research", provider: "deepseek", model: dependencies.researchProvider.model, schema_version: 1 },
+                { stage: "assessment", provider: "deepseek", model: dependencies.assessmentProvider.model, schema_version: 1 },
                 ...(critic ? [{ stage: "critic" as const, provider: "minimax" as const, model: dependencies.criticProvider.model, schema_version: 1 as const }] : [])
               ],
               clock: clockString

@@ -75,7 +75,8 @@ const controlHostCaphubAnalysisLimitsSchema = z.object({
   ocrTimeoutMsPerImage: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.ocrTimeoutMsPerImage),
   providerTimeoutMs: z.object({
     minimax: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.minimax),
-    kimi: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi)
+    kimi: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.kimi),
+    deepseek: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.providerTimeoutMs.deepseek)
   }).strict(),
   maxSchemaCorrections: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxSchemaCorrections),
   maxProviderCallsPerJob: boundedPositiveInteger(CAPHUB_ANALYSIS_LIMITS.maxProviderCallsPerJob),
@@ -106,10 +107,9 @@ export const controlHostCaphubAnalysisConfigSchema = z.object({
   miniMaxBaseUrl: z.literal("https://api.minimax.io/v1").default("https://api.minimax.io/v1"),
   miniMaxModel: z.literal("MiniMax-M3").default("MiniMax-M3"),
   miniMaxSecretEnv: secretEnvNameSchema.default("MINIMAX_API_KEY"),
-  kimiMode: z.enum(["api_key", "local_login"]).default("api_key"),
-  kimiApiBaseUrl: z.literal("https://api.kimi.com/coding/v1").default("https://api.kimi.com/coding/v1"),
-  kimiApiModel: z.literal("k3-256k").default("k3-256k"),
-  kimiApiSecretEnv: secretEnvNameSchema.default("KIMI_CODE_API_KEY"),
+  deepSeekApiBaseUrl: z.literal("https://api.deepseek.com").default("https://api.deepseek.com"),
+  deepSeekApiModel: z.literal("deepseek-flash").default("deepseek-flash"),
+  deepSeekApiSecretEnv: secretEnvNameSchema.default("DEEPSEEK_API_KEY"),
   sourceAllowedOrigins: z.array(exactHttpsOriginSchema).max(32).default([]),
   limits: controlHostCaphubAnalysisLimitsSchema.default(CAPHUB_ANALYSIS_LIMITS)
 }).strict();

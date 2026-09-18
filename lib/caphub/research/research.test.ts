@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExtractionResult } from "../analysis/types";
-import type { KimiInvocationOptions } from "../providers/kimi";
+import type { ResearchInvocationOptions } from "./research";
 import type { StructuredProviderOutput } from "../providers/contracts";
 import type { ResearchSourceGateway, SourceCandidate } from "./source-gateway";
 import { buildResearchDossier, ResearchDossierError } from "./research";
@@ -85,7 +85,7 @@ describe("buildResearchDossier", () => {
   it("normalizes immutable evidence and keeps hostile source text inert", async () => {
     let modelInput: unknown;
     const worker = {
-      async research(input: unknown, _options: KimiInvocationOptions): Promise<StructuredProviderOutput> {
+      async research(input: unknown, _options: ResearchInvocationOptions): Promise<StructuredProviderOutput> {
         modelInput = input;
         const evidenceId = (input as { evidence: Array<{ id: string }> }).evidence[0].id;
         return {

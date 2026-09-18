@@ -43,10 +43,18 @@ describe("fixed Control Host analysis composition", () => {
       home,
       env: {
         MINIMAX_API_KEY: "fixture-minimax",
-        KIMI_CODE_API_KEY: "fixture-kimi"
+        DEEPSEEK_API_KEY: "fixture-deepseek"
       }
     });
     await expect(service.start("not-a-capture-id"))
       .rejects.toMatchObject({ code: "INVALID_CAPTURE_ID" });
+  });
+
+  it("requires only the fixed DeepSeek secret for research and assessment", async () => {
+    const home = controlHostHome({ enabled: true, analysis: { enabled: true } });
+    await expect(loadControlHostAnalysisService({
+      home,
+      env: { MINIMAX_API_KEY: "fixture-minimax" }
+    })).rejects.toThrow("DEEPSEEK_API_KEY");
   });
 });
