@@ -18,6 +18,7 @@ export interface SourceCandidate {
   title: string;
   sourceKind: SourceKind;
   claims: string[];
+  content?: string;
 }
 
 export interface FetchedSource {
