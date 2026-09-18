@@ -135,6 +135,9 @@ or real analysis requires a new Human authorization.
 - A newly authorized single Kimi retry after the Human restored account capacity
   also did not return a schema-valid result. No further Provider request is
   authorized; the failure cannot be attributed from the redacted canary record.
+- A separately authorized MiniMax `MiniMax-M3` synthetic smoke passed with no
+  retry. It validates only MiniMax; Kimi remains the analysis blocker and the
+  runtime stays in S3.
 
 ## P0 Backlog retirement (live)
 

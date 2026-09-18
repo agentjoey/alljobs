@@ -491,3 +491,15 @@ and one independent Verification occur only after the implementation tasks.
   retained, so this evidence cannot attribute the failure to account capacity.
 - No further Provider request was made. Caphub remains in S3 with Registry
   enabled and analysis/exports/targets disabled.
+
+## MiniMax compatibility smoke — 2026-09-18
+
+- Under explicit Human authorization, one MiniMax `MiniMax-M3` synthetic
+  streaming compatibility request was made through the server-only provider
+  path. It used no tools and `maxRetries: 0`; no Capture was read.
+- The terminal response was the required strict JSON object. The metadata-only
+  evidence reports 182 input tokens, 6 output tokens, two text chunks, and a
+  normal stop. No key or response body is retained in this record.
+- This validates the MiniMax provider path only. It does not change the failed
+  Kimi structured-output result, does not enable analysis, and does not create
+  a Capture analysis, ReviewPacket, target, or export.
