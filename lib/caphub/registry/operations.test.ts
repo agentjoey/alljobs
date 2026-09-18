@@ -186,7 +186,7 @@ describe.sequential("Registry migration and readiness operations", () => {
       expectedSocketDir: postgres.socketDir
     });
     expect(report).toEqual({
-      postgresVersion: expect.stringMatching(/^17\./),
+      postgresVersion: expect.stringMatching(/^17\.\d+(?:\.\d+)?$/),
       connectionMode: "local_socket",
       tcpListenAddresses: "",
       database: "caphub",

@@ -64,6 +64,10 @@ export function isSupportedRegistryPostgresVersion(
   return connectionMode === "tls_verify_full" && version.startsWith("18.");
 }
 
+function redactedRegistryPostgresVersion(version: string): string {
+  return version.match(/^\d+\.\d+(?:\.\d+)?/)?.[0] ?? version;
+}
+
 function assertPrivateOwnedCanonicalDirectory(path: string): void {
   const metadata = lstatSync(path);
   const currentUid = typeof process.getuid === "function" ? process.getuid() : metadata.uid;
@@ -228,6 +232,7 @@ export async function checkRegistryReadiness(input: {
       && input.appPool.options.host === input.expectedSocketDir
       && input.migrationPool.options.host === input.expectedSocketDir
     : true;
+  const serverVersion = version.rows[0]?.server_version ?? "";
   const databasePrivilegeBoundary: DatabasePrivilegeBoundary = input.connectionMode === "tls_verify_full"
     ? "neon_project_admin_accepted"
     : "database_role_least_privilege";
@@ -235,7 +240,7 @@ export async function checkRegistryReadiness(input: {
     ? true
     : exactRoles && !appCanMigrate && !appCanUpdateAppendOnly;
   const ready = isSupportedRegistryPostgresVersion(
-    version.rows[0]?.server_version ?? "",
+    serverVersion,
     input.connectionMode
   )
     && transportReady && exactIdentities && noDirectApplicationMigratorMembership
@@ -245,7 +250,7 @@ export async function checkRegistryReadiness(input: {
     && Number(appendOnlyTriggers.rows[0]?.count ?? 0) === APPEND_ONLY_TABLES.length;
 
   return {
-    postgresVersion: version.rows[0]?.server_version ?? "unknown",
+    postgresVersion: redactedRegistryPostgresVersion(serverVersion || "unknown"),
     connectionMode: input.connectionMode,
     tcpListenAddresses: input.connectionMode === "local_socket"
       ? actualTcpListenAddresses
