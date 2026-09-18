@@ -107,14 +107,8 @@ describe("ExtractionDraftV2 host composition", () => {
     ["image", { kind: "image", image_index: 1 }],
     ["OCR block", { kind: "ocr_block", image_index: 0, ocr_block_index: 1 }],
     ["indicator", { kind: "indicator", indicator_kind: "command", indicator_index: 1 }]
-  ] as const)("rejects an unknown %s locator before persistence", (_label, sourceRef) => {
-    try {
-      compose(withClaimSourceRef(sourceRef));
-      throw new Error("Expected host linkage validation to fail");
-    } catch (error) {
-      expect(error).toBeInstanceOf(ExtractionCompositionError);
-      expect((error as ExtractionCompositionError).code).toBe("HOST_EXTRACTION_LINKAGE_FAILED");
-    }
+  ] as const)("drops a claim with an unknown %s locator without fabricating evidence", (_label, sourceRef) => {
+    expect(compose(withClaimSourceRef(sourceRef)).claims).toEqual([]);
   });
 
   it("rejects extra locator properties instead of accepting model-controlled linkage", () => {

@@ -72,20 +72,14 @@ function id(prefix: "ev" | "clm", value: unknown): string {
   return `${prefix}_${digestCanonicalJson(value).slice(0, 32)}`;
 }
 
-function assertLocatorExists(locator: ExtractionSourceRefV2, preprocess: PreprocessResult): void {
+function locatorExists(locator: ExtractionSourceRefV2, preprocess: PreprocessResult): boolean {
   if (locator.kind === "image") {
-    if (!preprocess.images.some((image) => image.index === locator.image_index)) {
-      throw new ExtractionCompositionError();
-    }
-    return;
+    return preprocess.images.some((image) => image.index === locator.image_index);
   }
 
   if (locator.kind === "ocr_block") {
     const image = preprocess.images.find((candidate) => candidate.index === locator.image_index);
-    if (!image || !image.ocr_blocks[locator.ocr_block_index]) {
-      throw new ExtractionCompositionError();
-    }
-    return;
+    return Boolean(image?.ocr_blocks[locator.ocr_block_index]);
   }
 
   const indicators = {
@@ -94,9 +88,7 @@ function assertLocatorExists(locator: ExtractionSourceRefV2, preprocess: Preproc
     package: preprocess.indicators.packages,
     command: preprocess.indicators.commands
   };
-  if (!indicators[locator.indicator_kind][locator.indicator_index]) {
-    throw new ExtractionCompositionError();
-  }
+  return Boolean(indicators[locator.indicator_kind][locator.indicator_index]);
 }
 
 function canonicalLocators(
@@ -105,8 +97,9 @@ function canonicalLocators(
 ): ExtractionSourceRefV2[] {
   const locators = new Map<string, ExtractionSourceRefV2>();
   for (const sourceRef of sourceRefs) {
-    assertLocatorExists(sourceRef, preprocess);
-    locators.set(canonicalJson(sourceRef), sourceRef);
+    if (locatorExists(sourceRef, preprocess)) {
+      locators.set(canonicalJson(sourceRef), sourceRef);
+    }
   }
   return [...locators.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
@@ -130,9 +123,9 @@ export function composeExtractionResultV2(input: ComposeExtractionResultV2Input)
     schema_version: 1,
     capture_id: input.captureId,
     preprocess_artifact_id: input.preprocessArtifactId,
-    claims: input.draft.claims.map((claim) => {
+    claims: input.draft.claims.flatMap((claim) => {
       const claimEvidenceIds = evidenceIds(input, claim.source_refs);
-      return {
+      return claimEvidenceIds.length === 0 ? [] : [{
         id: id("clm", {
           capture_id: input.captureId,
           preprocess_artifact_id: input.preprocessArtifactId,
@@ -145,14 +138,17 @@ export function composeExtractionResultV2(input: ComposeExtractionResultV2Input)
         basis: claim.basis,
         confidence: claim.confidence,
         evidence_ids: claimEvidenceIds
-      };
+      }];
     }),
     entities: input.draft.entities,
-    experience_fragments: input.draft.experience_fragments.map((fragment) => ({
-      title: fragment.title,
-      summary: fragment.summary,
-      evidence_ids: evidenceIds(input, fragment.source_refs)
-    })),
+    experience_fragments: input.draft.experience_fragments.flatMap((fragment) => {
+      const fragmentEvidenceIds = evidenceIds(input, fragment.source_refs);
+      return fragmentEvidenceIds.length === 0 ? [] : [{
+        title: fragment.title,
+        summary: fragment.summary,
+        evidence_ids: fragmentEvidenceIds
+      }];
+    }),
     explicit_urls: input.draft.explicit_urls,
     unresolved_questions: input.draft.unresolved_questions
   });

@@ -193,12 +193,13 @@ describe("atomic extraction v2 through real provider adapters", () => {
     assertRedacted(f.events);
   });
 
-  it("records host locator failure as the one DeepSeek terminal event", async () => {
+  it("drops claims with host-invalid locators and records one successful DeepSeek terminal event", async () => {
     const f = setup({ payload: envelope({ ...draft, claims: [{ ...draft.claims[0], source_refs: [{ kind: "image", image_index: 99 }] }] }) });
-    expect(await runExtractionStageV2(f.request)).toEqual({ kind: "human_review", reason: "HOST_EXTRACTION_LINKAGE_FAILED" });
+    const result = await runExtractionStageV2(f.request);
+    expect(result).toMatchObject({ kind: "success", value: { claims: [] } });
     expect(f.deepSeekFetch).toHaveBeenCalledTimes(1);
     expect(f.events).toHaveLength(4);
-    expect(f.events[3]).toMatchObject({ type: "failed", error_code: "HOST_EXTRACTION_LINKAGE_FAILED", input_tokens: 30, output_tokens: 10 });
+    expect(f.events[3]).toMatchObject({ type: "succeeded", input_tokens: 30, output_tokens: 10 });
     assertRedacted(f.events);
   });
 
@@ -348,8 +349,7 @@ describe("atomic extraction v2 through real provider adapters", () => {
   it.each([
     ["observation", { miniResult: { text: "" } }, "MINIMAX_INVALID_OBSERVATION", 0],
     ["structure", { payload: envelope({}) }, "DEEPSEEK_STRUCTURE_FAILED", 1],
-    ["non-HTTPS repository", { payload: envelope({ ...draft, entities: [{ name: "Example", aliases: [], repository: "http://example.com/repo" }] }) }, "DEEPSEEK_STRUCTURE_FAILED", 1],
-    ["locator", { payload: envelope({ ...draft, claims: [{ ...draft.claims[0], source_refs: [{ kind: "image", image_index: 9 }] }] }) }, "HOST_EXTRACTION_LINKAGE_FAILED", 1]
+    ["non-HTTPS repository", { payload: envelope({ ...draft, entities: [{ name: "Example", aliases: [], repository: "http://example.com/repo" }] }) }, "DEEPSEEK_STRUCTURE_FAILED", 1]
   ] as const)("persists Human Review for %s failure without an extraction artifact or replay", async (_name, options, reason, deepCalls) => {
     const f = setup(options);
     const stores = await workflow(f);
