@@ -74,6 +74,31 @@ function queued(overrides: Partial<AnalysisJob> = {}): AnalysisJob {
 }
 
 describe("filesystem analysis workflow stores", () => {
+  it("round-trips legacy and operation-aware redacted audit metadata after restart", async () => {
+    const root = fixtureRoot();
+    const store = new FilesystemModelCallAuditStore(root);
+    const base = {
+      jobId: JOB_ID, captureId: CAPTURE_ID, stage: "extraction" as const,
+      provider: "minimax" as const, model: "MiniMax-M3", attempt: 1 as const,
+      inputDigest: "5".repeat(64), inputBytes: 100, occurredAt: NOW
+    };
+    const legacy = buildModelCallAuditEvent(base, { type: "started" });
+    const failed = buildModelCallAuditEvent({
+      ...base, operation: "visual_observation", contractVersion: "caphub-minimax-visual-v2"
+    }, {
+      type: "failed", errorCode: "MINIMAX_INVALID_OBSERVATION", finishReason: "length",
+      outputBytes: 100, outputDigest: "6".repeat(64), inputTokens: 20, outputTokens: 10,
+      validationIssuePaths: ["$"]
+    });
+    await store.append(legacy);
+    await store.append(failed);
+    await expect(new FilesystemModelCallAuditStore(root).list(JOB_ID)).resolves.toEqual([legacy, failed]);
+    expect(failed).toHaveProperty("operation", "visual_observation");
+    const persisted = readFileSync(join(root, "events", "model-calls", `${JOB_ID}.jsonl`), "utf8");
+    expect(persisted).not.toMatch(/"(?:observation|prompt|response|reasoning|secret)":/);
+    await expect(store.append({ ...failed, operation: "schema_structuring" })).rejects.toThrow(/deterministic/);
+  });
+
   it("atomically replaces mutable jobs while preserving the old record on an injected pre-replace failure", async () => {
     const root = fixtureRoot();
     const store = new FilesystemAnalysisJobStore(root);

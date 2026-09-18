@@ -11,20 +11,30 @@ export type ModelCallAuditBase = ModelCallIdentityInput & {
   inputBytes: number;
   occurredAt: string;
   authMode?: "api_key" | "local_login";
+  contractVersion?: string;
+};
+
+type ModelCallTerminalMetadata = {
+  finishReason?: string;
+  outputBytes?: number;
+  validationIssuePaths?: string[];
 };
 
 export type ModelCallAuditOutcome =
   | { type: "started" }
-  | {
+  | (ModelCallTerminalMetadata & {
     type: "succeeded";
     outputDigest: string;
     inputTokens: number;
     outputTokens: number;
-  }
-  | {
+  })
+  | (ModelCallTerminalMetadata & {
     type: "failed";
     errorCode: Extract<ModelCallAuditEvent, { type: "failed" }>["error_code"];
-  };
+    outputDigest?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+  });
 
 function digest(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -38,7 +48,8 @@ function identitySeed(input: ModelCallIdentityInput): string {
     input.provider,
     input.model,
     input.attempt,
-    input.inputDigest
+    input.inputDigest,
+    ...(input.operation ? [input.operation] : [])
   ].join("\u0000");
 }
 
@@ -73,7 +84,8 @@ export function buildModelCallAuditEvent(
     provider: base.provider,
     model: base.model,
     attempt: base.attempt,
-    inputDigest: base.inputDigest
+    inputDigest: base.inputDigest,
+    ...(base.operation ? { operation: base.operation } : {})
   };
   const common = {
     schema_version: 1 as const,
@@ -84,6 +96,8 @@ export function buildModelCallAuditEvent(
     stage: base.stage,
     provider: base.provider,
     model: base.model,
+    ...(base.operation ? { operation: base.operation } : {}),
+    ...(base.contractVersion ? { contract_version: base.contractVersion } : {}),
     ...(base.authMode ? { auth_mode: base.authMode } : {}),
     attempt: base.attempt,
     input_digest: base.inputDigest,
@@ -91,11 +105,17 @@ export function buildModelCallAuditEvent(
     occurred_at: base.occurredAt
   };
 
+  const terminalMetadata = outcome.type === "started" ? {} : {
+    ...(outcome.finishReason !== undefined ? { finish_reason: outcome.finishReason } : {}),
+    ...(outcome.outputBytes !== undefined ? { output_bytes: outcome.outputBytes } : {}),
+    ...(outcome.validationIssuePaths !== undefined ? { validation_issue_paths: outcome.validationIssuePaths } : {})
+  };
   const event = outcome.type === "started"
     ? { ...common, type: outcome.type }
     : outcome.type === "succeeded"
       ? {
         ...common,
+        ...terminalMetadata,
         type: outcome.type,
         output_digest: outcome.outputDigest,
         input_tokens: outcome.inputTokens,
@@ -103,8 +123,12 @@ export function buildModelCallAuditEvent(
       }
       : {
         ...common,
+        ...terminalMetadata,
         type: outcome.type,
-        error_code: outcome.errorCode
+        error_code: outcome.errorCode,
+        ...(outcome.outputDigest !== undefined ? { output_digest: outcome.outputDigest } : {}),
+        ...(outcome.inputTokens !== undefined ? { input_tokens: outcome.inputTokens } : {}),
+        ...(outcome.outputTokens !== undefined ? { output_tokens: outcome.outputTokens } : {})
       };
 
   return modelCallAuditEventSchema.parse(event);

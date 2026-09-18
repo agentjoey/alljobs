@@ -48,6 +48,9 @@ export type StructuredStageHumanReviewReason =
   | "PERMISSION"
   | "PROVIDER_UNAVAILABLE"
   | "INVALID_OUTPUT"
+  | "MINIMAX_INVALID_OBSERVATION"
+  | "DEEPSEEK_STRUCTURE_FAILED"
+  | "HOST_EXTRACTION_LINKAGE_FAILED"
   | "SCHEMA_INVALID_TWICE"
   | "INPUT_TOO_LARGE"
   | "PROVIDER_CALL_LIMIT"
@@ -57,6 +60,8 @@ export type StructuredStageResult<T> =
   | { kind: "success"; value: T }
   | { kind: "human_review"; reason: StructuredStageHumanReviewReason };
 
+export type ModelCallOperation = "visual_observation" | "schema_structuring" | "structured_generation";
+
 export interface ModelCallIdentityInput {
   jobId: string;
   captureId: string;
@@ -65,6 +70,7 @@ export interface ModelCallIdentityInput {
   model: string;
   attempt: 1 | 2;
   inputDigest: string;
+  operation?: ModelCallOperation;
 }
 
 export interface ModelCallIdFactory {

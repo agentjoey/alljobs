@@ -324,7 +324,8 @@ function assertDeterministicModelEvent(event: ModelCallAuditEvent): void {
     provider: event.provider,
     model: event.model,
     attempt: event.attempt,
-    inputDigest: event.input_digest
+    inputDigest: event.input_digest,
+    ...(event.operation ? { operation: event.operation } : {})
   }, event.type);
   if (event.call_id !== ids.callId || event.event_id !== ids.eventId) {
     throw new PostgresCaphubStoreError("WORKFLOW_RECORD_CONFLICT");

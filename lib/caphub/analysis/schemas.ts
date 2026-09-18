@@ -440,11 +440,19 @@ const modelCallAuditBaseShape = {
   stage: z.enum(["extraction", "research", "assessment", "critic"]),
   provider: z.enum(["minimax", "kimi", "deepseek"]),
   model: nonEmptyTextSchema,
+  operation: z.enum(["visual_observation", "schema_structuring", "structured_generation"]).optional(),
+  contract_version: z.string().trim().min(1).max(128).optional(),
   auth_mode: z.enum(["api_key", "local_login"]).optional(),
   attempt: z.union([z.literal(1), z.literal(2)]),
   input_digest: sha256DigestSchema,
   input_bytes: z.number().int().nonnegative(),
   occurred_at: timestampSchema
+};
+
+const modelCallTerminalMetadataShape = {
+  finish_reason: z.string().trim().min(1).max(64).optional(),
+  output_bytes: z.number().int().nonnegative().optional(),
+  validation_issue_paths: z.array(z.string().max(256)).max(32).optional()
 };
 
 export const modelCallAuditEventSchema = z.discriminatedUnion("type", [
@@ -455,6 +463,7 @@ export const modelCallAuditEventSchema = z.discriminatedUnion("type", [
   z.object({
     ...modelCallAuditBaseShape,
     type: z.literal("succeeded"),
+    ...modelCallTerminalMetadataShape,
     output_digest: sha256DigestSchema,
     input_tokens: z.number().int().nonnegative(),
     output_tokens: z.number().int().nonnegative()
@@ -462,8 +471,15 @@ export const modelCallAuditEventSchema = z.discriminatedUnion("type", [
   z.object({
     ...modelCallAuditBaseShape,
     type: z.literal("failed"),
+    ...modelCallTerminalMetadataShape,
+    output_digest: sha256DigestSchema.optional(),
+    input_tokens: z.number().int().nonnegative().optional(),
+    output_tokens: z.number().int().nonnegative().optional(),
     error_code: z.enum([
       "INVALID_OUTPUT",
+      "MINIMAX_INVALID_OBSERVATION",
+      "DEEPSEEK_STRUCTURE_FAILED",
+      "HOST_EXTRACTION_LINKAGE_FAILED",
       "PROVIDER_UNAVAILABLE",
       "TIMEOUT",
       "AUTHENTICATION",

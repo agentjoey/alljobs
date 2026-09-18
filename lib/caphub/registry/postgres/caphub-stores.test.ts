@@ -82,6 +82,32 @@ defineCaptureStoreContract("PostgreSQL", () => {
 });
 
 describe.sequential("PostgreSQL Caphub storage ports", () => {
+  it("round-trips legacy and operation-aware audit metadata without persisting model text", async () => {
+    const seed = counter++;
+    const store = new PostgresModelCallAuditStore(fixture.pool);
+    const base = {
+      jobId: hexId("job_", seed), captureId: hexId("cap_", seed), stage: "extraction" as const,
+      provider: "deepseek" as const, model: "deepseek-flash", attempt: 1 as const,
+      inputDigest: "5".repeat(64), inputBytes: 100, occurredAt: NOW
+    };
+    const legacy = buildModelCallAuditEvent(base, { type: "started" });
+    const failed = buildModelCallAuditEvent({
+      ...base, operation: "schema_structuring", contractVersion: "caphub-deepseek-extraction-v2",
+      occurredAt: "2026-09-16T08:01:00.000Z"
+    }, {
+      type: "failed", errorCode: "DEEPSEEK_STRUCTURE_FAILED", finishReason: "completed",
+      outputBytes: 100, outputDigest: "6".repeat(64), inputTokens: 20, outputTokens: 10,
+      validationIssuePaths: ["claims.0.source_refs"]
+    });
+    await store.append(legacy);
+    await store.append(failed);
+    await expect(new PostgresModelCallAuditStore(fixture.pool).list(base.jobId)).resolves.toEqual([legacy, failed]);
+    expect(failed).toHaveProperty("operation", "schema_structuring");
+    const stored = await fixture.pool.query("SELECT metadata FROM caphub.audit_events WHERE subject_id = $1", [base.jobId]);
+    expect(JSON.stringify(stored.rows)).not.toMatch(/"(?:observation|prompt|response|reasoning|secret)":/);
+    await expect(store.append({ ...failed, operation: "visual_observation" })).rejects.toBeInstanceOf(PostgresCaphubStoreError);
+  });
+
   it("allows exactly one concurrent Capture create and reads it after adapter restart", async () => {
     const seed = counter++;
     const input = capture(seed);
