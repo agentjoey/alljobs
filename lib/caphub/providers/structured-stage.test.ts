@@ -85,7 +85,8 @@ describe("runStructuredStage", () => {
       kind: "correction",
       correction: {
         originalInputDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
-        validationIssuePaths: ["answer"]
+        validationIssuePaths: ["answer"],
+        originalInput: { source: "fixture" }
       }
     }));
     expect(fake.inputs[1]).not.toHaveProperty("input");

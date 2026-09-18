@@ -65,12 +65,14 @@ describe("KimiProvider", () => {
       inputDigest: "c".repeat(64),
       correction: {
         originalInputDigest: "c".repeat(64),
-        validationIssuePaths: ["identity.status"]
+        validationIssuePaths: ["identity.status"],
+        originalInput: { evidence: [{ id: "ev_fixture" }] }
       },
       signal
     });
     expect(prompts[0]).toContain('"additionalProperties":false');
     expect(prompts[0]).toContain("identity.status");
+    expect(prompts[0]).toContain("ev_fixture");
     expect(prompts[0]).not.toMatch(/rejected|credential|response/i);
   });
 });

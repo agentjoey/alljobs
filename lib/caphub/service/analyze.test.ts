@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 describe("analysis contract job identity", () => {
-  it.each([false, true])("starts one deterministic v3 job with immutable v2 lineage when predecessor exists=%s", async (hasPredecessor) => {
+  it.each([false, true])("starts one deterministic v4 job with immutable v3 lineage when predecessor exists=%s", async (hasPredecessor) => {
     const owned = realpathSync(mkdtempSync(join(realpathSync(tmpdir()), "alljobs-analysis-lineage-")));
     roots.push(owned);
     const root = join(owned, "home", "state", "caphub");
@@ -82,15 +82,15 @@ describe("analysis contract job identity", () => {
       note: "Fixture", mime_type: "image/png", object: objectRefFor(bytes), idempotency_key: "capture.lineage-0001",
       status: "received", human_review_required: true, created_at: "2026-09-16T06:00:00.000Z"
     };
-    // Independently reproduce the documented v2 and v3 identity contracts.
-    const v2Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v2`).digest("hex").slice(0, 32)}`;
+    // Independently reproduce the documented v3 and v4 identity contracts.
     const v3Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v3`).digest("hex").slice(0, 32)}`;
+    const v4Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v4`).digest("hex").slice(0, 32)}`;
     if (hasPredecessor) await jobs.put({
-      schema_version: 1, id: v2Id, analysis_contract_version: "caphub-analysis-v2", capture_id: CAPTURE_ID, input_digest: "a".repeat(64),
+      schema_version: 1, id: v3Id, analysis_contract_version: "caphub-analysis-v3", capture_id: CAPTURE_ID, input_digest: "a".repeat(64),
       completed_artifact_ids: [], status: "HUMAN_REVIEW_REQUIRED", reason: "INVALID_OUTPUT",
       stopped_at: capture.created_at, created_at: capture.created_at, updated_at: capture.created_at
     });
-    const v2Bytes = hasPredecessor ? readFileSync(analysisJobRecordPath(root, v2Id)) : null;
+    const v3Bytes = hasPredecessor ? readFileSync(analysisJobRecordPath(root, v3Id)) : null;
     const writes: unknown[] = [];
     const dependencies = minimalDependencies({
       captures: { get: async () => capture }, readObject: async () => bytes,
@@ -101,17 +101,17 @@ describe("analysis contract job identity", () => {
     const controller = new AbortController();
     controller.abort();
     const first = await service.start(CAPTURE_ID, controller.signal);
-    expect(v3Id).not.toBe(v2Id);
-    expect(first).toMatchObject({ jobId: v3Id, status: "HUMAN_REVIEW_REQUIRED" });
-    expect(writes[0]).toMatchObject({ schema_version: 1, id: v3Id, status: "queued", analysis_contract_version: "caphub-analysis-v3" });
-    const versioned = await jobs.get(v3Id);
-    expect(versioned).toHaveProperty("analysis_contract_version", "caphub-analysis-v3");
-    if (hasPredecessor) expect(versioned).toHaveProperty("supersedes_job_id", v2Id);
+    expect(v4Id).not.toBe(v3Id);
+    expect(first).toMatchObject({ jobId: v4Id, status: "HUMAN_REVIEW_REQUIRED" });
+    expect(writes[0]).toMatchObject({ schema_version: 1, id: v4Id, status: "queued", analysis_contract_version: "caphub-analysis-v4" });
+    const versioned = await jobs.get(v4Id);
+    expect(versioned).toHaveProperty("analysis_contract_version", "caphub-analysis-v4");
+    if (hasPredecessor) expect(versioned).toHaveProperty("supersedes_job_id", v3Id);
     else expect(versioned).not.toHaveProperty("supersedes_job_id");
-    const snapshot = readFileSync(analysisJobRecordPath(root, v3Id));
+    const snapshot = readFileSync(analysisJobRecordPath(root, v4Id));
     expect(await service.start(CAPTURE_ID)).toEqual(first);
-    expect(readFileSync(analysisJobRecordPath(root, v3Id))).toEqual(snapshot);
-    if (v2Bytes) expect(readFileSync(analysisJobRecordPath(root, v2Id))).toEqual(v2Bytes);
+    expect(readFileSync(analysisJobRecordPath(root, v4Id))).toEqual(snapshot);
+    if (v3Bytes) expect(readFileSync(analysisJobRecordPath(root, v3Id))).toEqual(v3Bytes);
     expect(dependencies.extractionObserver.observe).not.toHaveBeenCalled();
     expect(dependencies.extractionStructurer.structureExtraction).not.toHaveBeenCalled();
   });

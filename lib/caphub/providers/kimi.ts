@@ -1,7 +1,7 @@
 import { z, type ZodType } from "zod";
 import { canonicalJson } from "../analysis/digest";
 import { CAPHUB_ANALYSIS_LIMITS } from "../analysis/limits";
-import { capabilityAssessmentSchema, researchDossierSchema } from "../analysis/schemas";
+import { assessmentDraftSchema, researchDraftSchema } from "../analysis/model-drafts";
 import {
   ProviderInvocationError,
   type StructuredProvider,
@@ -36,7 +36,7 @@ export interface KimiInvocationOptions {
 }
 
 function schemaFor(stage: KimiStage): ZodType<unknown> {
-  return stage === "research" ? researchDossierSchema : capabilityAssessmentSchema;
+  return stage === "research" ? researchDraftSchema : assessmentDraftSchema;
 }
 
 function safeJson(value: unknown): string {
@@ -72,7 +72,10 @@ function correctionPrompt(
     `output_schema=${canonicalJson(z.toJSONSchema(schema))}`,
     `original_input_digest=${input.correction.originalInputDigest}`,
     `validation_issue_paths=${canonicalJson([...input.correction.validationIssuePaths].sort())}`,
-    "Return one corrected JSON object."
+    "Regenerate one corrected JSON object from the original input.",
+    '<untrusted_source encoding="canonical-json">',
+    safeJson(input.correction.originalInput),
+    "</untrusted_source>"
   ].join("\n");
 }
 

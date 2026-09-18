@@ -31,6 +31,7 @@ export type StructuredProviderInput =
     correction: {
       originalInputDigest: string;
       validationIssuePaths: string[];
+      originalInput: unknown;
     };
   });
 

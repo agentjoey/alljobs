@@ -154,7 +154,7 @@ describe("DeepSeekProvider", () => {
     });
   });
 
-  it("keeps correction requests source-free while carrying only validation paths", async () => {
+  it("regenerates a correction from the original input without retaining the rejected output", async () => {
     const prompts: string[] = [];
     const provider = new DeepSeekProvider({
       adapter: {
@@ -169,12 +169,18 @@ describe("DeepSeekProvider", () => {
       kind: "correction",
       stage: "research",
       inputDigest: "c".repeat(64),
-      correction: { originalInputDigest: "c".repeat(64), validationIssuePaths: ["identity.status"] },
+      correction: {
+        originalInputDigest: "c".repeat(64),
+        validationIssuePaths: ["identity.status"],
+        originalInput: { evidence: [{ id: "ev_fixture" }] }
+      },
       signal
     });
 
     expect(prompts[0]).toContain("prompt_version=caphub-deepseek-v1");
     expect(prompts[0]).toContain("identity.status");
-    expect(prompts[0]).not.toMatch(/untrusted_source|credential|response/i);
+    expect(prompts[0]).toContain('<untrusted_source encoding="canonical-json">');
+    expect(prompts[0]).toContain("ev_fixture");
+    expect(prompts[0]).not.toMatch(/rejected_output|credential|response_body/i);
   });
 });

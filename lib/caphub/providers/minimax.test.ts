@@ -236,7 +236,7 @@ describe("MiniMaxProvider", () => {
     expect(JSON.stringify(requests[0])).not.toMatch(/"tools"/i);
   });
 
-  it("uses only digest and validation paths for a critic correction call", async () => {
+  it("uses the original input, digest, and validation paths for a critic correction call", async () => {
     const requests: MiniMaxGenerationRequest[] = [];
     const provider = new MiniMaxProvider({
       generate: async (request) => {
@@ -255,13 +255,15 @@ describe("MiniMaxProvider", () => {
       inputDigest: "b".repeat(64),
       correction: {
         originalInputDigest: "b".repeat(64),
-        validationIssuePaths: ["findings.0.severity"]
+        validationIssuePaths: ["findings.0.severity"],
+        originalInput: { assessment: "fixture" }
       },
       signal
     });
 
     const serialized = JSON.stringify(requests[0]);
     expect(serialized).toContain("findings.0.severity");
+    expect(serialized).toContain("fixture");
     expect(serialized).toContain("b".repeat(64));
     expect(serialized).not.toMatch(/api[_-]?key|reasoning|rejected response/i);
   });

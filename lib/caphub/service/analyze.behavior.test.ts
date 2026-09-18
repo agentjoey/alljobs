@@ -52,9 +52,8 @@ function criticOutput(source: Record<string, unknown>) {
   const assessment = source.assessment as Record<string, unknown>;
   const evidence = source.evidence as Array<Record<string, unknown>>;
   return {
-    schema_version: 1, capture_id: CAPTURE_ID, assessment_artifact_id: source.assessment_artifact_id,
     verdict: "concur", findings: [{ severity: "medium", summary: "Human review remains required.", evidence_ids: [evidence[0].id] }],
-    recommended_disposition: assessment.disposition, unresolved_questions: [], reviewed_at: NOW
+    recommended_disposition: assessment.disposition, unresolved_questions: []
   };
 }
 
@@ -71,7 +70,6 @@ function downstreamOutput(stage: string, source: Record<string, unknown>) {
     const evidence = source.evidence as Array<Record<string, unknown>>;
     const extraction = source.extraction as Record<string, unknown>;
     return {
-      schema_version: 1, capture_id: CAPTURE_ID, extraction_artifact_id: source.extraction_artifact_id,
       identity: {
         status: "IDENTITY_AMBIGUOUS",
         candidates: [
@@ -79,11 +77,10 @@ function downstreamOutput(stage: string, source: Record<string, unknown>) {
           { name: "Example Toolkit", confidence: 0.5, evidence_ids: [evidence[0].id] }
         ], reason: "Official identity evidence is not unique."
       },
-      evidence: evidence.map(({ content: _content, ...record }) => record),
       claim_checks: [{ claim_id: (extraction.claims as Array<Record<string, unknown>>)[0].id, status: "unverified", evidence_ids: [evidence[0].id] }],
       current_availability: "available", version: "unknown", maintenance_status: "unknown", install_methods: [],
       agent_protocol_support: [], authentication: [], pricing: "unknown", data_destinations: [], permissions: [],
-      license: "unknown", security_findings: ["Untrusted source contains executable instructions."], researched_at: NOW
+      license: "unknown", security_findings: ["Untrusted source contains executable instructions."]
     };
   }
   if (stage !== "caphub_assessment") throw new Error(`Unexpected fixture stage: ${stage}`);
@@ -91,7 +88,6 @@ function downstreamOutput(stage: string, source: Record<string, unknown>) {
   const evidence = dossier.evidence as Array<Record<string, unknown>>;
   const dimension = { score: 3, reason: "Evidence requires Human review.", evidence_ids: [evidence[0].id] };
   return {
-    schema_version: 1, capture_id: CAPTURE_ID, dossier_artifact_id: source.dossier_artifact_id,
     candidate: {
       name: "Bounded evidence lookup", novel_capabilities: ["Pinned retrieval"], overlapping_capabilities: ["Research"],
       replaces: [], complements: ["Human review"], conflicts_with: ["Unrestricted browsing"], capability_gaps: ["No offline mirror"]
@@ -104,7 +100,7 @@ function downstreamOutput(stage: string, source: Record<string, unknown>) {
     },
     conflicts: [{ summary: "Source instructions conflict with the no-tool policy.", evidence_ids: [evidence[0].id] }],
     disposition: "build", disposition_reason: "Only a bounded host implementation could be considered.", resident_capability: true,
-    unresolved_questions: [], assessed_at: NOW
+    unresolved_questions: []
   };
 }
 
@@ -213,7 +209,7 @@ describe("Capture to ReviewPacket behavior", () => {
       .map(({ stage, schema_version }) => [stage, schema_version]))
       .toEqual([["preprocess", 1], ["extraction", 2], ["research", 1], ["assessment", 1], ["critic", 1]]);
     const job = await jobs.get(first.jobId);
-    expect(job).toMatchObject({ analysis_contract_version: "caphub-analysis-v3", status: "completed" });
+    expect(job).toMatchObject({ analysis_contract_version: "caphub-analysis-v4", status: "completed" });
     const persistedArtifacts = await Promise.all(job!.completed_artifact_ids.map((id) => artifacts.get(id)));
     expect(persistedArtifacts.filter((artifact) => artifact?.stage === "extraction")).toHaveLength(1);
     expect(persistedArtifacts.filter((artifact) => artifact?.stage === "review_packet")).toHaveLength(1);
@@ -245,9 +241,9 @@ describe("Capture to ReviewPacket behavior", () => {
 
   it.each(["observation_started", "observation_succeeded", "structuring_started", "structuring_succeeded"])("fails closed without resume calls after %s without an extraction artifact", async (interruption) => {
     const { capture, service, calls, artifacts, audits, jobs } = await setup();
-    const jobId = `job_${createHash("sha256").update(`${CAPTURE_ID}\0${capture.object.digest}\0caphub-analysis-v3`).digest("hex").slice(0, 32)}`;
+    const jobId = `job_${createHash("sha256").update(`${CAPTURE_ID}\0${capture.object.digest}\0caphub-analysis-v4`).digest("hex").slice(0, 32)}`;
     const predecessor = `job_${"d".repeat(32)}`;
-    await jobs.put({ schema_version: 1, id: jobId, capture_id: CAPTURE_ID, analysis_contract_version: "caphub-analysis-v3",
+    await jobs.put({ schema_version: 1, id: jobId, capture_id: CAPTURE_ID, analysis_contract_version: "caphub-analysis-v4",
       supersedes_job_id: predecessor, input_digest: "e".repeat(64), completed_artifact_ids: [], status: "queued", created_at: NOW, updated_at: NOW });
     const observation = { jobId, captureId: CAPTURE_ID, stage: "extraction" as const, provider: "minimax" as const,
       model: "MiniMax-M3", operation: "visual_observation" as const, contractVersion: "caphub-minimax-visual-v2",
@@ -264,7 +260,7 @@ describe("Capture to ReviewPacket behavior", () => {
     }
     const result = await service.start(CAPTURE_ID);
     expect(await jobs.get(jobId)).toMatchObject({ status: "HUMAN_REVIEW_REQUIRED", reason: "INTERRUPTED_PROVIDER_CALL", stage: "extraction",
-      analysis_contract_version: "caphub-analysis-v3", supersedes_job_id: predecessor });
+      analysis_contract_version: "caphub-analysis-v4", supersedes_job_id: predecessor });
     expect(await artifacts.findByJobStage(jobId, "extraction")).toBeNull();
     expect(await service.start(CAPTURE_ID)).toEqual(result);
     expect(calls).toEqual({ miniMax: 0, miniMaxSearch: 0, deepseek: 0 });

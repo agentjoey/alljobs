@@ -148,7 +148,8 @@ export async function runStructuredStage<T>(
         inputDigest: originalInputDigest,
         correction: {
           originalInputDigest,
-          validationIssuePaths: issuePaths ?? ["$"]
+          validationIssuePaths: issuePaths ?? ["$"],
+          originalInput: request.input
         }
       };
     const inputBytes = Buffer.byteLength(canonicalJson(

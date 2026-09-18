@@ -47,17 +47,19 @@ describe("Caphub MiniMax prompts", () => {
     expect(prompt).toContain("Check evidence references");
   });
 
-  it("builds critic correction prompts from issue paths and the original digest only", () => {
+  it("builds critic correction prompts from issue paths, the original digest, and original input", () => {
     const prompt = buildMiniMaxCorrectionPrompt({
       stage: "critic",
       originalInputDigest: "a".repeat(64),
-      validationIssuePaths: ["claims.0.basis", "entities"]
+      validationIssuePaths: ["claims.0.basis", "entities"],
+      originalInput: { evidence: [{ id: "ev_fixture" }] }
     });
 
     expect(prompt).toContain("claims.0.basis");
     expect(prompt).toContain("entities");
     expect(prompt).toContain("a".repeat(64));
     expect(prompt).toContain("stage=critic");
+    expect(prompt).toContain("ev_fixture");
     expect(prompt).not.toMatch(/rejected|credential|response/i);
   });
 });

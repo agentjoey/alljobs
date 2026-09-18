@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { buildCapabilityAssessment, buildCriticReview, CapabilityAssessmentError, shouldRunCritic } from "../analysis/assessment";
 import { digestCanonicalJson } from "../analysis/digest";
+import { assessmentDraftSchema, criticDraftSchema, researchDraftSchema } from "../analysis/model-drafts";
 import { composeReviewPacket } from "../analysis/review-packet";
 import {
   capabilityAssessmentSchema,
@@ -106,7 +107,7 @@ async function payloadFor<T>(
   return schema.parse(payload);
 }
 
-export const CAPHUB_ANALYSIS_CONTRACT_VERSION = "caphub-analysis-v3";
+export const CAPHUB_ANALYSIS_CONTRACT_VERSION = "caphub-analysis-v4";
 
 function legacyJobIdFor(capture: CaptureRecord): string {
   return `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}`, "utf8").digest("hex").slice(0, 32)}`;
@@ -114,7 +115,7 @@ function legacyJobIdFor(capture: CaptureRecord): string {
 
 function versionedJobIdFor(
   capture: CaptureRecord,
-  version: "caphub-analysis-v2" | "caphub-analysis-v3"
+  version: "caphub-analysis-v2" | "caphub-analysis-v3" | "caphub-analysis-v4"
 ): string {
   return `job_${createHash("sha256")
     .update(`${capture.id}\0${capture.object.digest}\0${version}`, "utf8")
@@ -178,7 +179,8 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
       const jobId = versionedJobIdFor(capture, CAPHUB_ANALYSIS_CONTRACT_VERSION);
       let job = await dependencies.jobs.get(jobId);
       if (!job) {
-        const predecessor = await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v2"))
+        const predecessor = await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v3"))
+          ?? await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v2"))
           ?? await dependencies.jobs.get(legacyJobIdFor(capture));
         const now = clockString();
         job = {
@@ -302,7 +304,7 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
                     const value = await runProvider({
                       stage: "research",
                       input: { ...(input as Record<string, unknown>), extraction_artifact_id: extractionArtifactId },
-                      schema: researchDossierSchema,
+                      schema: researchDraftSchema,
                       provider: dependencies.researchProvider
                     });
                     return { value, usage: { inputTokens: 0, outputTokens: 0 } };
@@ -336,7 +338,7 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
                     const value = await runProvider({
                       stage: "assessment",
                       input: { ...(input as Record<string, unknown>), dossier_artifact_id: dossierArtifactId },
-                      schema: capabilityAssessmentSchema,
+                      schema: assessmentDraftSchema,
                       provider: dependencies.assessmentProvider
                     });
                     return { value, usage: { inputTokens: 0, outputTokens: 0 } };
@@ -373,7 +375,7 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
                     const value = await runProvider({
                       stage: "critic",
                       input: { ...(input as Record<string, unknown>), assessment_artifact_id: assessmentArtifactId },
-                      schema: criticReviewSchema,
+                      schema: criticDraftSchema,
                       provider: dependencies.criticProvider
                     });
                     return { value, usage: { inputTokens: 0, outputTokens: 0 } };
