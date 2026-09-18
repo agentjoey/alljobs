@@ -16,4 +16,4 @@ Old production queue SSR baseline from approved plan: 1.98–10.65 seconds. No p
 
 Task 1 in progress: normalization/schema RED reproduced before implementation. Human conflict-resolution RED reproduced (missing resolver), then GREEN. Current focused checks: 6 files / 27 tests PASS; typecheck PASS; focused ESLint PASS. Real temporary PostgreSQL proves duplicate aliases, unresolved content conflicts, all-reference retention rows, rerun idempotence, and no historical enqueue. No production migration/backfill or provider calls.
 
-Remaining Task 1 checks: successful-import retention fixture and constraints coverage before task completion. Final integration full tests/build remain unrun.
+Additional Task 1 verification: focused successful-import fixture PASS (1 selected, 5 unrelated skipped); duplicate aliases inherit original import + 30 days. Database checks prove unique requests, running lease constraint, invalid deadlines and missing Capture foreign keys are rejected. Follow-up typecheck and focused lint PASS. Final integration full tests/build remain unrun.

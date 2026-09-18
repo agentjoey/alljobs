@@ -59,13 +59,13 @@ describe.sequential("Caphub Registry migrations", () => {
         applyRegistryMigrations(concurrentFixture.pool)
       ]);
       expect(results.map(({ applied }) => applied).sort((left, right) => right.length - left.length)).toEqual([
-        ["001_registry", "002_read_models", "003_exports"],
+        ["001_registry", "002_read_models", "003_exports", "004_capture_automation"],
         []
       ]);
       const ledger = await concurrentFixture.pool.query<{ version: string }>(
         "SELECT version FROM caphub.schema_migrations ORDER BY version"
       );
-      expect(ledger.rows.map(({ version }) => version)).toEqual(["001_registry", "002_read_models", "003_exports"]);
+      expect(ledger.rows.map(({ version }) => version)).toEqual(["001_registry", "002_read_models", "003_exports", "004_capture_automation"]);
     } finally {
       await concurrentFixture.stop();
     }
@@ -73,7 +73,7 @@ describe.sequential("Caphub Registry migrations", () => {
 
   it("applies the checksum-bound manifest once and reruns idempotently", async () => {
     await expect(applyRegistryMigrations(fixture.pool)).resolves.toEqual({
-      applied: ["001_registry", "002_read_models", "003_exports"]
+      applied: ["001_registry", "002_read_models", "003_exports", "004_capture_automation"]
     });
     await expect(applyRegistryMigrations(fixture.pool)).resolves.toEqual({ applied: [] });
 
@@ -90,7 +90,7 @@ describe.sequential("Caphub Registry migrations", () => {
     expect(byId.get("002_read_models")?.checksum)
       .toBe("fa8fefdef331966fdcb67db911ace73eca2d2f54702028acaa6735de1e8716c7");
     expect(registryMigrationManifest.map((migration) => migration.id))
-      .toEqual(["001_registry", "002_read_models", "003_exports"]);
+      .toEqual(["001_registry", "002_read_models", "003_exports", "004_capture_automation"]);
   });
 
   it("enforces P4 deployment_plan and deployment review constraints at the SQL boundary", async () => {
@@ -203,7 +203,7 @@ describe.sequential("Caphub Registry migrations", () => {
       : migration);
     await expect(applyRegistryMigrations(fixture.pool, { migrations: tampered })).rejects.toThrow(/checksum/i);
     const ledger = await fixture.pool.query<{ count: string }>("SELECT count(*) FROM caphub.schema_migrations");
-    expect(ledger.rows[0]?.count).toBe("3");
+    expect(ledger.rows[0]?.count).toBe("4");
   });
 
   it("enforces append-only versions, lineage, decisions, consumers, imports, and audits", async () => {

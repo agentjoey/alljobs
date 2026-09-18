@@ -33,5 +33,10 @@ export const registryMigrationManifest: readonly RegistryMigration[] = Object.fr
     "003_exports",
     "003_exports.sql",
     "e9df0d799318069fa4d1e09438043a16666df695e6ccdf28ad0474a2121922e4"
+  ),
+  loadMigration(
+    "004_capture_automation",
+    "004_capture_automation.sql",
+    "6055930cace6bb5679dfa839fa8525cf6bad6e1e058519995c8f8384cab7201b"
   )
 ]);

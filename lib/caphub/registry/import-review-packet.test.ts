@@ -11,7 +11,8 @@ import { FilesystemCaptureStore } from "../storage/filesystem";
 import { FilesystemAnalysisJobStore, FilesystemStageArtifactStore } from "../workflow/filesystem";
 import { applyRegistryMigrations } from "./migrate";
 import { createReviewPacketImporter } from "./import-review-packet";
-import { PostgresAnalysisJobStore } from "./postgres/caphub-stores";
+import { PostgresAnalysisJobStore, PostgresCaptureStore } from "./postgres/caphub-stores";
+import { applyAutomationBackfill } from "../automation/backfill";
 
 const NOW = "2026-09-16T10:00:00.000Z";
 const CAPTURE_ID = `cap_${"1".repeat(32)}`;
@@ -230,6 +231,23 @@ describe.sequential("ReviewPacket Registry import", () => {
     expect(repaired.job.status).toBe("WAITING_FOR_REVIEW");
     const imports = await postgres.pool.query<{ count: string }>("SELECT count(*) FROM caphub.registry_imports");
     expect(imports.rows[0]?.count).toBe("1");
+  });
+
+  it("backfill prefers the successful import and gives duplicate aliases its original retention deadline", async () => {
+    const seeded = await seedFilesystem();
+    await createReviewPacketImporter({ ...seeded, pool: postgres.pool, clock: () => NOW }).importReviewPacket({ jobId: JOB_ID });
+    const alias = { ...capture, id: `cap_${"9".repeat(32)}`, idempotency_key: "capture.backfill-alias", created_at: "2026-09-18T00:00:00.000Z" };
+    await new PostgresCaptureStore(postgres.pool).create(alias);
+    await applyAutomationBackfill(postgres.pool);
+    await applyAutomationBackfill(postgres.pool);
+    const head = await postgres.pool.query("SELECT capture_id FROM caphub.capture_filename_heads");
+    expect(head.rows[0].capture_id).toBe(CAPTURE_ID);
+    const rows = await postgres.pool.query("SELECT imported_at,eligible_at FROM caphub.capture_object_retention ORDER BY capture_id");
+    expect(rows.rows).toHaveLength(2);
+    for (const row of rows.rows) {
+      expect(row.imported_at.toISOString()).toBe(NOW);
+      expect(row.eligible_at.toISOString()).toBe("2026-10-16T10:00:00.000Z");
+    }
   });
 
   it("rejects a missing referenced artifact without partial Registry writes", async () => {
