@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { generateText, type ModelMessage } from "ai";
 import {
   createMiniMaxTokenPlanModel,
@@ -15,7 +16,7 @@ import {
 import {
   buildMiniMaxCorrectionPrompt,
   buildMiniMaxCriticPrompt,
-  buildMiniMaxExtractionPrompt
+  buildMiniMaxVisualObservationPrompt
 } from "./prompts";
 
 type MiniMaxContentPart =
@@ -35,9 +36,10 @@ export interface MiniMaxGenerationRequest {
 
 export interface MiniMaxGenerationResult {
   text: string;
+  finishReason: string;
   usage: {
-    inputTokens: number;
-    outputTokens: number;
+    inputTokens: number | undefined;
+    outputTokens: number | undefined;
   };
 }
 
@@ -60,6 +62,41 @@ export type MiniMaxInvocationOptions = {
   inputDigest: string;
   signal: AbortSignal;
 };
+
+type MiniMaxUsage = {
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export interface MiniMaxVisualObservationResult {
+  text: string;
+  usage: MiniMaxUsage;
+  finishReason: string;
+  outputBytes: number;
+}
+
+export interface MiniMaxVisualObservationErrorMetadata {
+  finishReason: string;
+  outputBytes: number;
+  outputDigest: string;
+  usage?: MiniMaxUsage;
+}
+
+export class MiniMaxVisualObservationError extends ProviderInvocationError {
+  readonly metadata: Readonly<MiniMaxVisualObservationErrorMetadata>;
+
+  constructor(metadata: MiniMaxVisualObservationErrorMetadata) {
+    super("INVALID_OUTPUT");
+    this.name = "MiniMaxVisualObservationError";
+    this.metadata = Object.freeze(metadata.usage
+      ? { ...metadata, usage: Object.freeze({ ...metadata.usage }) }
+      : {
+          finishReason: metadata.finishReason,
+          outputBytes: metadata.outputBytes,
+          outputDigest: metadata.outputDigest
+        });
+  }
+}
 
 function extractionInput(value: unknown): MiniMaxExtractionInput {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -97,9 +134,10 @@ async function generateMiniMax(
   });
   return {
     text: result.text,
+    finishReason: result.finishReason,
     usage: {
-      inputTokens: result.usage.inputTokens ?? 0,
-      outputTokens: result.usage.outputTokens ?? 0
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens
     }
   };
 }
@@ -112,6 +150,43 @@ function parseTerminalJson(text: string): unknown {
   }
 }
 
+const MINIMAX_FINISH_REASONS = new Set([
+  "stop",
+  "length",
+  "content-filter",
+  "tool-calls",
+  "error",
+  "other"
+]);
+
+function normalizedFinishReason(value: unknown): string {
+  return typeof value === "string" && MINIMAX_FINISH_REASONS.has(value) ? value : "other";
+}
+
+function validatedUsage(value: MiniMaxGenerationResult["usage"]): MiniMaxUsage | undefined {
+  return typeof value.inputTokens === "number"
+    && Number.isInteger(value.inputTokens)
+    && value.inputTokens >= 0
+    && typeof value.outputTokens === "number"
+    && Number.isInteger(value.outputTokens)
+    && value.outputTokens >= 0
+    ? { inputTokens: value.inputTokens, outputTokens: value.outputTokens }
+    : undefined;
+}
+
+function observationError(
+  result: MiniMaxGenerationResult,
+  outputBytes: number,
+  usage: MiniMaxUsage | undefined
+): MiniMaxVisualObservationError {
+  return new MiniMaxVisualObservationError({
+    finishReason: normalizedFinishReason(result.finishReason),
+    outputBytes,
+    outputDigest: createHash("sha256").update(result.text, "utf8").digest("hex"),
+    ...(usage ? { usage } : {})
+  });
+}
+
 export class MiniMaxProvider implements StructuredProvider {
   readonly provider = "minimax" as const;
   readonly model = MINIMAX_TOKEN_PLAN_MODEL;
@@ -122,7 +197,7 @@ export class MiniMaxProvider implements StructuredProvider {
   }
 
   async invoke(input: StructuredProviderInput): Promise<StructuredProviderOutput> {
-    if (input.stage !== "extraction" && input.stage !== "critic") {
+    if (input.stage !== "critic") {
       throw new ProviderInvocationError("PERMISSION");
     }
 
@@ -132,18 +207,6 @@ export class MiniMaxProvider implements StructuredProvider {
         type: "text",
         text: buildMiniMaxCorrectionPrompt({ stage: input.stage, ...input.correction })
       }];
-    } else if (input.stage === "extraction") {
-      const extraction = extractionInput(input.input);
-      content = [
-        { type: "text", text: buildMiniMaxExtractionPrompt(extraction.preprocess) },
-        ...[...extraction.normalizedImages]
-          .sort((left, right) => left.index - right.index)
-          .map((image): MiniMaxContentPart => ({
-            type: "file",
-            data: image.data,
-            mediaType: image.mediaType
-          }))
-      ];
     } else {
       content = [{ type: "text", text: buildMiniMaxCriticPrompt(input.input) }];
     }
@@ -151,27 +214,55 @@ export class MiniMaxProvider implements StructuredProvider {
     const result = await this.generate({
       model: MINIMAX_TOKEN_PLAN_MODEL,
       messages: [{ role: "user", content }],
-      maxOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxOutputTokens[input.stage],
+      maxOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxOutputTokens.critic,
       maxRetries: 0,
       abortSignal: input.signal
     });
     return {
       value: parseTerminalJson(result.text),
-      usage: result.usage
+      usage: {
+        inputTokens: result.usage.inputTokens ?? 0,
+        outputTokens: result.usage.outputTokens ?? 0
+      }
     };
   }
 
-  extract(
+  async observe(
     input: MiniMaxExtractionInput,
     options: MiniMaxInvocationOptions
-  ): Promise<StructuredProviderOutput> {
-    return this.invoke({
-      kind: "initial",
-      stage: "extraction",
-      inputDigest: options.inputDigest,
-      input,
-      signal: options.signal
+  ): Promise<MiniMaxVisualObservationResult> {
+    const extraction = extractionInput(input);
+    const content: MiniMaxContentPart[] = [
+      { type: "text", text: buildMiniMaxVisualObservationPrompt(extraction.preprocess) },
+      ...[...extraction.normalizedImages]
+        .sort((left, right) => left.index - right.index)
+        .map((image): MiniMaxContentPart => ({
+          type: "file",
+          data: image.data,
+          mediaType: image.mediaType
+        }))
+    ];
+    const result = await this.generate({
+      model: MINIMAX_TOKEN_PLAN_MODEL,
+      messages: [{ role: "user", content }],
+      maxOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens,
+      maxRetries: 0,
+      abortSignal: options.signal
     });
+    const outputBytes = Buffer.byteLength(result.text, "utf8");
+    const usage = validatedUsage(result.usage);
+    if (normalizedFinishReason(result.finishReason) !== "stop"
+      || result.text.trim().length === 0
+      || outputBytes > CAPHUB_ANALYSIS_LIMITS.maxVisualObservationBytes
+      || !usage) {
+      throw observationError(result, outputBytes, usage);
+    }
+    return {
+      text: result.text,
+      usage,
+      finishReason: "stop",
+      outputBytes
+    };
   }
 
   critique(
