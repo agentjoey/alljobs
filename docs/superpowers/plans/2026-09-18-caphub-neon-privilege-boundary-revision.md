@@ -45,7 +45,7 @@
 - `checkRegistryReadiness({ appPool, migrationPool, connectionMode, expectedSocketDir })` returns `ready: true` for managed TLS only when the non-privilege invariant set is intact; local mode additionally requires strict role/effective-privilege checks.
 - `createProductionPreflightReport(snapshot)` copies only a syntactically valid, mode-consistent boundary label into its redacted report.
 
-- [ ] **Step 1: Write failing managed-TLS and preflight tests.**
+- [x] **Step 1: Write failing managed-TLS and preflight tests.**
 
   Add an elevated-role fixture after the successful local readiness test. Create a non-login `neon_superuser` role through the existing test-cluster superuser, grant it to `caphub_app`, change `caphub_app` to `INHERIT`, and grant it `CREATE` on schema `caphub`, migration-ledger writes, and update/delete on the append-only tables through `migrationPool`. This safely models the managed inherited-admin fact inside the disposable test cluster without granting the application role direct membership of `caphub_migrator`.
 
@@ -97,7 +97,7 @@
   })).toThrow("PREFLIGHT_UNSAFE_REPORT");
   ```
 
-- [ ] **Step 2: Run focused tests and verify RED.**
+- [x] **Step 2: Run focused tests and verify RED.**
 
   Run:
 
@@ -107,7 +107,7 @@
 
   Expected: TypeScript test compilation or assertions fail because `databasePrivilegeBoundary` is absent from `RegistryReadinessReport`; do not change production implementation before observing this failure.
 
-- [ ] **Step 3: Implement the smallest mode-specific predicate.**
+- [x] **Step 3: Implement the smallest mode-specific predicate.**
 
   In `operations.ts`, declare the boundary union and add it to `RegistryReadinessReport`:
 
@@ -133,7 +133,7 @@
 
   In `caphub-production-preflight.ts`, reject every label outside the three literals. Require `"database_role_least_privilege"` for available `local_socket` evidence and `"neon_project_admin_accepted"` for available `tls_verify_full` evidence. Require `"unavailable"` when PostgreSQL is unavailable. Copy the validated label into the allowlisted output, and set it to `"unavailable"` in `unavailableRegistry`.
 
-- [ ] **Step 4: Run focused GREEN verification.**
+- [x] **Step 4: Run focused GREEN verification.**
 
   Run:
 
@@ -145,7 +145,7 @@
 
   Expected: all focused tests pass, TypeScript has no errors, and lint is clean. The local test still proves the strict boundary; the managed-TLS test proves the accepted label without changing any local privileges.
 
-- [ ] **Step 5: Record the code change in a focused commit.**
+- [x] **Step 5: Record the code change in a focused commit.**
 
   ```bash
   git add lib/caphub/registry/operations.ts lib/caphub/registry/operations.test.ts scripts/caphub-production-preflight.ts scripts/caphub-production-preflight.test.ts
@@ -162,11 +162,11 @@
 - Consumes the committed code contract and its focused test/type/lint results.
 - Produces an append-only, redacted record stating the managed-TLS boundary label, test scope, and that N3 registry import is conditional on a fresh ready report whose source digest equals the N2 attestation.
 
-- [ ] **Step 1: Add no production code; write the factual evidence entries.**
+- [x] **Step 1: Add no production code; write the factual evidence entries.**
 
   Record only: this plan/spec path, the mode-bound field names and label values, focused test/type/lint outcomes, the current code commit, and the next safety condition. Do not include any database URL, host, username, credential, private file path, object key, capture data, or command arguments containing secrets.
 
-- [ ] **Step 2: Verify evidence is redacted and consistent.**
+- [x] **Step 2: Verify evidence is redacted and consistent.**
 
   Run:
 
@@ -176,7 +176,7 @@
 
   Expected: no new secret, URL, credential, or object-key disclosure caused by this record. Manually compare the state wording with the output fields in Task 1.
 
-- [ ] **Step 3: Commit the evidence record.**
+- [x] **Step 3: Commit the evidence record.**
 
   ```bash
   git add .agent/caphub/production-activation-log.md docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md docs/superpowers/plans/2026-09-18-caphub-neon-privilege-boundary-revision.md

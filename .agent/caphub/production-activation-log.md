@@ -378,3 +378,36 @@ and one independent Verification occur only after the implementation tasks.
   administrator-controlled way to remove that privileged membership and set
   non-inheriting least-privilege role attributes, or an explicitly approved
   revision of the security contract.
+
+## N3 privilege-boundary revision and Registry import — 2026-09-18
+
+- The Human approved
+  `docs/superpowers/specs/2026-09-18-caphub-neon-privilege-boundary-revision.md`:
+  Neon inherited project administration is accepted as a high-privilege
+  credential risk, not represented as PostgreSQL least privilege. The separate
+  Caphub database/private bucket, private credential environment, exact TLS
+  host policies, stopped service, operator confirmations, migration ledger,
+  and append-only triggers remain integrity and containment controls.
+- Implementation commits `d883070` and `ce865a6` add a mode-bound, redacted
+  readiness field. Managed TLS reports `neon_project_admin_accepted`; local
+  socket mode retains `database_role_least_privilege` and rejects an elevated
+  inherited-role fixture. The readiness version field now emits only a numeric
+  PostgreSQL version, not a server build decoration.
+- TDD evidence: the managed-TLS label and mode-consistency preflight tests
+  first failed, then the focused suite passed 15/15; typecheck and scoped lint
+  passed. The temporary PostgreSQL test cluster required the local host's
+  shared-memory capability; no Production database was used by those tests.
+- A fresh read-only Production readiness check and redacted preflight reported
+  PostgreSQL `18.6`, managed TLS, complete migrations and append-only triggers,
+  the accepted boundary label, and `ready: true`. The preflight independently
+  matched the existing N2 object-transfer attestation and the two-Capture
+  source manifest before any import.
+- Under the already explicit N3 authorization, the confirmed Registry import
+  created 2 Capture metadata records and found 0 existing conflicts. The
+  post-import read-only preflight confirmed that both Capture records match the
+  immutable-object transfer evidence. Recovery proof remains false; exports
+  remain disabled with zero enabled targets, analysis remains disabled, and
+  provider compatibility remains pending.
+- N4 recovery proof, PA-C provider canary, and PA-D rebuild/reload/cutover are
+  not performed by this record. No provider call, target write, service reload,
+  push, merge, deployment, or release occurred.
