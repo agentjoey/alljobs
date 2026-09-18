@@ -646,3 +646,27 @@ and one independent Verification occur only after the implementation tasks.
   ready, source Capture consistency, remote object/recovery evidence, both
   provider keys present, and no enabled export target. A new real Capture
   analysis remains separately authorized and operator-started.
+
+## Analysis Contract V3 — pre-production acceptance (2026-09-18)
+
+- The approved autonomous-research design and inline implementation plan are
+  implemented on `codex/caphub-release` through code commit
+  `3d91d26d4123a0ef209d6f37fb0059a7e0f5c284`.
+- MiniMax-M3 performs at most one audited server-side `web_search` per job and
+  supplies bounded HTTPS citation content as untrusted evidence. DeepSeek
+  retains structured research and assessment. Explicit URL fetch remains
+  policy-bound, but an empty origin list no longer disables model search.
+- Analysis Contract V3 creates deterministic new jobs and records lineage to
+  the latest V2 or V1 predecessor. Existing jobs and artifacts are unchanged.
+- Focused verification passed: 16 files / 120 tests, typecheck, focused ESLint,
+  deployment invariants, and webpack production build. Final build ID is
+  `YT_ESR3cuPy2-3RQIxAWQ`, SHA-256
+  `aecc1922239c88f606ebca7adb8a69e55d55786080a44e14ce2c668e9fccb8ae`.
+- The real MiniMax tool returned a multi-message sequence not represented by
+  its minimal documentation example. The first authorized probe exposed that
+  parser gap, one metadata-only diagnostic characterized it, and a final
+  post-fix probe succeeded with eight bounded HTTPS citations. There was no
+  automatic retry and no source content, raw body, prompt, query, or credential
+  was retained.
+- Production reload and the single authorized V3 Capture canary are pending;
+  exports and targets remain disabled.

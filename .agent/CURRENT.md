@@ -3,7 +3,7 @@
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-18 by Codex during Extraction V2 final acceptance and rollout preparation
+Last Updated:   2026-09-18 by Codex during Caphub Analysis Contract V3 rollout
 
 ## Current decision
 
@@ -66,25 +66,28 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-Extraction V2 local implementation and final-code acceptance are complete on
+Caphub Analysis Contract V3 autonomous web research is implemented on
 `codex/caphub-release` through code commit
-`9f3f1121b53060d63cef80b1bb5125079a0c4161`. The two Important findings from the
-final scoped review are addressed, and their focused independent re-review
-passed. See `.agent/caphub/extraction-v2-implementation-log.md`,
-`extraction-v2-verification.md`, and `extraction-v2-review.md`.
+`3d91d26d4123a0ef209d6f37fb0059a7e0f5c284`. A Capture with no explicit source
+URL can now use one audited MiniMax-M3 server-side `web_search`, normalize its
+HTTPS citations as inline evidence, and continue through DeepSeek research and
+assessment. Active V3 jobs preserve immutable V1/V2 history and supersede the
+latest prior contract job.
 
-The final-code acceptance passed the affected Task 7 matrix plus configuration
-regression as 20 files / 221 tests, typecheck, focused ESLint, webpack build,
-deployment invariants, and the single final-build Analysis-stops E2E. Current
-1440px and true 390px screenshots were visually inspected and rebound.
+Pre-production verification passed 16 focused files / 120 tests, typecheck,
+focused ESLint, deployment invariants, and a webpack production build. Three
+authorized live MiniMax requests were made during compatibility diagnosis: the
+first exposed the real multi-message response shape, the second recorded only
+structural metadata, and the final post-fix probe succeeded with eight bounded
+HTTPS citations. No automatic retry occurred and no raw source/provider body,
+query, prompt, or credential was retained.
 
-The Human Owner instructed Codex to continue toward complete production launch.
-The rollout order is one bounded synthetic live V2 probe, Control Host
-rebuild/reload, then one authorized real Capture V2 canary. Preserve
-`127.0.0.1:3456`, disabled
-exports/targets, and immutable terminal V1 jobs; a Capture rerun must be a new
-V2 job with explicit lineage. No live V2 probe, production change, or Capture
-action has yet occurred for this V2 rollout.
+The next action is the already authorized local-production reload followed by
+exactly one V3 canary for existing Capture
+`cap_379e2508ead34c349fcb303bcd39eff2`. Keep the listener on
+`127.0.0.1:3456`, keep exports/targets disabled, and record only metadata-level
+Registry, audit, lineage, and Review Center evidence. Do not push, merge, tag,
+or publish a release.
 
 ## Caphub Extraction V2 — local closeout (2026-09-18)
 
