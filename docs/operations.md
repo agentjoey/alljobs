@@ -260,6 +260,33 @@ existing planning refresh path, Tunnel, domain, and Access untouched. The
 cached state under `state/monitoring` is preserved for inspection; removing it
 is a separate, explicitly confirmed operation.
 
+### Caphub upload, analysis and image retention
+
+- `/caphub/reviews` is the current-file queue; detail/history remain inside Caphub.
+  Legacy `/reviews` and `/captures/:id` redirect without starting an analysis.
+- Same normalized filename/content returns existing results. Different content
+  requires Create new version; a stale confirmation must be reviewed again.
+- `npm run caphub:worker` is read-only by default. `--once` and `--daemon` obey
+  analysis.enabled/autoStart and retention.enabled. No historical catch-up occurs.
+- Requests use a 120-second lease with 30-second renewal. A lost lease aborts local
+  execution. An interrupted external call with no terminal audit becomes a visible
+  needs-attention item; never clear the audit to force a replay. Successful analysis
+  can retry idempotent import without another model call.
+- A saved-but-not-queued upload returns its receipt and a retry action. Retry the
+  same request/key; don't upload under another name to repair the queue.
+- `npm run caphub:retention` lists up to 25 due exact digests without deletion.
+  `--apply` requires retention.enabled. Eligibility begins at successful Registry
+  import +30 days, not upload or Human approval. A missing/ineligible shared
+  reference blocks deletion; imported aliases inherit the original deadline.
+  A sweep runs hourly independently from analysis. Each S3 deletion aborts at five
+  seconds; retry preserves exact-key idempotence and purge/audit receipts.
+- `npm run caphub:preflight -- --automation` reports migration, conflict groups,
+  queue states, flags and due targets, not credential values. `workerReady` means
+  configured data prerequisites, not proof the LaunchAgent is running; inspect its
+  host status separately. `npm run caphub:benchmark -- URL` records cold +10 warm
+  useful-content timings; a loading shell is not success. Private routes must not
+  be publicly cached.
+
 ### Pending Human gates
 
 The following remain Human-owned and are NOT performed by the implementation:

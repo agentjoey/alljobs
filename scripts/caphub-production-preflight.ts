@@ -403,6 +403,26 @@ export async function runProductionPreflight(
 }
 
 export async function main(args: readonly string[] = process.argv.slice(2)): Promise<void> {
+  if (args.length === 1 && args[0] === "--automation") {
+    const {loadControlHostConfig}=await import("../lib/planning/config");
+    const {loadControlHostRegistryRuntime}=await import("../lib/caphub/registry/runtime");
+    const {inspectAutomationBackfill}=await import("../lib/caphub/automation/backfill");
+    const {AnalysisRequests}=await import("../lib/caphub/registry/postgres/analysis-requests");
+    const {runConfiguredRetention}=await import("./caphub-retention");
+    const resolved=loadControlHostConfig();const runtime=await loadControlHostRegistryRuntime({resolved});
+    try {
+      const migrations=await runtime.pool.query<{version:string}>("SELECT version FROM caphub.schema_migrations ORDER BY version");
+      const migrated=migrations.rows.some(row=>row.version==="004_capture_automation");
+      const caphub=resolved.config.caphub;
+      const report={migrationLevel:migrations.rows.at(-1)?.version??null,autoStart:caphub?.analysis.autoStart??false,retentionEnabled:caphub?.retention.enabled??false,
+        workerReady:migrated&&Boolean(caphub?.enabled&&caphub.analysis.enabled&&caphub.registry.enabled),
+        backfill:migrated?await inspectAutomationBackfill(runtime.pool):null,
+        queue:migrated?await new AnalysisRequests(runtime.pool).summary():null,
+        retentionTargets:migrated?await runConfiguredRetention(resolved,runtime.pool,true):[]};
+      process.stdout.write(JSON.stringify(report)+"\n");
+    } finally {await runtime.pool.end();}
+    return;
+  }
   await runProductionPreflight(args, { collect: collectFixedSnapshot }, (value) => process.stdout.write(value));
 }
 

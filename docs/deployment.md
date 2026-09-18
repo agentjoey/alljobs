@@ -102,6 +102,42 @@ the [Production activation runbook](../.agent/caphub/production-activation-runbo
   launchctl load ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
   ```
 
+### Caphub automatic analysis workbench (pending production authorization)
+
+Use the separately reviewed automation build; never build inside the currently
+running `.worktrees/caphub-release`. Migration `004_capture_automation` is additive.
+Before mutation run `npm run caphub:preflight -- --automation` and
+`npm run caphub:automation-backfill` in the private host environment. Neither
+command invokes providers or removes objects. Apply migrations using the existing
+migrator procedure, then run backfill `--apply` with intake disabled. Same-name,
+different-content groups need exact Human selections in a resolutions JSON file;
+pass `--resolutions /absolute/private/file.json`. Do not automatically enqueue
+historical Captures.
+
+Install `deploy/com.agentjoey.alljobs-caphub.plist` only after the release batch is
+approved. Substitute the reviewed worktree, Node directory and private AllJobs
+home. Its initial Disabled=true/RunAtLoad=false state must remain until activation.
+Create the installed plist with mode 0600 and logs directory mode 0700. Copy only
+the existing Registry app URL, configured provider keys and object-storage
+environment values from the already-private app configuration using a restricted
+local script; never print them, place them in a command argument, or commit them.
+The worker does not require the migrator credential and opens no listener.
+
+Rollout order: migration/backfill → reviewed app with autoStart=false → disabled
+worker installation → read-only route/performance smoke → authorized
+`caphub.analysis.autoStart=true` and worker enable/bootstrap → one named browser
+canary → duplicate canary proving unchanged model-call count. Existing app stays
+on `127.0.0.1:3456`; refresh worker, Tunnel and Access are unchanged. Enable
+`caphub.retention.enabled=true` only with the separately enumerated dry-run targets
+and deletion authorization. Both flags default false.
+
+Rollback: set autoStart=false and retention.enabled=false, stop only the Caphub
+worker, reload the previously approved app build if required. Preserve migration
+004, queue rows and evidence. Do not drop tables or replay interrupted providers.
+Source-object deletion cannot be undone from Registry metadata; derived results
+and receipts remain readable. Push/merge and production reload require explicit
+authorization naming this release, not an old V4 canary approval.
+
 ### R2-only disable / rollback
 
 To stop R2 without changing planning data, remove the assistant key from the

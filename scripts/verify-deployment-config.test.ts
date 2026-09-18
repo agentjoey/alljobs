@@ -1,9 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { verifyCaphubPostgresArtifacts } from "./verify-deployment-config.mjs";
+import { verifyCaphubPostgresArtifacts,verifyCaphubAutomationArtifacts } from "./verify-deployment-config.mjs";
 
 describe("verify-deployment-config script", () => {
+  it("keeps automation disabled, private and free of credentials/listeners",()=>{
+    const plist=readFileSync("deploy/com.agentjoey.alljobs-caphub.plist","utf8");
+    expect(verifyCaphubAutomationArtifacts(plist)).toEqual([]);
+    expect(verifyCaphubAutomationArtifacts(plist.replace("<key>Disabled</key><true/>",""))).not.toEqual([]);
+    expect(verifyCaphubAutomationArtifacts(plist+"postgresql://secret")).not.toEqual([]);
+    expect(verifyCaphubAutomationArtifacts(plist+"--port")).not.toEqual([]);
+  });
   it("executes cleanly and validates deployment invariants", () => {
     const scriptPath = resolve(process.cwd(), "scripts/verify-deployment-config.mjs");
     const output = execFileSync("node", [scriptPath], { encoding: "utf8" });

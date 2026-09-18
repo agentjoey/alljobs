@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.agentjoey.alljobs-caphub</string>
+  <key>ProgramArguments</key><array>
+    <string>&lt;NODE_BIN_DIR&gt;/node</string><string>--conditions=react-server</string>
+    <string>--import</string><string>tsx</string><string>scripts/caphub-worker.ts</string><string>--daemon</string>
+  </array>
+  <key>WorkingDirectory</key><string>&lt;REPO_ABS_PATH&gt;</string>
+  <key>Disabled</key><true/>
+  <key>RunAtLoad</key><false/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>Umask</key><integer>63</integer>
+  <key>StandardOutPath</key><string>&lt;ALLJOBS_HOME&gt;/logs/caphub-worker.log</string>
+  <key>StandardErrorPath</key><string>&lt;ALLJOBS_HOME&gt;/logs/caphub-worker-error.log</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>NODE_ENV</key><string>production</string>
+    <key>ALLJOBS_HOME</key><string>&lt;ALLJOBS_HOME&gt;</string>
+    <key>PATH</key><string>&lt;NODE_BIN_DIR&gt;:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+</dict></plist>

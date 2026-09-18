@@ -38,11 +38,22 @@ export function verifyCaphubPostgresArtifacts(input) {
   return errors;
 }
 
+export function verifyCaphubAutomationArtifacts(plist) {
+  const errors=[];
+  for (const required of ["com.agentjoey.alljobs-caphub", "scripts/caphub-worker.ts", "--daemon", "--conditions=react-server", "&lt;REPO_ABS_PATH&gt;", "&lt;ALLJOBS_HOME&gt;/logs/", "<key>Disabled</key><true/>", "<key>RunAtLoad</key><false/>", "<key>Umask</key><integer>63</integer>"]) {
+    if (!plist.includes(required)) errors.push(`Automation worker missing ${required}`);
+  }
+  if (/postgres(?:ql)?:\/\/|--listen|--port|API_KEY|SECRET_ACCESS_KEY/.test(plist)) errors.push("Worker template must not contain secrets or network listeners");
+  return errors;
+}
+
 export function main() {
 console.log("[verify-deployment-config] Checking deployment manifests and safety invariants...");
 
 // 1. Check package.json scripts
 const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
+const automationErrors = verifyCaphubAutomationArtifacts(readFileSync(resolve(root, "deploy/com.agentjoey.alljobs-caphub.plist"), "utf8"));
+if (automationErrors.length) { for (const error of automationErrors) console.error(error); process.exit(1); }
 if (!pkg.scripts["start:prod"]?.includes("-H 127.0.0.1") || !pkg.scripts["start:prod"]?.includes("-p 3456")) {
   console.error("[verify-deployment-config] start:prod script MUST include '-H 127.0.0.1 -p 3456'");
   process.exit(1);
