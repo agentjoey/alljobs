@@ -65,7 +65,8 @@ describe.sequential("Control Host Registry runtime", () => {
       database: "caphub",
       user: "caphub_app",
       password: "fixture-secret",
-      ssl: { rejectUnauthorized: true }
+      ssl: { rejectUnauthorized: true },
+      connectionTimeoutMillis: 15_000
     });
     expect(options).not.toHaveProperty("connectionString");
     const bytes = new TextEncoder().encode("immutable screenshot bytes");
