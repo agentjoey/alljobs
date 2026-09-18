@@ -1,7 +1,7 @@
 # Caphub Automatic Analysis Workbench Design
 
 **Date:** 2026-09-18  
-**Status:** Approved in chat; written specification awaiting Human review  
+**Status:** Written specification approved by Human Owner on 2026-09-18
 **Scope:** Capture-to-analysis automation, Caphub-owned review workbench,
 filename conflict handling, Review deduplication, and 30-day raw-image
 retention  
@@ -333,8 +333,9 @@ object keys, filesystem paths, or internal exception text.
   overwrite a later version.
 - Retention deletion is limited to an exact validated content-addressed object
   key with an eligible Registry record and reference check.
-- No browser operation can approve, export, publish, install, execute code,
-  write Git, or deploy.
+- Existing Human Review decision controls remain available in the browser.
+  Upload and automatic analysis cannot approve a review; no browser operation
+  added here can export, publish, install, execute code, write Git, or deploy.
 - Existing Cloudflare Access, Tunnel, domain, and loopback-only listener remain
   unchanged.
 
