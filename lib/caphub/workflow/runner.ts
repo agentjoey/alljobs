@@ -63,6 +63,12 @@ function unmatchedStarted(events: readonly ModelCallAuditEvent[]): Extract<Model
   ) ?? null;
 }
 
+function isTransientRegistryFailure(error: unknown): boolean {
+  return error instanceof Error
+    && "code" in error
+    && (error as Error & { code?: unknown }).code === "REGISTRY_UNAVAILABLE";
+}
+
 async function serializeJob<T>(jobId: string, operation: () => Promise<T>): Promise<T> {
   const previous = runChains.get(jobId) ?? Promise.resolve();
   const run = previous.catch(() => undefined).then(operation);
@@ -210,6 +216,7 @@ export class AnalysisWorkflowRunner {
         if (interruptedDuringRun) {
           return this.stopForHumanReview(job, "INTERRUPTED_PROVIDER_CALL", interruptedDuringRun.stage);
         }
+        if (isTransientRegistryFailure(error)) throw error;
         const failed: AnalysisJob = {
           ...base(job),
           status: "failed",

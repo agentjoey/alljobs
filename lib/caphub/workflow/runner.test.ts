@@ -172,6 +172,28 @@ describe("resumable analysis workflow", () => {
     expect(calls).toEqual(["preprocess", "extraction", "research", "assessment", "review_packet"]);
   });
 
+  it("keeps a stage resumable when Registry storage is transiently unavailable before a provider call", async () => {
+    const stores = await setup();
+    const unavailable = Object.assign(new Error("Registry storage is unavailable"), {
+      code: "REGISTRY_UNAVAILABLE"
+    });
+    const failingHandlers = handlers([]).map((handler) => handler.stage === "preprocess"
+      ? { ...handler, async run() { throw unavailable; } }
+      : handler);
+    const failing = new AnalysisWorkflowRunner({ ...stores, handlers: failingHandlers, clock: () => NOW });
+
+    await expect(failing.runAnalysisJob(JOB_ID, new AbortController().signal)).rejects.toBe(unavailable);
+    await expect(stores.jobs.get(JOB_ID)).resolves.toMatchObject({
+      status: "running",
+      stage: "preprocess"
+    });
+
+    const resumedCalls: AnalysisStage[] = [];
+    const resumed = new AnalysisWorkflowRunner({ ...stores, handlers: handlers(resumedCalls), clock: () => NOW });
+    await expect(resumed.runAnalysisJob(JOB_ID, new AbortController().signal)).resolves.toMatchObject({ status: "completed" });
+    expect(resumedCalls).toEqual(["preprocess", "extraction", "research", "assessment", "review_packet"]);
+  });
+
   it("routes an unmatched provider started audit to Human review without another call", async () => {
     const stores = await setup();
     const provider = { calls: 0 };
