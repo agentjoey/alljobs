@@ -28,13 +28,18 @@ async function loadReviewCenterView(
       waitingAgeBand: member(one("age"), ["fresh", "aging", "overdue"] as const),
       cursor: reviewRequestIdSchema.safeParse(one("cursor")).success ? one("cursor") : null
     };
-    const queue = await queries.getReviewQueue(queueInput);
+    const queuePromise = queries.getReviewQueue(queueInput);
     const rawRequest = typeof params.request === "string" ? params.request : null;
-    const selected = rawRequest && reviewRequestIdSchema.safeParse(rawRequest).success
-      ? rawRequest
-      : queue.items[0]?.request.id;
-    const detail = selected ? await queries.getReviewDetail(selected) : { kind: "not_found" as const };
-    return { state: "ready", queue, detail };
+    const detailPromise = (async () => {
+      const selected = rawRequest && reviewRequestIdSchema.safeParse(rawRequest).success
+        ? rawRequest
+        : (await queuePromise).items[0]?.request.id;
+      return selected ? queries.getReviewDetail(selected) : { kind: "not_found" as const };
+    })();
+    const [queue, detail, analysisStops] = await Promise.all([
+      queuePromise, detailPromise, queries.getAnalysisStops({ limit: 25 })
+    ]);
+    return { state: "ready", queue, detail, analysisStops };
   } catch (error) {
     return error instanceof RegistryRuntimeError && error.code === "REGISTRY_DISABLED"
       ? { state: "disabled" }

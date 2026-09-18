@@ -2,6 +2,8 @@ import "server-only";
 
 import type { Pool } from "pg";
 import { z } from "zod";
+import { analysisJobIdSchema, analysisStageSchema } from "../analysis/schemas";
+import { captureIdSchema } from "../domain/schemas";
 import { renderClaudePreview } from "../adapters/claude";
 import { renderCodexPreview } from "../adapters/codex";
 import { renderHermesPreview } from "../adapters/hermes";
@@ -30,6 +32,24 @@ const reviewQueueInputSchema = z.object({
 }).strict();
 
 export type ReviewQueueInput = z.input<typeof reviewQueueInputSchema>;
+
+const analysisStopsInputSchema = z.object({ limit: z.number().int().min(1).max(25).default(25) }).strict();
+const analysisStopReasonSchema = z.enum([
+  "ABORTED", "TIMEOUT", "AUTHENTICATION", "BILLING", "PERMISSION", "PROVIDER_UNAVAILABLE",
+  "INVALID_OUTPUT", "MINIMAX_INVALID_OBSERVATION", "DEEPSEEK_STRUCTURE_FAILED",
+  "HOST_EXTRACTION_LINKAGE_FAILED", "SCHEMA_INVALID_TWICE", "INPUT_TOO_LARGE",
+  "PROVIDER_CALL_LIMIT", "TOKEN_LIMIT", "INTERRUPTED_PROVIDER_CALL", "HUMAN_REVIEW_REQUIRED"
+]);
+const analysisStopRowSchema = z.object({
+  job_id: analysisJobIdSchema,
+  capture_id: captureIdSchema,
+  stage: analysisStageSchema.nullable(),
+  // Historical reasons were free-form; only closed codes may cross this boundary.
+  reason: analysisStopReasonSchema.catch("HUMAN_REVIEW_REQUIRED"),
+  contract_version: z.enum(["caphub-analysis-v1", "caphub-analysis-v2"]).nullable(),
+  supersedes_job_id: analysisJobIdSchema.nullable(),
+  stopped_at: z.string().datetime({ offset: true })
+});
 
 interface QueueRow {
   request_id: string;
@@ -303,6 +323,39 @@ async function decisionTimeline(pool: Pool, requestId: string) {
 
 export function createRegistryQueries(pool: Pool) {
   return {
+    async getAnalysisStops(input: z.input<typeof analysisStopsInputSchema> = {}) {
+      const parsed = analysisStopsInputSchema.safeParse(input);
+      if (!parsed.success) throw new RegistryReadError("INVALID_QUERY");
+      try {
+        const result = await pool.query(`
+          SELECT r.record_id AS job_id, v.payload->>'capture_id' AS capture_id,
+                 v.payload->>'stage' AS stage, v.payload->>'reason' AS reason,
+                 v.payload->>'analysis_contract_version' AS contract_version,
+                 v.payload->>'supersedes_job_id' AS supersedes_job_id,
+                 v.payload->>'stopped_at' AS stopped_at
+          FROM caphub.registry_records r
+          JOIN caphub.registry_versions v ON v.record_id = r.record_id AND v.version = r.current_version
+          WHERE r.kind = 'analysis_job' AND v.payload->>'status' = 'HUMAN_REVIEW_REQUIRED'
+          ORDER BY (v.payload->>'stopped_at')::timestamptz DESC, r.record_id DESC
+          LIMIT $1
+        `, [parsed.data.limit]);
+        return result.rows.map((raw) => {
+          const row = analysisStopRowSchema.parse(raw);
+          return {
+            jobId: row.job_id,
+            captureId: row.capture_id,
+            stage: row.stage,
+            reason: row.reason,
+            contractVersion: row.contract_version ?? "caphub-analysis-v1",
+            supersedesJobId: row.supersedes_job_id,
+            stoppedAt: iso(row.stopped_at)
+          };
+        });
+      } catch {
+        throw new RegistryReadError("REGISTRY_UNAVAILABLE");
+      }
+    },
+
     async getReviewQueue(input: ReviewQueueInput = {}) {
       const parsed = reviewQueueInputSchema.safeParse(input);
       if (!parsed.success) throw new RegistryReadError("INVALID_QUERY");
@@ -803,6 +856,7 @@ export function createRegistryQueries(pool: Pool) {
 
 export type ReviewDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getReviewDetail"]>>;
 export type ReviewQueueDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getReviewQueue"]>>;
+export type AnalysisStopDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getAnalysisStops"]>>[number];
 export type CaptureDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCaptureDetail"]>>;
 export type CapabilityDetailDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCapabilityDetail"]>>;
 export type CapabilityExportDto = Awaited<ReturnType<ReturnType<typeof createRegistryQueries>["getCapabilityExportState"]>>;

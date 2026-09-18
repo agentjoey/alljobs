@@ -67,6 +67,15 @@ export function reviewDetail(overrides: Record<string, unknown> = {}): Extract<R
   return base as Extract<ReviewDetailDto, { kind: "found" }>;
 }
 
+export function analysisStop() {
+  return {
+    jobId: `job_${"a".repeat(32)}`, captureId: `cap_${"b".repeat(32)}`,
+    stage: "extraction" as const, reason: "DEEPSEEK_STRUCTURE_FAILED" as const,
+    contractVersion: "caphub-analysis-v2" as const, supersedesJobId: `job_${"c".repeat(32)}`,
+    stoppedAt: "2026-09-18T08:00:00.000Z"
+  };
+}
+
 export function reviewQueue(): ReviewQueueDto {
   const detail = reviewDetail();
   return {

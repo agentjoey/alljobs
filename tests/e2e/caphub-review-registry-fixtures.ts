@@ -21,6 +21,7 @@ import type { AnalysisJob, ReviewPacket, StageArtifact } from "../../lib/caphub/
 import type { CaptureRecord } from "../../lib/caphub/domain/types";
 import { createReviewPacketImporter } from "../../lib/caphub/registry/import-review-packet";
 import { applyRegistryMigrations } from "../../lib/caphub/registry/migrate";
+import { PostgresAnalysisJobStore, PostgresCaptureStore } from "../../lib/caphub/registry/postgres/caphub-stores";
 import { FilesystemCaptureStore } from "../../lib/caphub/storage/filesystem";
 import { FilesystemAnalysisJobStore, FilesystemStageArtifactStore } from "../../lib/caphub/workflow/filesystem";
 import { startCaphubTestPostgres, type CaphubTestPostgres } from "../helpers/caphub-postgres";
@@ -374,6 +375,40 @@ export async function seedReviewCandidate(
     approveConfirmation: request.rows[0].approve_confirmation,
     rejectConfirmation: request.rows[0].reject_confirmation
   };
+}
+
+export async function seedAnalysisStop(pool: Pool, seed: string) {
+  const now = "2026-09-18T08:00:00.000Z";
+  const captureId = `cap_${digest(`${seed}:capture`).slice(0, 32)}`;
+  const supersedesJobId = `job_${digest(`${seed}:v1`).slice(0, 32)}`;
+  const jobId = `job_${digest(`${seed}:v2`).slice(0, 32)}`;
+  const objectDigest = digest(`${seed}:image`);
+  await new PostgresCaptureStore(pool).create({
+    schema_version: 1, id: captureId,
+    source: { kind: "web", original_filename: "analysis-stop-fixture.png" },
+    note: "Local analysis stop fixture", mime_type: "image/png",
+    object: { algorithm: "sha256", digest: objectDigest,
+      key: `sha256/${objectDigest.slice(0, 2)}/${objectDigest}`, bytes: 68 },
+    idempotency_key: `capture.stop-${digest(seed).slice(0, 24)}`,
+    status: "received", human_review_required: true, created_at: now
+  });
+  const jobs = new PostgresAnalysisJobStore(pool);
+  const legacy: AnalysisJob = {
+    schema_version: 1, id: supersedesJobId, capture_id: captureId,
+    input_digest: digest(`${seed}:input`), completed_artifact_ids: [],
+    created_at: now, updated_at: now, status: "queued"
+  };
+  await jobs.put(legacy);
+  await jobs.put({ ...legacy, status: "HUMAN_REVIEW_REQUIRED", stage: "extraction",
+    reason: "SCHEMA_INVALID_TWICE", stopped_at: now });
+  const queued: AnalysisJob = {
+    ...legacy, id: jobId, analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: supersedesJobId
+  };
+  await jobs.put(queued);
+  const stoppedAt = "2026-09-18T08:01:00.000Z";
+  await jobs.put({ ...queued, status: "HUMAN_REVIEW_REQUIRED", stage: "extraction",
+    reason: "DEEPSEEK_STRUCTURE_FAILED", stopped_at: stoppedAt, updated_at: stoppedAt });
+  return { jobId, captureId, supersedesJobId, stoppedAt, objectKey: `sha256/${objectDigest.slice(0, 2)}/${objectDigest}` };
 }
 
 export function setRegistryEnabled(fixture: CaphubReviewFixture, enabled: boolean): void {

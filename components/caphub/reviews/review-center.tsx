@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReviewDetailDto, ReviewQueueDto } from "@/lib/caphub/registry/queries";
+import type { AnalysisStopDto, ReviewDetailDto, ReviewQueueDto } from "@/lib/caphub/registry/queries";
 import { DecisionForm } from "./decision-form";
 import { ReviewDossier } from "./review-dossier";
 
@@ -7,7 +7,16 @@ export type ReviewCenterView =
   | { state: "loading"; code?: string }
   | { state: "disabled"; code?: string }
   | { state: "unavailable"; code?: string }
-  | { state: "ready"; queue: ReviewQueueDto; detail: ReviewDetailDto };
+  | { state: "ready"; queue: ReviewQueueDto; detail: ReviewDetailDto; analysisStops: AnalysisStopDto[] };
+
+function analysisStopPhase(stop: AnalysisStopDto): string {
+  switch (stop.reason) {
+    case "MINIMAX_INVALID_OBSERVATION": return "Visual observation";
+    case "DEEPSEEK_STRUCTURE_FAILED": return "Schema structuring";
+    case "HOST_EXTRACTION_LINKAGE_FAILED": return "Host source linkage";
+    default: return "Human review required";
+  }
+}
 
 function queueHref(
   filters: Extract<ReviewQueueDto, { kind: "ready" }>["appliedFilters"],
@@ -40,6 +49,26 @@ export function ReviewCenter({ initialView }: { initialView: ReviewCenterView })
       <div><span className="registry-kicker">Caphub · Human Review</span><h1>Decide with the evidence still attached.</h1><p>Review one immutable subject version at a time. Decisions cannot publish, install, build, or deploy.</p></div>
       <div className="registry-queue-count"><strong>{items.filter((item) => item.request.state === "WAITING_FOR_REVIEW").length}</strong><span>waiting</span></div>
     </header>
+    <section id="analysis-stops" className="registry-state min-w-0" aria-labelledby="analysis-stops-title">
+      <h2 id="analysis-stops-title">Analysis stops</h2>
+      {initialView.analysisStops.length === 0 ? <p>No analysis stops require attention</p> : <>
+        <p>Latest {initialView.analysisStops.length} stops · newest first. Each job is terminal and requires human review.</p>
+        <ol className="mt-4 grid list-none gap-4 p-0">
+          {initialView.analysisStops.map((stop) => <li key={stop.jobId} className="min-w-0 border-t border-[var(--hairline-strong)] pt-4 [overflow-wrap:anywhere]">
+            <h3 className="m-0 text-base">{analysisStopPhase(stop)}</h3>
+            <p className="mt-1"><code>{stop.reason}</code></p>
+            <dl className="m-0 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="min-w-0"><dt>Job</dt><dd className="m-0"><code>{stop.jobId}</code></dd></div>
+              <div className="min-w-0"><dt>Capture</dt><dd className="m-0"><Link className="inline-flex min-h-10 items-center underline" href={`/captures/${stop.captureId}`}><code>{stop.captureId}</code></Link></dd></div>
+              <div><dt>Stage</dt><dd className="m-0">{stop.stage ?? "Not recorded"}</dd></div>
+              <div><dt>Contract</dt><dd className="m-0"><code>{stop.contractVersion}</code></dd></div>
+              <div><dt>Stopped</dt><dd className="m-0"><time dateTime={stop.stoppedAt}>{stop.stoppedAt.replace("T", " ").replace(".000Z", " UTC")}</time></dd></div>
+              <div className="min-w-0"><dt>Predecessor job</dt><dd className="m-0">{stop.supersedesJobId ? <code>{stop.supersedesJobId}</code> : "None"}</dd></div>
+            </dl>
+          </li>)}
+        </ol>
+      </>}
+    </section>
     <form className="registry-filters" aria-label="Review filters" action="/reviews" method="get">
       <label>Kind <select name="kind" defaultValue={filters.reviewKind ?? "all"}><option value="all">All</option><option value="candidate">Candidate</option><option value="build">Build</option><option value="implementation">Implementation</option><option value="release">Release</option><option value="update">Update</option><option value="deployment">Deployment</option></select></label>
       <label>State <select name="state" defaultValue={filters.state ?? "all"}><option value="all">All</option><option value="WAITING_FOR_REVIEW">Waiting</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option><option value="REVOKED">Revoked</option><option value="SUPERSEDED">Superseded</option></select></label>

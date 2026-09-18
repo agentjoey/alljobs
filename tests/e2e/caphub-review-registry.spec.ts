@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { createHash, randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Pool } from "pg";
@@ -9,6 +10,7 @@ import {
   openFixturePool,
   readCaphubReviewFixture,
   seedReviewCandidate,
+  seedAnalysisStop,
   setRegistryEnabled,
   snapshotFixtureFiles,
   type CaphubReviewFixture,
@@ -238,6 +240,55 @@ test.describe.serial("Caphub P3 final-build Review Registry", () => {
     await expect(page).toHaveURL(/#decision$/);
     await expect(page.locator("#decision")).toBeVisible();
     await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+  });
+
+  test("analysis stops show precise read-only failures with Capture navigation, responsive layout, and WCAG checks", async ({ page }) => {
+    const stop = await seedAnalysisStop(pool, "analysis-stops-v2");
+    const external: string[] = [];
+    const mutations: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).hostname !== "127.0.0.1") external.push(request.url());
+      if (!["GET", "HEAD"].includes(request.method())) mutations.push(request.url());
+    });
+    const before = await pool.query("SELECT count(*)::int AS versions FROM caphub.registry_versions");
+    await page.goto("/reviews");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const panel = page.getByRole("region", { name: "Analysis stops" });
+    const stopped = panel.getByRole("listitem").filter({ hasText: stop.jobId });
+    await expect(stopped.getByText("DEEPSEEK_STRUCTURE_FAILED", { exact: true })).toBeVisible();
+    await expect(stopped.getByRole("heading", { name: "Schema structuring" })).toBeVisible();
+    await expect(stopped.getByText("caphub-analysis-v2", { exact: true })).toBeVisible();
+    await expect(stopped.getByText("extraction", { exact: true })).toBeVisible();
+    await expect(stopped.getByText(stop.supersedesJobId, { exact: true })).toBeVisible();
+    await expect(panel.locator("form, button, input")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /retry|rerun|analyze/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /retry|rerun|analyze/i })).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText(/postgres(?:ql)?:\/\/|api[_-]?key|authorization:|\/Users\//i);
+    await expect(page.locator("body")).not.toContainText(fixture.rootDir);
+    await expect(page.locator("body")).not.toContainText(stop.objectKey);
+    const screenshots = resolve(".agent/caphub/extraction-v2-screenshots");
+    mkdirSync(screenshots, { recursive: true });
+    for (const width of [1440, 390] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => window.innerWidth)).toBe(width);
+      await assertNoHorizontalOverflow(page);
+      const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      expect(accessibility.violations).toEqual([]);
+      execFileSync(process.execPath, ["scripts/shot.mjs", "http://127.0.0.1:3470/reviews",
+        resolve(screenshots, `analysis-stops-${width}.png`), String(width), "1", width === 390 ? "1" : "0"],
+      { timeout: 20_000, stdio: "pipe" });
+    }
+    const capture = stopped.getByRole("link", { name: stop.captureId });
+    await expect(capture).toHaveAttribute("href", `/captures/${stop.captureId}`);
+    await capture.focus();
+    await expect(capture).toBeFocused();
+    await capture.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`/captures/${stop.captureId}$`));
+    await expect(page.getByRole("heading", { name: /Trace the decision back/i })).toBeVisible();
+    await expect(page.locator("body")).toContainText(stop.captureId);
+    expect(external).toEqual([]);
+    expect(mutations).toEqual([]);
+    expect((await pool.query("SELECT count(*)::int AS versions FROM caphub.registry_versions")).rows).toEqual(before.rows);
   });
 
   test("captures the approved P3 state matrix from this production build", async ({ page }) => {

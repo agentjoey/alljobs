@@ -85,6 +85,58 @@ function poolWith(...results: unknown[][]): Pool {
 }
 
 describe("Registry read DTOs", () => {
+  const stopRow = {
+    job_id: `job_${"a".repeat(32)}`,
+    capture_id: `cap_${"b".repeat(32)}`,
+    stage: "extraction",
+    reason: "DEEPSEEK_STRUCTURE_FAILED",
+    contract_version: "caphub-analysis-v2",
+    supersedes_job_id: `job_${"c".repeat(32)}`,
+    stopped_at: NOW
+  };
+
+  it("projects only safe analysis stop fields, including legacy defaults", async () => {
+    const hidden = {
+      prompt: "private prompt", output: "raw model output", object_key: "private/object/key",
+      databaseUrl: "postgresql://user:secret@host/db", api_key: "credential",
+      provider_response: { content: "raw provider content" }
+    };
+    const result = await createRegistryQueries(poolWith([
+      { ...stopRow, ...hidden },
+      { ...stopRow, stage: null, contract_version: null, supersedes_job_id: null }
+    ])).getAnalysisStops({ limit: 25 });
+    expect(result).toEqual([
+      { jobId: stopRow.job_id, captureId: stopRow.capture_id, stage: "extraction",
+        reason: "DEEPSEEK_STRUCTURE_FAILED", contractVersion: "caphub-analysis-v2",
+        supersedesJobId: stopRow.supersedes_job_id, stoppedAt: NOW },
+      { jobId: stopRow.job_id, captureId: stopRow.capture_id, stage: null,
+        reason: "DEEPSEEK_STRUCTURE_FAILED", contractVersion: "caphub-analysis-v1",
+        supersedesJobId: null, stoppedAt: NOW }
+    ]);
+    expect(JSON.stringify(result)).not.toMatch(/prompt|output|private\/|postgres|credential|provider_response/i);
+  });
+
+  it.each([0, 26, 1.5, NaN])("rejects invalid stop limit %s before a database read", async (limit) => {
+    const pool = poolWith([]);
+    await expect(createRegistryQueries(pool).getAnalysisStops({ limit })).rejects.toMatchObject({ code: "INVALID_QUERY" });
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it.each(["job_id", "capture_id", "supersedes_job_id", "stage", "contract_version", "stopped_at"])("rejects unsafe stop %s without returning its value", async (field) => {
+    await expect(createRegistryQueries(poolWith([{ ...stopRow, [field]: "/Users/private/secret" }]))
+      .getAnalysisStops()).rejects.toMatchObject({ code: "REGISTRY_UNAVAILABLE", message: "Registry is unavailable" });
+  });
+
+  it("withholds free-form historical reasons and database error content", async () => {
+    const result = await createRegistryQueries(poolWith([{ ...stopRow, reason: "postgresql://secret /Users/private provider response" }]))
+      .getAnalysisStops();
+    expect(result[0].reason).toBe("HUMAN_REVIEW_REQUIRED");
+    const pool = { query: vi.fn().mockRejectedValue(new Error("postgresql://secret /Users/private")) } as unknown as Pool;
+    await expect(createRegistryQueries(pool).getAnalysisStops()).rejects.toMatchObject({
+      code: "REGISTRY_UNAVAILABLE", message: "Registry is unavailable"
+    });
+  });
+
   it("returns bounded queue identity and stable pagination metadata", async () => {
     const secondId = `rev_${"9".repeat(32)}`;
     const pool = poolWith([queueRow(), queueRow({ request_id: secondId })]);

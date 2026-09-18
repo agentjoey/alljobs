@@ -5,8 +5,59 @@ import { applyRegistryMigrations } from "./migrate";
 import { digestCanonicalJson } from "../analysis/digest";
 import { testCapabilityPackage } from "../packages/fixtures";
 import { createRegistryQueries } from "./queries";
+import { PostgresAnalysisJobStore } from "./postgres/caphub-stores";
+import type { AnalysisJob } from "../analysis/types";
 
 const CREATED_AT = "2026-09-16T12:00:00.000Z";
+
+describe.sequential("Analysis stops (real PostgreSQL)", () => {
+  let fixture: CaphubTestPostgres;
+  beforeAll(async () => {
+    fixture = await startCaphubTestPostgres();
+    await applyRegistryMigrations(fixture.pool);
+    const jobs = new PostgresAnalysisJobStore(fixture.appPool);
+    for (let index = 0; index < 27; index++) {
+      const job: AnalysisJob = {
+        schema_version: 1, id: `job_${index.toString(16).padStart(32, "0")}`,
+        capture_id: `cap_${"a".repeat(32)}`, input_digest: "b".repeat(64),
+        analysis_contract_version: "caphub-analysis-v2", completed_artifact_ids: [],
+        created_at: CREATED_AT, updated_at: CREATED_AT, status: "queued"
+      };
+      await jobs.put(job);
+      if (index < 26) await jobs.put({ ...job, status: "HUMAN_REVIEW_REQUIRED",
+        stage: "extraction", reason: "DEEPSEEK_STRUCTURE_FAILED",
+        stopped_at: new Date(Date.parse(CREATED_AT) + index * 1000).toISOString() });
+    }
+  }, 30_000);
+  afterAll(async () => { await fixture?.stop(); }, 30_000);
+
+  it("reads current stopped jobs newest first with a default hard cap of 25", async () => {
+    const queries = createRegistryQueries(fixture.appPool);
+    const stops = await queries.getAnalysisStops();
+    expect(stops).toHaveLength(25);
+    expect(stops.map(({ jobId }) => jobId)).toEqual(Array.from({ length: 25 }, (_, i) =>
+      `job_${(25 - i).toString(16).padStart(32, "0")}`));
+    expect(stops[0]).toEqual({ jobId: `job_${"19".padStart(32, "0")}`,
+      captureId: `cap_${"a".repeat(32)}`, stage: "extraction", reason: "DEEPSEEK_STRUCTURE_FAILED",
+      contractVersion: "caphub-analysis-v2", supersedesJobId: null, stoppedAt: "2026-09-16T12:00:25.000Z" });
+    expect(await queries.getAnalysisStops({ limit: 1 })).toEqual([stops[0]]);
+  });
+
+  it("honors the current-version pointer instead of exposing another immutable version", async () => {
+    const client = await fixture.appPool.connect();
+    try {
+      await client.query("BEGIN");
+      // A read-boundary fixture: retain the immutable stop but point at the queued version.
+      await client.query("UPDATE caphub.registry_records SET current_version = 1 WHERE record_id = $1",
+        [`job_${"19".padStart(32, "0")}`]);
+      const stops = await createRegistryQueries(client as unknown as import("pg").Pool).getAnalysisStops({ limit: 1 });
+      expect(stops[0].jobId).toBe(`job_${"18".padStart(32, "0")}`);
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
+  });
+});
 
 describe.sequential("Registry queue keyset pagination", () => {
   let fixture: CaphubTestPostgres;
