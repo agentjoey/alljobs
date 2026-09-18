@@ -1,6 +1,6 @@
 import type { AnalysisStage } from "../analysis/types";
 
-export type StructuredProviderName = "minimax" | "kimi";
+export type StructuredProviderName = "minimax" | "kimi" | "deepseek";
 export type StructuredProviderStage = Extract<
   AnalysisStage,
   "extraction" | "research" | "assessment" | "critic"

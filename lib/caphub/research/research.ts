@@ -3,11 +3,15 @@ import { digestCanonicalJson } from "../analysis/digest";
 import { researchDossierSchema } from "../analysis/schemas";
 import type { EvidenceRecord, ExtractionResult, ResearchDossier } from "../analysis/types";
 import type { StructuredProviderOutput } from "../providers/contracts";
-import type { KimiInvocationOptions } from "../providers/kimi";
 import { ResearchSourceError, type ResearchSourceGateway, type SourceCandidate, type SourceKind } from "./source-gateway";
 
+export interface ResearchInvocationOptions {
+  inputDigest: string;
+  signal: AbortSignal;
+}
+
 export interface ResearchWorker {
-  research(input: unknown, options: KimiInvocationOptions): Promise<StructuredProviderOutput>;
+  research(input: unknown, options: ResearchInvocationOptions): Promise<StructuredProviderOutput>;
 }
 
 export class ResearchDossierError extends Error {
