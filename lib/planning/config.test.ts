@@ -652,6 +652,24 @@ describe("Caphub export configuration", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts an explicit owner-selected Obsidian vault path containing ordinary spaces", () => {
+    const parsed = parseCaphub({
+      caphub: {
+        enabled: true,
+        registry: { enabled: true },
+        exports: {
+          enabled: true,
+          obsidian: {
+            enabled: true,
+            root: "/Users/owner/Library/Mobile Documents/iCloud~md~obsidian/Documents/Caphub",
+            alias: "3b0bc2e2318652e8"
+          }
+        }
+      }
+    });
+    expect(parsed.success).toBe(true);
+  });
+
   it("rejects unpaired roots or aliases, broad roots, variables, and glob characters", () => {
     const base = {
       caphub: {
@@ -672,7 +690,7 @@ describe("Caphub export configuration", () => {
         exports: { enabled: true, targets: { codex: { enabled: true, alias: "codex-only" } } }
       }
     }).success).toBe(false);
-    for (const root of ["/", "~/vault", "$HOME/vault", "/tmp/glob*", "/tmp/what?", "relative/path", "/tmp/back\\slash", "/tmp/with space"]) {
+    for (const root of ["/", "~/vault", "$HOME/vault", "/tmp/glob*", "/tmp/what?", "relative/path", "/tmp/back\\slash", "/tmp/with\nnewline", "/tmp/with\ttab"]) {
       const parsed = parseCaphub({
         caphub: {
           ...base.caphub,

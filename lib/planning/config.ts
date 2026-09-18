@@ -157,9 +157,9 @@ const exportRootSchema = z.string()
   .min(1)
   .max(500)
   .refine((value) => value.startsWith("/") && !value.endsWith("/") && !value.includes("\\")
-    && !value.includes("~") && !value.includes("$") && !value.includes("*") && !value.includes("?")
-    && !/\s/.test(value), {
-    message: "Export roots must be explicit absolute paths without variables, ~, globs, whitespace, or backslashes"
+    && !value.includes("$") && !value.includes("*") && !value.includes("?")
+    && !/[\u0000-\u001f\u007f]/.test(value), {
+    message: "Export roots must be explicit absolute paths without variables, globs, control characters, or backslashes"
   })
   .refine((value) => value !== "/", {
     message: "Export roots must not be the filesystem root"
