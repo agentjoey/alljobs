@@ -431,3 +431,29 @@ and one independent Verification occur only after the implementation tasks.
   remains pending; exports retain zero enabled targets. PA-C and PA-D are not
   performed. No provider call, target write, reload, push, merge, deployment,
   or release occurred.
+
+## PA-D application rebuild and Control Host cutover — 2026-09-18
+
+- The accepted activation candidate `d7081a5b4d250fb68c825862107a915c769ac90b`
+  was fast-forwarded into the dedicated deployment worktree on
+  `codex/caphub-release`. The Human-owned `main` checkout was neither modified
+  nor staged.
+- The deployment worktree dependency tree was refreshed from the committed
+  lockfile before the final Next.js webpack Production build. The build,
+  embedded TypeScript check, and `verify:deploy` all passed. The complete phase
+  test gate remains `172 files / 1459 tests` PASS from the exact candidate.
+- The existing private mode-`600` LaunchAgent was loaded and started against
+  the deployment worktree. A build-time keepalive race briefly sampled an
+  incomplete `.next` directory; after the build completed, one explicit
+  restart loaded the complete artifact.
+- Host-level verification confirms the application process listens only on
+  `127.0.0.1:3456` and `GET /caphub` returns `200` with the Caphub page
+  contract present. The final running-build screenshot is
+  `production-activation-screenshots/caphub-production-1440.png` (1440 CSS
+  pixels, SHA-256
+  `ba0595e6a231e80f36a05a672f0b150cf10d47b4a7c6abc6e599336f2a0b75ec`).
+- The existing public entrypoint returned the expected Cloudflare Access login
+  challenge (`302`), so PA-D did not bypass the pre-existing access boundary.
+- No provider request, source fetch, Capture write, target operation,
+  publish/install/rollback, push, PR, merge to `main`, tag, or public release
+  was performed. Analysis stays disabled; exports retain zero enabled targets.

@@ -18,3 +18,9 @@ run. All export targets are disabled, no target directory is created, and the
 fixture is removed after Playwright exits. The images therefore contain stable
 fixture IDs but no Production paths, credentials, prompts, raw responses, or
 Capture bytes.
+
+## PA-D Control Host evidence
+
+- `caphub-production-1440.png` — the running Control Host Production build at
+  a 1440 CSS-pixel viewport after PA-D. It shows the ready Capture-only Caphub
+  inbox and no analysis, export, target, or provider action.

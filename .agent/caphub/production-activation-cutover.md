@@ -39,3 +39,17 @@ record. The application listener remains stopped and Caphub is safe-off.
 Obtain the fresh N1 Production Neon provisioning authorization. With the
 listener still stopped, first create the private Object Storage/database
 resources, then complete N2 object transfer before any Registry import.
+
+## PA-D completion — 2026-09-18
+
+The authorized Neon activation sequence N1 through N4 is complete, and the
+accepted application candidate is now rebuilt and running from the dedicated
+Control Host deployment worktree. The listener is bound only to
+`127.0.0.1:3456`; the local Caphub route returned HTTP 200 after startup.
+
+The final deployment evidence is recorded in
+`.agent/caphub/production-activation-log.md` and its screenshot is retained in
+`.agent/caphub/production-activation-screenshots/caphub-production-1440.png`.
+This completion does not authorize a provider canary (PA-C), Capture input,
+analysis, a target, export, publication, Git push, PR, `main` merge, tag, or
+release.

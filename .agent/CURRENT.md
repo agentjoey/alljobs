@@ -66,16 +66,13 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-PA-A implementation acceptance is complete on
-`codex/caphub-production-activation`: full gate PASS, scoped independent Review
-PASS, and independent Verification PASS against final code candidate
-`5b434f4049eba40dab71c3d96f1cacf364115e7a`. PA-B and the separate S1 listener
-stop were authorized and the listener is now stopped. Execution is paused in S1
-because no approved off-host/Time Machine backup destination is configured;
-the complete Capture source backup is required before Registry mutation. The
-next safe action is to provide or authorize one backup destination, create and
-verify the whole-tree source backup, then resume PA-B. Provider calls,
-application cutover, and P4 targets remain separately Human-gated.
+The approved Neon activation sequence N1–N4 and PA-D are complete. Caphub is
+running from `codex/caphub-release` on the Control Host and is bound only to
+`127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200 from the
+final webpack Production build. The next separate Human gate is PA-C: one
+bounded real Kimi canary. Capture input, provider calls, analysis, targets,
+exports, publication, push, PR, `main` merge, tags, and releases remain
+separately controlled.
 
 ## Caphub development status — 2026-09-16
 
@@ -108,6 +105,23 @@ application cutover, and P4 targets remain separately Human-gated.
 - No real database/bootstrap/migration/import/backup, LaunchAgent, config/secret
   change, provider call, service reload, push, merge, deploy, or release has
   occurred from this implementation branch.
+
+## Caphub P1–P4 Production activation — PA-D complete
+
+- Neon Registry and private Object Storage activation N1–N4 completed with a
+  recovery-branch proof. The managed-TLS privilege boundary is explicitly
+  `neon_project_admin_accepted`; it is not represented as PostgreSQL least
+  privilege.
+- Accepted candidate `d7081a5` was fast-forwarded only into the dedicated
+  deployment worktree and rebuilt from the committed lockfile. Full phase gate:
+  172 files / 1459 tests PASS; final webpack build, TypeScript, and deployment
+  invariants PASS.
+- `com.agentjoey.alljobs` is running locally on `127.0.0.1:3456`; host-level
+  `GET /caphub` returned 200. Evidence: `.agent/caphub/production-activation-log.md`
+  and `.agent/caphub/production-activation-screenshots/caphub-production-1440.png`.
+- PA-C is still a separate Human gate. No real provider request, Capture input,
+  analysis, target/export operation, Git push, PR, `main` merge, tag, or public
+  release occurred in PA-D.
 
 ## P0 Backlog retirement (live)
 
