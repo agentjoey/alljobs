@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { Check, Copy } from "lucide-react";
 import { z } from "zod";
 import { captureRecordSchema, objectRefSchema } from "@/lib/caphub/domain/schemas";
+import { AnalysisStatus } from "./analysis-status";
+import Link from "next/link";
 
 // The HTTP projection deliberately omits storage keys and idempotency keys.
 // Keep every level strict so a server contract drift cannot become UI content.
@@ -15,7 +17,7 @@ const publicCaptureSchema = captureRecordSchema.omit({ object: true, idempotency
   }).strict()
 }).strict();
 export const captureMetadataSchema = z.object({ capture: publicCaptureSchema }).strict();
-export const captureReceiptSchema = captureMetadataSchema.extend({ kind: z.enum(["created", "duplicate"]) }).strict();
+export const captureReceiptSchema = captureMetadataSchema.extend({ kind: z.enum(["created", "duplicate"]),analysis:z.object({enqueue:z.enum(["saved","failed"])}).optional() }).strict();
 
 export type CaptureReceipt = z.infer<typeof captureReceiptSchema>;
 export interface CaptureError {
@@ -61,7 +63,7 @@ export function CaptureStatus({ receipt, error, readPending = false, readError =
               <h3>{duplicate ? "Duplicate — existing receipt returned" : "Capture received"}</h3>
               <p>{duplicate
                 ? "This capture already exists. The existing receipt was returned without creating another capture."
-                : "The original bytes and metadata were stored once. No analysis has started."}</p>
+                : "Image saved. Follow its analysis and results below."}</p>
             </div>
             <span className="caphub-receipt__badge">{duplicate ? "Existing" : "Created"}</span>
           </div>
@@ -73,6 +75,7 @@ export function CaptureStatus({ receipt, error, readPending = false, readError =
             <div><dt>Digest</dt><dd><code>{capture.object.digest.slice(0, 8)}…</code></dd></div>
             <div><dt>Review</dt><dd>Human review required</dd></div>
           </dl>
+          {receipt.analysis?.enqueue==="failed"?<p role="alert">Image saved, but analysis was not queued. Retry the same request.</p>:receipt.analysis?<AnalysisStatus captureId={capture.id}/>:<p className="caphub-analysis"><Link href={`/caphub/captures/${capture.id}`}>View analysis and results</Link></p>}
           {onChooseAnother && <div className="caphub-receipt__actions"><button className="caphub-quiet-button" type="button" onClick={onChooseAnother}>Receive another image</button></div>}
         </article>
       ) : error ? (

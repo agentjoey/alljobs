@@ -2,6 +2,37 @@
 
 /* Caphub — the approved Paper Workbench accession lane. */
 .caphub-page { min-width: 0; }
+.caphub-subnav { display:flex; gap:24px; margin-bottom:24px; border-bottom:1px solid var(--hairline-strong); padding-bottom:12px; }
+.caphub-subnav a { min-height:44px; display:inline-flex; align-items:center; font-weight:600; }
+.caphub-review-page { min-width:0; max-width:1200px; margin-inline:auto; }
+.caphub-review-page h1 { font-size:28px; line-height:1.2; margin:0 0 20px; overflow-wrap:anywhere; }
+.caphub-review-page h2 { font-size:19px; margin:28px 0 12px; }
+.caphub-review-page > a:first-child { display:inline-block; margin-bottom:20px; }
+.caphub-review-page details { margin-block:20px; border-top:1px solid var(--hairline); padding-top:12px; }
+.caphub-review-page summary { cursor:pointer; min-height:44px; padding-block:10px; font-weight:600; }
+.caphub-review-page code,.caphub-review-page small { overflow-wrap:anywhere; }
+.caphub-filters form { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding-block:12px; }
+.caphub-filters label { display:flex; align-items:center; gap:8px; }
+.caphub-filters select { min-height:44px; padding:8px; background:var(--paper-raised); border:1px solid var(--hairline-strong); }
+.caphub-items ul { margin:0; padding:0; list-style:none; border-top:1px solid var(--hairline-strong); }
+.caphub-items li { display:grid; grid-template-columns:minmax(0,1fr) minmax(200px,1fr) auto; align-items:center; gap:24px; padding:16px 12px; border-bottom:1px solid var(--hairline); }
+.caphub-items small { display:block; margin-top:4px; color:var(--ink-muted); font-size:13px; }
+.caphub-item-name { overflow-wrap:anywhere; }
+.caphub-items .caphub-quiet-button { text-decoration:none; display:inline-flex; align-items:center; }
+.caphub-next { display:inline-block; padding-block:20px; }
+.caphub-row-skeleton { height:64px; margin-bottom:8px; background:var(--paper-recessed); border-bottom:1px solid var(--hairline); }
+.caphub-analysis { padding:16px 18px; }
+.caphub-analysis > p:first-child { font-weight:650; }
+.caphub-review-detail { max-width:900px; }
+.caphub-review-detail > section { margin-block:24px; }
+.caphub-review-detail p,.caphub-review-detail li { max-width:75ch; overflow-wrap:anywhere; }
+.caphub-review-detail .registry-decision-panel { position:static; }
+@media(max-width:640px) {
+  .caphub-items li { grid-template-columns:minmax(0,1fr) auto; gap:12px; padding-inline:0; }
+  .caphub-items li > div:nth-child(2) { grid-column:1; }
+  .caphub-items li > a { grid-column:2; grid-row:1 / span 2; }
+  .caphub-review-page h1 { font-size:24px; }
+}
 .caphub-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 400px); align-items: end; gap: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--hairline-strong); }
 .caphub-intro h1 { max-width: 14ch; margin: 0; font-size: clamp(30px, 3vw, 44px); font-weight: 650; letter-spacing: -0.035em; line-height: 0.98; }
 .caphub-intro p { max-width: 65ch; margin: 12px 0 0; color: var(--ink-muted); font-size: 16px; }

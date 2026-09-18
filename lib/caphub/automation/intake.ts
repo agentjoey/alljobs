@@ -14,7 +14,7 @@ export interface AutomatedCaptureInput extends ReceiveCaptureInput {
 }
 export class FilenameConflictError extends Error {
   readonly existing: { id: string; filename: string; digest: string; createdAt: string };
-  constructor(readonly code: "FILENAME_CONFLICT" | "FILENAME_CONFLICT_STALE" | "FILENAME_CONFLICT_UNRESOLVED", capture: CaptureRecord) {
+  constructor(readonly code: "FILENAME_CONFLICT" | "FILENAME_CONFLICT_STALE" | "FILENAME_CONFLICT_UNRESOLVED", capture: CaptureRecord,readonly incomingDigest?: string) {
     super(code);
     this.existing = { id: capture.id, filename: capture.source.original_filename, digest: capture.object.digest, createdAt: capture.created_at };
   }
@@ -75,7 +75,7 @@ export function createAutomatedIntake(deps: Dependencies) {
           JOIN caphub.registry_versions v ON v.record_id=r.record_id AND v.version=r.current_version
           LEFT JOIN caphub.capture_filename_versions f ON f.capture_id=r.record_id WHERE r.kind='capture' AND f.capture_id IS NULL`);
         const unresolved = legacy.rows.find(row => normalizeCaptureFilename(row.payload.source.original_filename) === filenameKey);
-        if (unresolved) throw new FilenameConflictError("FILENAME_CONFLICT_UNRESOLVED", unresolved.payload);
+        if (unresolved) throw new FilenameConflictError("FILENAME_CONFLICT_UNRESOLVED", unresolved.payload,digest);
       }
       let capture: CaptureRecord;
       let kind: ReceiveCaptureResult["kind"];
@@ -84,7 +84,7 @@ export function createAutomatedIntake(deps: Dependencies) {
         kind = "duplicate";
       } else {
         if (head && (head.payload.id !== expectedCurrentCaptureId || head.payload.object.digest !== expectedCurrentObjectDigest)) {
-          throw new FilenameConflictError(expectedCurrentCaptureId ? "FILENAME_CONFLICT_STALE" : "FILENAME_CONFLICT", head.payload);
+          throw new FilenameConflictError(expectedCurrentCaptureId ? "FILENAME_CONFLICT_STALE" : "FILENAME_CONFLICT", head.payload,digest);
         }
         if (!head && expectedCurrentCaptureId) throw new CaptureServiceError("INVALID_INPUT", "No current filename to confirm");
         await db.query("SELECT pg_advisory_xact_lock(hashtext('caphub.object'),hashtext($1))", [digest]);

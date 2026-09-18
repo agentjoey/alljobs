@@ -13,7 +13,7 @@ const inputSchema = z.object({
 export type WorkItemsInput = z.input<typeof inputSchema>;
 export interface CaphubWorkItem {
   filenameKey: string; filename: string; version: number; captureId: string; state: string;
-  createdAt: string; recommendation: string | null; valueScore: number | null; riskScore: number | null;
+  createdAt: string; waitingSeconds: number; recommendation: string | null; valueScore: number | null; riskScore: number | null;
   reviewRequestId: string | null; historyCount: number; href: string;
 }
 export interface CaphubWorkItems { items: CaphubWorkItem[]; total: number; counts: Record<string,number>; nextCursor: string | null; registryMs: number }
@@ -35,6 +35,7 @@ export async function getCaphubWorkItems(pool: Pool, raw: WorkItemsInput = {}): 
     ), projected AS (
       SELECT f.filename_key AS "filenameKey",v.payload #>> '{source,original_filename}' AS filename,
         f.version,f.capture_id AS "captureId",COALESCE(rr.created_at,r.created_at) AS "createdAt",
+        GREATEST(0,EXTRACT(EPOCH FROM CURRENT_TIMESTAMP-COALESCE(rr.created_at,r.created_at)))::int AS "waitingSeconds",
         CASE WHEN f.unresolved THEN 'filename_conflict' WHEN rr.state='WAITING_FOR_REVIEW' THEN 'waiting_for_review'
           WHEN rr.request_id IS NOT NULL THEN 'completed'
           WHEN j.status IN ('failed','HUMAN_REVIEW_REQUIRED') THEN 'needs_attention'

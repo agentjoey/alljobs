@@ -1,0 +1,1 @@
+export default function Loading(){return <section className="caphub-review-page" role="status"><h1>Reviews</h1><p>Loading files…</p><div className="caphub-row-skeleton" aria-hidden="true"/><div className="caphub-row-skeleton" aria-hidden="true"/><div className="caphub-row-skeleton" aria-hidden="true"/></section>;}

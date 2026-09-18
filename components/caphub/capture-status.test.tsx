@@ -27,7 +27,7 @@ it.each(["created", "duplicate"] as const)("renders the %s public receipt with t
   expect(screen.getByText("Human review required")).toBeVisible();
   expect(document.querySelector("time")).toHaveAttribute("datetime", "2026-09-15T08:42:19+08:00");
   expect(screen.queryByRole("img")).not.toBeInTheDocument();
-  expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  expect(screen.getByRole("link",{name:"View analysis and results"})).toHaveAttribute("href","/caphub/captures/cap_31f86a209ab84b72ad89f7f82d13e4c1");
   expect(document.body).not.toHaveTextContent(/untrusted|sha256\//);
 });
 

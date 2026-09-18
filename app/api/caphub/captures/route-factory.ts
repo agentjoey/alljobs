@@ -178,13 +178,16 @@ export function createCapturePostRoute(dependencies: CapturePostRouteDependencie
           ? {}
           : { sourceUrl: sourceUrlValue })
       });
-      return Response.json({ kind: result.kind, capture: publicCapture(result.capture), ...(result.analysis ? { analysis: result.analysis } : {}) }, {
+      const receipt = { kind: result.kind, capture: publicCapture(result.capture), ...(result.analysis ? { analysis: result.analysis } : {}) };
+      if (result.analysis?.enqueue === "failed") return Response.json({receipt,error:{code:"ANALYSIS_QUEUE_UNAVAILABLE",message:"Image saved; retry the same request to queue analysis."}},{status:503,headers:SAFE_HEADERS});
+      return Response.json(receipt, {
         status: result.kind === "created" ? 201 : 200,
         headers: SAFE_HEADERS
       });
     } catch (error) {
       if (error instanceof FilenameConflictError) return Response.json({ error: {
-        code: error.code, message: "This filename has different image content. Confirm a new version.", existing: error.existing
+        code: error.code, message: "This filename has different image content. Confirm a new version.", existing: error.existing,
+        ...(error.incomingDigest ? {incomingDigest:error.incomingDigest} : {})
       } }, { status: 409, headers: SAFE_HEADERS });
       if (error instanceof CaptureServiceError) return serviceFailure(error);
       return safeError(500, "INTERNAL_ERROR", "Capture request could not be completed.");

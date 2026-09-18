@@ -15,7 +15,7 @@ function revokeConfirmation(detail: FoundReview): string {
 
 export function DecisionForm({ detail }: { detail: FoundReview }) {
   const [action, setAction] = useState<DecisionAction>("approve");
-  const [disposition, setDisposition] = useState<(typeof DISPOSITIONS)[number]>("build");
+  const [disposition, setDisposition] = useState<(typeof DISPOSITIONS)[number]>(() => DISPOSITIONS.find(value=>value===detail.packet.recommendedDisposition) ?? "watch");
   const [rationale, setRationale] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -98,7 +98,7 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
       <section className="registry-decision-receipt registry-superseded-receipt">
         <h3>This request was superseded</h3>
         <p>Its original evidence and Diff remain readable, but decision controls are removed.</p>
-        {detail.request.supersededByRequestId && <Link className="registry-latest-request" href={`/reviews?request=${detail.request.supersededByRequestId}`}>Open latest request {detail.request.supersededByRequestId}</Link>}
+        {detail.request.supersededByRequestId && <Link className="registry-latest-request" href={`/caphub/reviews/${detail.request.supersededByRequestId}`}>Open latest request</Link>}
       </section>
     </aside>;
   }
@@ -106,11 +106,11 @@ export function DecisionForm({ detail }: { detail: FoundReview }) {
   return (
     <aside className="registry-decision" id="decision" aria-labelledby="decision-title">
       <header><h2 id="decision-title">Decision ledger</h2><span>Human owner only</span></header>
-      <div className="registry-version-lock">
+      <details className="registry-version-lock"><summary>Decision target</summary>
         <strong>Candidate version {detail.request.subjectVersion} · lock {detail.request.lockVersion}</strong>
         <code aria-label="Full subject SHA-256 digest">{detail.request.subjectDigest}</code>
-      </div>
-      <p className="registry-consequence"><strong>Authority boundary:</strong> this decision cannot create a Release, start a Builder, write Git, install, publish, or deploy.</p>
+      </details>
+      <p className="registry-consequence">Records your decision only; nothing is installed or published.</p>
 
       {(storedDecision || receipt) && <section className="registry-decision-receipt" aria-live="polite">
         <h3 ref={receiptRef} tabIndex={-1}>{receipt ? "Decision recorded" : storedDecision?.action === "reject" ? "Candidate version rejected" : storedDecision?.action === "revoke" ? "Approval revoked" : detail.authority?.state === "consumed" ? "Decision recorded · consumed" : "Decision recorded · revocable"}</h3>

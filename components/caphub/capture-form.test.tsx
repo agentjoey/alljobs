@@ -27,6 +27,36 @@ const receipt = {
 };
 const temporaryHomes: string[] = [];
 
+it("retains the selected file and only confirms different content on explicit Human action",async()=>{
+  const {user,fileInput,image,responses,requests}=setup();
+  responses.push(async()=>Response.json({error:{code:"FILENAME_CONFLICT",message:"Conflict",existing:{id:CAPTURE_ID,filename:"evidence.png",digest:"a".repeat(64),createdAt:"2026-09-18T00:00:00Z"}}},{status:409}));
+  await user.upload(fileInput,image);
+  await user.click(screen.getByRole("button",{name:"Receive capture"}));
+  expect(await screen.findByRole("heading",{name:"Same filename, different image"})).toHaveFocus();
+  expect(requests.filter(row=>row.init.method==="POST")).toHaveLength(1);
+  await user.click(screen.getByRole("button",{name:"Create new version"}));
+  const body=requests.filter(row=>row.init.method==="POST")[1].init.body as FormData;
+  expect(body.get("image")).toBe(image);
+  expect(body.get("expected_current_capture_id")).toBe(CAPTURE_ID);
+  expect(body.get("expected_current_object_digest")).toBe("a".repeat(64));
+});
+
+it("cancels filename conflict without another request and restores chooser focus",async()=>{
+ const {user,fileInput,image,responses,requests}=setup();
+ responses.push(async()=>Response.json({error:{code:"FILENAME_CONFLICT",message:"Conflict",existing:{id:CAPTURE_ID,filename:"evidence.png",digest:"a".repeat(64),createdAt:"2026-09-18T00:00:00Z"}}},{status:409}));
+ await user.upload(fileInput,image);await user.click(screen.getByRole("button",{name:"Receive capture"}));
+ await user.click(await screen.findByRole("button",{name:"Cancel"}));
+ expect(requests).toHaveLength(1);await waitFor(()=>expect(screen.getByRole("button",{name:"Choose image"})).toHaveFocus());
+});
+it("repairs a saved-but-not-queued receipt using the same upload key",async()=>{
+ const {user,fileInput,image,responses,requests}=setup();
+ responses.push(async()=>Response.json({receipt:{...receipt,analysis:{enqueue:"failed"}},error:{code:"ANALYSIS_QUEUE_UNAVAILABLE",message:"Saved"}},{status:503}));
+ await user.upload(fileInput,image);await user.click(screen.getByRole("button",{name:"Receive capture"}));
+ await user.click(await screen.findByRole("button",{name:"Retry analysis queue"}));
+ const posts=requests.filter(row=>row.init.method==="POST");expect(posts).toHaveLength(2);
+ expect((posts[0].init.body as FormData).get("idempotency_key")).toBe((posts[1].init.body as FormData).get("idempotency_key"));
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -41,7 +71,7 @@ function setup(options: { shell?: boolean; enabled?: boolean } = {}) {
   const getResponses: (() => Promise<Response>)[] = [];
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     requests.push({ url, init });
-    if (init.method === "GET") return getResponses.shift()?.() ?? Response.json({ capture: receipt.capture });
+    if (!init.method || init.method === "GET") return getResponses.shift()?.() ?? Response.json({ capture: receipt.capture });
     return responses.shift()?.() ?? Response.json(receipt, { status: 201 });
   });
   const form = <CaptureForm enabled={options.enabled ?? true} maxUploadBytes={1_048_576} />;
@@ -60,7 +90,8 @@ describe("Web Capture intake", () => {
     expect(fileInput).not.toHaveAttribute("multiple");
     await user.tab();
     expect(screen.getByRole("button", { name: "Choose image" })).toHaveFocus();
-    expect(screen.getByText("Immutable · Human review required")).toBeVisible();
+    expect(screen.getByText("Capture → Analyze → Review")).toBeVisible();
+    expect(screen.getByText(/Original images expire 30 days/)).toBeVisible();
     expect(screen.getByText(/One image · max 1 MiB/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Choose an image to continue" })).toBeDisabled();
     expect(requests).toHaveLength(0);

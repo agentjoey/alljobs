@@ -47,7 +47,7 @@ export function SourceStatus({
 }: SourceStatusProps) {
   const caphubState = useContext(CaphubStateContext);
   const isCaphub = routePath === "/caphub" || routePath?.startsWith("/caphub/");
-  const isCaphubRegistry = routePath?.startsWith("/reviews")
+  const isCaphubRegistry = routePath?.startsWith("/caphub/reviews") || routePath?.startsWith("/caphub/captures") || routePath?.startsWith("/reviews")
     || routePath?.startsWith("/captures")
     || routePath?.startsWith("/capabilities");
   // Only render provenance facts that are actually known; never fabricate.
@@ -83,7 +83,7 @@ export function SourceStatus({
       </div>
       <div className="status-strip__segment">
         <span className="status-strip__item">
-          <strong>STATE</strong> {isCaphub ? caphubState ?? "Checking" : shortId}
+          <strong>STATE</strong> {isCaphub && !isCaphubRegistry ? caphubState ?? "Checking" : shortId}
         </span>
         <span className="status-strip__sep">/</span>
         <span className="status-strip__item">

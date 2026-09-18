@@ -1,35 +1,43 @@
 import { CaptureForm } from "@/components/caphub/capture-form";
 import { loadControlHostConfig } from "@/lib/planning/config";
+import Link from "next/link";
+import { WorkItems } from "@/components/caphub/work-items";
+import type { CaphubWorkItems } from "@/lib/caphub/registry/work-items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default function CaphubPage() {
+export default async function CaphubPage() {
   let enabled = false;
+  let registryEnabled = false;
   let maxUploadBytes = 10_485_760;
+  let work:CaphubWorkItems|null=null;
   try {
     const caphub = loadControlHostConfig().config.caphub;
     enabled = caphub?.enabled === true;
+    registryEnabled = caphub?.registry.enabled === true;
     maxUploadBytes = caphub?.maxUploadBytes ?? maxUploadBytes;
   } catch {
     // Configuration details and host paths never cross the server boundary.
+  }
+  if(enabled&&registryEnabled){
+    const {readWorkbench}=await import("@/lib/caphub/registry/read-workbench");
+    const {getCaphubWorkItems}=await import("@/lib/caphub/registry/work-items");
+    const view=await readWorkbench(pool=>getCaphubWorkItems(pool,{limit:5}));
+    if(view.state==="ready")work=view.data;
   }
 
   return (
     <div className="caphub-page">
       <section className="caphub-intro" aria-labelledby="caphub-title">
         <div>
-          <h1 id="caphub-title">Preserve the evidence first.</h1>
-          <p>Send one screenshot into Caphub as immutable evidence. Add the context you already know; analysis and capability decisions happen in later, Human-approved phases.</p>
+          <h1 id="caphub-title">Capture a capability.</h1>
+          <p>Upload a screenshot, follow its analysis, and review the results.</p>
         </div>
-        <p className="caphub-scope"><strong>P1 boundary</strong>This inbox stores a traceable Capture and audit event. It does not read the screenshot, call a model, install anything, or publish a capability.</p>
+        <Link className="caphub-quiet-button" href="/caphub/reviews">Review current files</Link>
       </section>
       <CaptureForm enabled={enabled} maxUploadBytes={maxUploadBytes} />
-      <ul className="caphub-boundaries" aria-label="P1 safeguards">
-        <li><strong>Immutable evidence</strong><span>Content-addressed bytes are never overwritten and are not exposed from this page.</span></li>
-        <li><strong>Safe retry</strong><span>One idempotency key stays bound to the selected image until a receipt is returned.</span></li>
-        <li><strong>Human boundary</strong><span>Every Capture stops at received. Analysis, approval, and release remain absent.</span></li>
-      </ul>
+      {work&&<section className="caphub-current-work"><h2>Current files</h2><WorkItems data={work}/></section>}
     </div>
   );
 }

@@ -6,6 +6,12 @@ import { DIGEST, reviewDetail } from "./test-fixtures";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("DecisionForm", () => {
+  it("defaults to the imported recommendation and hides full digest until expanded",()=>{
+    const detail=reviewDetail();detail.packet.recommendedDisposition="adopt";
+    render(<DecisionForm detail={detail}/>);
+    expect(screen.getByRole("button",{name:"adopt"})).toHaveAttribute("aria-pressed","true");
+    expect(screen.getByLabelText("Full subject SHA-256 digest").closest("details")).not.toHaveAttribute("open");
+  });
   it("requires exact confirmation and mandatory reject rationale", () => {
     render(<DecisionForm detail={reviewDetail()} />);
     const submit = screen.getByRole("button", { name: /Approve build/i });

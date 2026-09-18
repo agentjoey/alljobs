@@ -22,6 +22,8 @@ export async function getCaphubCaptureStatus(pool: Pick<Pool,"query">, captureId
     LEFT JOIN LATERAL (
       SELECT jr.record_id,jv.payload FROM caphub.registry_records jr JOIN caphub.registry_versions jv ON jv.record_id=jr.record_id AND jv.version=jr.current_version
       WHERE jr.kind='analysis_job' AND jv.payload->>'capture_id'=COALESCE(f.canonical_capture_id,r.record_id)
+        AND NOT EXISTS (SELECT 1 FROM caphub.registry_records nr JOIN caphub.registry_versions nv ON nv.record_id=nr.record_id AND nv.version=nr.current_version
+          WHERE nr.kind='analysis_job' AND nv.payload->>'supersedes_job_id'=jr.record_id)
       ORDER BY jr.created_at DESC,jr.record_id DESC LIMIT 1
     ) j ON true
     LEFT JOIN LATERAL (
@@ -39,6 +41,7 @@ export async function getCaphubCaptureStatus(pool: Pick<Pool,"query">, captureId
 }
 
 export async function getCaphubReviewDetail(pool: Pool, requestId: string) {
+  const started = performance.now();
   reviewRequestIdSchema.parse(requestId);
   const db = await pool.connect();
   try {
@@ -63,9 +66,20 @@ export async function getCaphubReviewDetail(pool: Pool, requestId: string) {
       LEFT JOIN caphub.capture_object_retention t ON t.capture_id=r.record_id
       WHERE i.review_request_id=$1 LIMIT 1`,[requestId]);
     const row = related.rows[0];
-    return { ...detail,filename: row?.filename ?? detail.candidate.name,captureId: row?.capture_id ?? null,
+    return { ...detail,registryMs: Math.round(performance.now() - started),filename: row?.filename ?? detail.candidate.name,captureId: row?.capture_id ?? null,
       eligibleAt: iso(row?.eligible_at ?? null),purgedAt: iso(row?.purged_at ?? null),
       history: (row?.history ?? []) as { id: string; created_at: string; status: string; stage: string | null; contract: string | null; capture_id: string; request_id: string | null }[] };
   } finally { db.release(); }
 }
 export type CaphubReviewDetail = Awaited<ReturnType<typeof getCaphubReviewDetail>>;
+
+export async function getCaptureHistory(pool: Pick<Pool,"query">, captureId: string) {
+  captureIdSchema.parse(captureId);
+  const result=await pool.query<{id:string;status:string;created_at:Date;contract:string|null}>(`SELECT j.record_id AS id,
+    v.payload->>'status' AS status,j.created_at,v.payload->>'analysis_contract_version' AS contract
+    FROM caphub.registry_records j JOIN caphub.registry_versions v ON v.record_id=j.record_id AND v.version=j.current_version
+    WHERE j.kind='analysis_job' AND (v.payload->>'capture_id'=$1 OR v.payload->>'capture_id' IN (
+      SELECT f.capture_id FROM caphub.capture_filename_versions f WHERE f.filename_key=(SELECT filename_key FROM caphub.capture_filename_versions WHERE capture_id=$1)))
+    ORDER BY j.created_at DESC,j.record_id DESC LIMIT 25`,[captureId]);
+  return result.rows;
+}

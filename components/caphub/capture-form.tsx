@@ -6,6 +6,7 @@ import { z } from "zod";
 import { captureMimeTypeSchema, captureRecordSchema } from "@/lib/caphub/domain/schemas";
 import { usePublishCaphubState } from "@/components/planning/source-status";
 import { CaptureStatus, captureMetadataSchema, captureReceiptSchema, type CaptureError, type CaptureReceipt } from "./capture-status";
+import { FilenameConflictPrompt, filenameConflictSchema, type FilenameConflict } from "./filename-conflict";
 
 const errorCodeSchema = z.enum([
   "CAPHUB_DISABLED", "ORIGIN_NOT_ALLOWED", "INVALID_INPUT", "INVALID_REQUEST",
@@ -33,6 +34,9 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
   const [validation, setValidation] = useState<ValidationError | null>(null);
   const [error, setError] = useState<CaptureError | null>(null);
   const [receipt, setReceipt] = useState<CaptureReceipt | null>(null);
+  const [conflict,setConflict]=useState<FilenameConflict|null>(null);
+  const confirmedHead=useRef<FilenameConflict|null>(null);
+  const chooseRef=useRef<HTMLButtonElement>(null);
   const [readPending, setReadPending] = useState(false);
   const [readError, setReadError] = useState<{ attempt: number } | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -60,7 +64,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
       const result = captureMetadataSchema.safeParse(await response.json());
       if (!result.success || result.data.capture.id !== known.capture.id) throw new Error("Unverified receipt metadata");
       if (sequence !== readSequence.current) return;
-      setReceipt({ kind: known.kind, capture: result.data.capture });
+      setReceipt({ ...known, capture: result.data.capture });
       setReadError(null);
       setAnnouncement("Receipt metadata refreshed. Human review is required.");
     } catch {
@@ -90,6 +94,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
     setReadPending(false);
     setReadError(null);
     setReceipt(null);
+    setConflict(null);confirmedHead.current=null;
     setError(null);
     setAttempted(false);
     if (message) {
@@ -103,9 +108,10 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
     setAnnouncement(`${image.name} selected and ready to receive.`);
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (disabled || inFlight.current || receipt || !selection) return;
+  async function submit(event?: FormEvent<HTMLFormElement>,confirmation?:FilenameConflict) {
+    event?.preventDefault();
+    if (disabled || inFlight.current || (receipt && receipt.analysis?.enqueue!=="failed") || !selection || (conflict&&!confirmation)) return;
+    if(confirmation)confirmedHead.current=confirmation;
     let validSource = false;
     try {
       validSource = captureRecordSchema.shape.source.shape.source_url.safeParse(sourceUrl || undefined).success;
@@ -135,9 +141,19 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
     body.set("idempotency_key", selection.key);
     body.set("note", note);
     body.set("source_url", sourceUrl);
+    if(confirmedHead.current){
+      body.set("expected_current_capture_id",confirmedHead.current.existing.id);
+      body.set("expected_current_object_digest",confirmedHead.current.existing.digest);
+    }
     try {
       const response = await fetch("/api/caphub/captures", { method: "POST", body });
       const payload: unknown = await response.json();
+      const filenameConflict=filenameConflictSchema.safeParse(payload);
+      if(response.status===409&&filenameConflict.success){
+        setConflict(filenameConflict.data.error);confirmedHead.current=null;setAnnouncement("Same filename, different image. Choose whether to create a new version.");return;
+      }
+      const queueFailure=z.object({receipt:captureReceiptSchema,error:z.object({code:z.literal("ANALYSIS_QUEUE_UNAVAILABLE"),message:z.string()})}).safeParse(payload);
+      if(response.status===503&&queueFailure.success){setReceipt(queueFailure.data.receipt);setAnnouncement("Image saved. Retry to queue analysis.");return;}
       if (response.status === 200 || response.status === 201) {
         const result = captureReceiptSchema.safeParse(payload);
         if (!result.success || result.data.kind !== (response.status === 201 ? "created" : "duplicate")) {
@@ -146,6 +162,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
           return;
         }
         setReceipt(result.data);
+        setConflict(null);
         setAnnouncement(result.data.kind === "created" ? "Capture received. Human review is required." : "Duplicate detected. The existing Capture receipt was returned. Human review is required.");
         void readReceipt(result.data);
         return;
@@ -179,13 +196,13 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
   }
 
   const submitLabel = disabled ? "Capture unavailable" : pending ? "Receiving capture…"
-    : receipt ? (receipt.kind === "created" ? "Receipt returned" : "Existing receipt returned")
+    : receipt?.analysis?.enqueue==="failed" ? "Retry analysis queue" : receipt ? (receipt.kind === "created" ? "Receipt returned" : "Existing receipt returned")
     : error ? "Retry same capture" : selection ? "Receive capture" : "Choose an image to continue";
-  const custodyTitle = receipt ? "Selected evidence is retained in immutable custody."
-    : pending ? "Receiving selected evidence into immutable custody."
+  const custodyTitle = receipt ? "Image saved."
+    : pending ? "Saving your image…"
     : error ? "The capture receipt is not yet confirmed."
-    : selection ? "Selected evidence is ready for immutable custody."
-    : "Evidence becomes immutable; conclusions do not exist yet.";
+    : selection ? "Ready to upload."
+    : "Upload once. Follow the analysis here.";
 
   return (
     <>
@@ -208,13 +225,13 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
             {selection ? <div className="caphub-selected-file">
               <span className="caphub-file-mark" aria-hidden="true">{selection.image.type.split("/")[1].toUpperCase()}</span>
               <div><strong>{selection.image.name}</strong><small>{selection.image.type} · {formatBytes(selection.image.size)}</small></div>
-              <button className="caphub-quiet-button" type="button" onClick={openChooser} disabled={disabled || pending || !!receipt}>Choose different image</button>
+              <button ref={chooseRef} className="caphub-quiet-button" type="button" onClick={openChooser} disabled={disabled || pending || !!receipt}>Choose different image</button>
             </div> : <div className="caphub-drop-content">
               <span className="caphub-upload-mark" aria-hidden="true"><Upload /></span>
-              <span className="caphub-promise">Immutable · Human review required</span>
+              <span className="caphub-promise">Capture → Analyze → Review</span>
               <h3>Drop a screenshot here</h3>
-              <p id="capture-file-help">PNG, JPEG, or WebP. Caphub preserves the original bytes and records their SHA-256 digest.</p>
-              <button className="caphub-quiet-button" type="button" onClick={openChooser} disabled={disabled || pending}>Choose image</button>
+              <p id="capture-file-help">PNG, JPEG, or WebP. Matching images reuse existing results.</p>
+              <button ref={chooseRef} className="caphub-quiet-button" type="button" onClick={openChooser} disabled={disabled || pending}>Choose image</button>
             </div>}
             {selection && <p id="capture-file-help" className="sr-only">One PNG, JPEG, or WebP. Maximum {limit}.</p>}
             {validation?.field === "image" && <p className="caphub-inline-error" id="capture-validation" role="alert">{validation.message}</p>}
@@ -226,7 +243,7 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
             <label htmlFor="capture-source">Source URL <span>HTTPS only</span></label>
             <input id="capture-source" type="text" inputMode="url" placeholder="https://www.douyin.com/…" maxLength={2048} value={sourceUrl} disabled={contextLocked}
               aria-invalid={validation?.field === "source"} aria-describedby="capture-source-help capture-context-error" onChange={(event) => setSourceUrl(event.target.value)} />
-            <p id="capture-source-help">Stored as metadata only. P1 does not open or fetch this URL.</p>
+            <p id="capture-source-help">Optional context to help identify the source.</p>
           </div>
           <div className="caphub-field" data-invalid={validation?.field === "note" || undefined}>
             <label htmlFor="capture-note">Note <span>{note.length.toLocaleString("en-US")} / 4,000</span></label>
@@ -235,19 +252,23 @@ export function CaptureForm({ enabled, maxUploadBytes }: { enabled: boolean; max
           </div>
           {validation && validation.field !== "image" && <p id="capture-context-error" className="caphub-inline-error" role="alert">{validation.message}</p>}
           {attempted && !receipt && !pending && !disabled && <p className="caphub-retry-help">Context stays fixed for a safe retry. Choose a different image to start a new intake.</p>}
-          <button className="caphub-submit" type="submit" disabled={disabled || pending || !!receipt || !selection}>
+          <button className="caphub-submit" type="submit" disabled={disabled || pending || (!!receipt&&receipt.analysis?.enqueue!=="failed") || !selection || !!conflict}>
             {pending && <span className="caphub-spinner" aria-hidden="true" />}{submitLabel}
           </button>
         </section>
       </form>
+      {conflict&&<FilenameConflictPrompt conflict={conflict} pending={pending} onConfirm={()=>void submit(undefined,conflict)} onCancel={()=>{
+        setConflict(null);setSelection(null);setAttempted(false);confirmedHead.current=null;
+        setTimeout(()=>chooseRef.current?.focus(),0);
+      }}/>}
       <section className="caphub-custody" aria-label="Capture custody boundary">
         <div>
-          {selection && <span className="caphub-custody__identity">{selection.image.name} → immutable local evidence</span>}
+          {selection && <span className="caphub-custody__identity">{selection.image.name}</span>}
           <strong>{custodyTitle}</strong>
           <p>{error ? "No receipt was returned. Retry with the retained idempotency key; evidence may already be stored."
-            : receipt ? "Caphub stored this evidence once. The receipt contains metadata only, and Human review remains required."
+            : receipt ? "You can leave after upload. Queued analysis continues in the background."
             : pending ? "Keep this page open. Caphub is validating and storing this image once; a second request is unavailable."
-            : "Caphub stores the original bytes, strict Capture metadata, idempotency record, and one audit event once. P1 cannot delete captures."}</p>
+            : "Original images expire 30 days after parsed information is saved. Results remain available."}</p>
         </div>
         <span className="caphub-custody__state">Human review required</span>
       </section>
