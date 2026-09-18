@@ -5,7 +5,30 @@
 - Development root: .worktrees/caphub-automatic-analysis. Production remains in .worktrees/caphub-release.
 - Execution: inline. One scoped independent review at integration.
 - Token accounting: use session token_count differences at the start/end timestamps; report input, cached input, output separately. Account usage percentages are not token counts.
-- Production actions pending exact release authorization: migration, worker configuration/start, reload, named real canary, retention activation. No implementation tests use production services.
+- This header records the original local-development boundary. Production actions were pending at that point and were subsequently completed under the explicit release authorization documented below; local implementation tests still did not use production services.
+
+## Production closeout — 2026-09-19
+
+Task 11 is complete. The application and worker run from `.worktrees/caphub-release` at code SHA `766f8504b703dea86d0bd487aa607941a917aa79`; remote `main` was verified at that SHA before this evidence-only closeout. Neon migration 004 and the idempotent backfill were applied. Historical groups resolved without a different-content conflict: `img_1232.png` has two same-content members and canonical `cap_dee4da33699b446aab12c1f8ba993400`; `img_1194.png` has five same-content members and canonical `cap_379e2508ead34c349fcb303bcd39eff2`.
+
+Private Control Host configuration enables automatic analysis, retention and exports. `com.agentjoey.alljobs` and `com.agentjoey.alljobs-caphub` are running. The Obsidian target is Vault `Caphub`, alias `3b0bc2e2318652e8`, at the approved iCloud Documents path; credentials and connection strings are deliberately absent from this record. The first enabled retention dry-run returned no eligible objects. The successful canary becomes eligible at `2026-10-18T17:00:50.358Z`.
+
+Real-provider canary:
+
+- Capture `cap_c347f87046c2409580633201ec5d6ba6`; job `job_2595efbdf952a6d90f4d349d8e13d707`; Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`; final state `waiting_for_review`.
+- V4 produced six stage artifacts and the ReviewPacket. The audit contains seven `model.started` events across MiniMax and DeepSeek, including one bounded native correction; all final stages succeeded.
+- A second same-filename/same-content upload returned `duplicate`, kept the same canonical Capture and Review Request, and left `model.started` at seven.
+- The authenticated final UI was inspected in Chrome. The browser automation file-chooser bridge could not address the local canary path, so the image upload itself used the exact production multipart Route Handler on loopback with `Origin: https://alljobs.agentjoey.ai`; no operator analysis CLI substituted for the worker.
+
+Production benchmark:
+
+- Review detail: cold useful 4440 ms / complete 4445 ms; ten warm useful loads 1171–2443 ms. Cold ≤5 s and every warm ≤3 s.
+- Queue: cold useful 801 ms; ten warm useful loads 390–1786 ms. Every warm ≤2 s.
+- Shell first byte 7–16 ms.
+
+Final screenshots: `automatic-analysis-screenshots/production-v6-review-1440.png` and `automatic-analysis-screenshots/production-v6-workbench-390.png`.
+
+The earlier full-suite result at `1adfabf` was 196 files / 1653 tests PASS. Canary-driven fixes through `766f850` were each covered with focused RED→GREEN regression tests plus typecheck, lint and a fresh production build; the full suite was not rerun after those focused fixes. A later temporary-PostgreSQL fixture attempt was blocked by the host's exhausted SysV shared-memory slots, so it is not reported as a pass. The real production boundary and affected non-PostgreSQL regressions passed.
 
 ## Checks
 

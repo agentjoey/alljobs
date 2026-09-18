@@ -1,13 +1,13 @@
 # Current Status — alljobs
 
-## Latest follow-up — 2026-09-18 automatic analysis
+## Latest follow-up — 2026-09-19 automatic analysis production release
 
-Local implementation and scoped acceptance complete on `codex/caphub-automatic-analysis-impl`, candidate `104c24d`, in `.worktrees/caphub-automatic-analysis`. Production is unchanged. Automatic analysis, Caphub review workbench, filename conflict confirmation, bounded reads and 30-day raw retention are implemented; activation remains off. Task 11 production release requires exact authorization. See `.agent/caphub/automatic-analysis-handoff.md` and `automatic-analysis-verification.md`. Linear AGE-252 updated with this distinction. Historical production notes below are not evidence of this candidate being deployed.
+Caphub automatic analysis is live on the Control Host at application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`. Neon migration 004 and the unambiguous filename backfill are applied; `com.agentjoey.alljobs-caphub` is running with automatic analysis and bounded 30-day retention enabled. The private Obsidian target is Vault `Caphub`, alias `3b0bc2e2318652e8`. Real MiniMax + DeepSeek canary `cap_c347f87046c2409580633201ec5d6ba6` completed as Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`; identical re-upload reused the canonical Capture without another model call. The first retention sweep had zero eligible objects. See `.agent/caphub/automatic-analysis-handoff.md` and `automatic-analysis-verification.md` for exact evidence and limitations.
 
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-18 by Codex during Caphub Analysis Contract V3 rollout
+Last Updated:   2026-09-19 by Codex during Caphub automatic-analysis production rollout
 
 ## Current decision
 

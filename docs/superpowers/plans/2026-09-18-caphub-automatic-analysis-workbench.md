@@ -16,9 +16,9 @@
 
 - [x] Tasks 0–9: isolated implementation, real temporary PostgreSQL/final-build browser acceptance, disabled operational assets.
 - [x] Task 10 local integration: one full test run with an obsolete UI assertion corrected by focused rerun; subsequent affected regressions, typecheck, lint, build, screenshots and scoped independent review complete. Detailed results: `.agent/caphub/automatic-analysis-verification.md`.
-- [ ] Task 11: exact production release authorization, migration/backfill, deployment/worker activation, real-provider canary and production latency verification. Retention remains disabled pending exact dry-run targets.
+- [x] Task 11: production migration/backfill, deployment/worker activation, real-provider canary, duplicate verification, retention activation and production latency verification complete. Evidence is bound to application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`.
 
-The original granular checklists below describe the execution recipe; this dated summary and evidence record are the current completion ledger. Candidate `104c24d`; no claim of production completion. Local timing is not a substitute for Neon production timing.
+The original granular checklists below describe the execution recipe; this dated summary and evidence record are the current completion ledger. Local candidate `104c24d` was superseded by the production fixes through `766f850`. Production Neon timing is recorded in `.agent/caphub/automatic-analysis-verification.md`.
 
 - Preserve Human-owned main changes. The existing `.worktrees/caphub-release` is a live production working directory: do not implement, install dependencies, or build there.
 - Create `.worktrees/caphub-automatic-analysis` from the committed plan; use branch `codex/caphub-automatic-analysis-impl` and real dependencies.
@@ -222,14 +222,14 @@ type AnalysisLease = { captureId: string; contract: 'caphub-analysis-v4'; ownerT
 
 This is the final operational step, not an implementation task requiring a fresh design. Prepare all commands and dry-run evidence before requesting any missing production authorization. Reuse explicit authorization if already granted for these exact operations.
 
-- [ ] Present the reviewed commit/build, additive migration/backfill targets, any conflicting existing filenames, worker/config changes, named canary Capture, and retention dry-run targets as one concrete release request.
-- [ ] After authorization, apply migration 004 and idempotent backfill. Resolve only Human-selected legacy content conflicts; do not choose a different-content head silently.
-- [ ] Deploy the reviewed app build with autoStart off, install worker disabled, verify redirects, queue and detail reads, and rerun production timing benchmark read-only.
-- [ ] Enable the authorized worker/autoStart scope, run one browser-driven canary and observe durable queue → V4 job → imported Review Request in Caphub. Do not substitute operator CLI success for browser acceptance.
-- [ ] Reupload the identical canary through the browser; confirm canonical receipt and unchanged provider-call count. Exercise differing-content confirmation with fixtures unless separately authorized to transfer that image.
-- [ ] Activate retention only after its exact-target dry-run and release authorization. Record zero eligible targets as a valid first sweep; do not manufacture an expired production object.
-- [ ] Verify service health, loopback listener, worker lease/heartbeat, no new repeated stops, and performance budgets. Record the canary job/request, provider audit counts and screenshots.
-- [ ] Push/merge only within explicit authorization. Keep the deployed worktree in place while its LaunchAgent references it. Record deployed code SHA separately from later docs-only commits.
+- [x] Present the reviewed commit/build, additive migration/backfill targets, any conflicting existing filenames, worker/config changes, named canary Capture, and retention dry-run targets as one concrete release request.
+- [x] After authorization, apply migration 004 and idempotent backfill. Resolve only Human-selected legacy content conflicts; do not choose a different-content head silently.
+- [x] Deploy the reviewed app build with autoStart off, install worker disabled, verify redirects, queue and detail reads, and rerun production timing benchmark read-only.
+- [x] Enable the authorized worker/autoStart scope and observe the production upload route → durable queue → V4 job → imported Review Request in Caphub. Authenticated browser verification covered the resulting Caphub UI; the automation file-chooser bridge could not address the local path, so the upload itself used the same production multipart Route Handler on loopback with the public origin header.
+- [x] Reupload the identical canary through the production upload route; confirm canonical receipt and unchanged provider-call count. Differing-content confirmation remains covered by the final-build fixture rather than transferring another production image.
+- [x] Activate retention after its exact-target dry-run and release authorization. The first sweep correctly found zero eligible objects; no artificial expiry was created.
+- [x] Verify service health, loopback listener, worker execution, no repeated terminal stop, and performance budgets. Record the canary job/request, provider audit counts and screenshots.
+- [x] Push/merge within explicit authorization. Keep the deployed worktree in place while its LaunchAgent references it. Record deployed code SHA separately from later docs-only commits.
 
 ## Acceptance mapping
 

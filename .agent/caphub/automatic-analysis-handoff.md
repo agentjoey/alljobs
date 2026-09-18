@@ -1,5 +1,11 @@
 # Caphub automatic analysis — local acceptance handoff
 
+## Production release supersedes the local-only handoff
+
+Released 2026-09-19 at application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`. Migration 004/backfill, automatic worker, bounded 30-day retention, private Obsidian Vault `Caphub` (alias `3b0bc2e2318652e8`), real MiniMax + DeepSeek canary, duplicate suppression and production read budgets are verified. Successful identifiers: Capture `cap_c347f87046c2409580633201ec5d6ba6`, job `job_2595efbdf952a6d90f4d349d8e13d707`, Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`. The request is `waiting_for_review`; cleanup is enabled and the first sweep had zero eligible objects. Exact production evidence and limitations are in `automatic-analysis-verification.md`.
+
+The remaining sections preserve the pre-release local acceptance record for chronology; their statements that production was pending are historical and no longer current.
+
 ## Identity
 
 - Date: 2026-09-18. Branch: `codex/caphub-automatic-analysis-impl`.
