@@ -66,14 +66,13 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-The approved Neon activation sequence N1–N4 and PA-D are complete. Caphub is
-running from `codex/caphub-release` on the Control Host and is bound only to
-`127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200 from the
-final webpack Production build. PA-C's one permitted Kimi `k3-256k` canary did
-not return a schema-valid structured result and was not retried. Caphub is
-therefore in S3: Capture/Registry remain available, while analysis and all
-targets/exports remain disabled. Any later provider compatibility investigation
-or real analysis requires a new Human authorization.
+The approved Neon activation sequence N1–N4, PA-D, and PA-C are complete.
+Caphub is running from `codex/caphub-release` on the Control Host and is bound
+only to `127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200.
+MiniMax and Kimi `k3-256k` Provider compatibility is verified, and analysis is
+enabled while Registry remains enabled. No Capture analysis runs automatically;
+the first real Capture analysis still requires an explicit operator request and
+creates a human-review-only ReviewPacket. All targets/exports remain disabled.
 
 ## Caphub development status — 2026-09-16
 
@@ -124,7 +123,10 @@ or real analysis requires a new Human authorization.
   analysis, target/export operation, Git push, PR, `main` merge, tag, or public
   release occurred in PA-D.
 
-## Caphub PA-C provider outcome
+## Caphub PA-C intermediate failures (historical)
+
+These bounded probes used a 32-token synthetic cap and are superseded by the
+successful 1024-token contract diagnosis below.
 
 - The Human authorized one Kimi `k3-256k` synthetic structured-output canary.
   The only real request did not produce a schema-valid result; it was not
@@ -138,6 +140,16 @@ or real analysis requires a new Human authorization.
 - A separately authorized MiniMax `MiniMax-M3` synthetic smoke passed with no
   retry. It validates only MiniMax; Kimi remains the analysis blocker and the
   runtime stays in S3.
+
+## Caphub PA-C contract diagnosis passed
+
+- A one-request Kimi `k3-256k` diagnostic using the application’s strict
+  `json_schema` protocol passed. The prior 32-token synthetic cap was too low
+  for a response that includes reasoning plus final JSON; the bounded 1024-token
+  diagnostic completed with 52 output tokens.
+- Analysis is enabled and the Control Host service remains healthy/loopback
+  only. No Capture has been analyzed automatically, and Registry review,
+  export, target, publication, and release boundaries remain unchanged.
 
 ## P0 Backlog retirement (live)
 

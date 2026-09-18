@@ -503,3 +503,23 @@ and one independent Verification occur only after the implementation tasks.
 - This validates the MiniMax provider path only. It does not change the failed
   Kimi structured-output result, does not enable analysis, and does not create
   a Capture analysis, ReviewPacket, target, or export.
+
+## PA-C Kimi structured-output contract diagnosis — 2026-09-18
+
+- Under explicit Human authorization, one synthetic direct-HTTP diagnostic used
+  the same Kimi `k3-256k` OpenAI-compatible chat endpoint and strict
+  `json_schema` response format as the application. It used no tools, one
+  request, and no retry.
+- The diagnostic returned HTTP 200, one normal-stop choice, a non-empty final
+  content field, and schema-valid JSON. It used 214 input tokens and 52 output
+  tokens under a 1024-token cap. The response included reasoning content as
+  well as its final JSON, making the earlier 32-token canary cap the supported
+  explanation for its missing final object; the endpoint, model, credentials,
+  and strict-schema protocol are now compatible.
+- No raw provider response, credential, prompt payload, source, or Capture was
+  retained. The successful diagnostic is the fresh PA-C compatibility evidence.
+- Per the prior explicit Provider-start authorization, analysis was restored and
+  the application restarted. Final host verification returned HTTP 200 for
+  `/caphub` on the loopback-only listener. Registry remains enabled; exports
+  and all target operations remain disabled. No Capture analysis, ReviewPacket,
+  target/export operation, push, PR, `main` merge, tag, or release occurred.
