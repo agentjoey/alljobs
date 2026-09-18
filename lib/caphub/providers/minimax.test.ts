@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MINIMAX_TOKEN_PLAN_MODEL } from "../../assistant/minimax-token-plan-core";
-import type { StructuredProviderInput } from "./contracts";
+import { ProviderInvocationError, type StructuredProviderInput } from "./contracts";
 import {
   MiniMaxProvider,
   MiniMaxVisualObservationError,
@@ -10,6 +10,7 @@ import {
 } from "./minimax";
 
 const signal = new AbortController().signal;
+afterEach(() => vi.unstubAllGlobals());
 
 const observationInput: MiniMaxExtractionInput = {
   preprocess: {
@@ -38,6 +39,23 @@ function initial(input: unknown): StructuredProviderInput {
 }
 
 describe("MiniMaxProvider", () => {
+  it.each([[401, "AUTHENTICATION"], [402, "BILLING"]] as const)(
+    "redacts actual SDK HTTP %i errors at the observation boundary", async (status, code) => {
+      const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({
+        error: { message: "PRIVATE_RESPONSE TEST_SECRET", type: "invalid_request_error", code: "synthetic_failure" }
+      }, { status, headers: { "x-private": "PRIVATE_HEADER" } }));
+      vi.stubGlobal("fetch", fetch);
+      const provider = new MiniMaxProvider({ apiKey: "TEST_SECRET" });
+      const error = await provider.observe(observationInput, observationOptions).catch((cause: unknown) => cause);
+      expect(error).toBeInstanceOf(ProviderInvocationError);
+      expect(error).toMatchObject({ code });
+      expect(error).not.toHaveProperty("cause");
+      expect(Object.keys(error as ProviderInvocationError).sort()).toEqual(["code", "name"]);
+      expect(String(error)).not.toMatch(/PRIVATE_RESPONSE|PRIVATE_HEADER|TEST_SECRET|synthetic_failure/);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it("returns one bounded visual observation from ordered image parts", async () => {
     const requests: MiniMaxGenerationRequest[] = [];
     const provider = new MiniMaxProvider({

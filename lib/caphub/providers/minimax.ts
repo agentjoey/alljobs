@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { generateText, type ModelMessage } from "ai";
+import { APICallError, generateText, type ModelMessage } from "ai";
 import {
   createMiniMaxTokenPlanModel,
   MINIMAX_TOKEN_PLAN_MODEL
@@ -242,13 +242,25 @@ export class MiniMaxProvider implements StructuredProvider {
           mediaType: image.mediaType
         }))
     ];
-    const result = await this.generate({
-      model: MINIMAX_TOKEN_PLAN_MODEL,
-      messages: [{ role: "user", content }],
-      maxOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens,
-      maxRetries: 0,
-      abortSignal: options.signal
-    });
+    let result: MiniMaxGenerationResult;
+    try {
+      result = await this.generate({
+        model: MINIMAX_TOKEN_PLAN_MODEL,
+        messages: [{ role: "user", content }],
+        maxOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens,
+        maxRetries: 0,
+        abortSignal: options.signal
+      });
+    } catch (error) {
+      if (APICallError.isInstance(error)) {
+        // SDK errors may contain provider bodies, request headers, and credentials.
+        // Retain only the closed application code, never the original cause.
+        throw new ProviderInvocationError(error.statusCode === 401
+          ? "AUTHENTICATION"
+          : error.statusCode === 402 ? "BILLING" : "UNAVAILABLE");
+      }
+      throw error;
+    }
     const outputBytes = Buffer.byteLength(result.text, "utf8");
     const usage = validatedUsage(result.usage);
     if (normalizedFinishReason(result.finishReason) !== "stop"

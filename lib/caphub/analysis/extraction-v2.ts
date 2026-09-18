@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { digestCanonicalJson, canonicalJson } from "./digest";
+import { extractionResultSchema } from "./schemas";
 import type { ExtractionResult, PreprocessResult } from "./types";
 
 export const extractionSourceRefV2Schema = z.discriminatedUnion("kind", [
@@ -20,6 +21,7 @@ export const extractionSourceRefV2Schema = z.discriminatedUnion("kind", [
 ]);
 
 const boundedText = (maximum: number) => z.string().trim().min(1).max(maximum);
+const httpsUrl = z.string().url().max(2_048).refine((url) => new URL(url).protocol === "https:");
 
 export const extractionDraftV2Schema = z.object({
   schema_version: z.literal(2),
@@ -35,7 +37,7 @@ export const extractionDraftV2Schema = z.object({
     logo_hint: boundedText(512).optional(),
     author: boundedText(512).optional(),
     domain: boundedText(512).optional(),
-    repository: z.string().url().max(2_048).optional(),
+    repository: httpsUrl.optional(),
     package: boundedText(512).optional()
   }).strict()).max(64),
   experience_fragments: z.array(z.object({
@@ -43,9 +45,7 @@ export const extractionDraftV2Schema = z.object({
     summary: boundedText(4_096),
     source_refs: z.array(extractionSourceRefV2Schema).min(1).max(32)
   }).strict()).max(64),
-  explicit_urls: z.array(z.string().url().max(2_048).refine(
-    (url) => new URL(url).protocol === "https:"
-  )).max(64),
+  explicit_urls: z.array(httpsUrl).max(64),
   unresolved_questions: z.array(boundedText(2_048)).max(64)
 }).strict();
 
@@ -126,7 +126,7 @@ export function composeExtractionResultV2(input: ComposeExtractionResultV2Input)
     throw new ExtractionCompositionError();
   }
 
-  return {
+  const result = extractionResultSchema.safeParse({
     schema_version: 1,
     capture_id: input.captureId,
     preprocess_artifact_id: input.preprocessArtifactId,
@@ -155,5 +155,7 @@ export function composeExtractionResultV2(input: ComposeExtractionResultV2Input)
     })),
     explicit_urls: input.draft.explicit_urls,
     unresolved_questions: input.draft.unresolved_questions
-  };
+  });
+  if (!result.success) throw new ExtractionCompositionError();
+  return result.data;
 }

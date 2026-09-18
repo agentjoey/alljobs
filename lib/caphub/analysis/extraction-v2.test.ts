@@ -126,4 +126,21 @@ describe("ExtractionDraftV2 host composition", () => {
       }]
     })).toThrow();
   });
+
+  it.each(["http://example.com/repo", "ftp://example.com/repo"])(
+    "rejects non-HTTPS repository %s at the draft boundary", (repository) => {
+      expect(extractionDraftV2Schema.safeParse({
+        ...draft, entities: [{ name: "Example", aliases: [], repository }]
+      }).success).toBe(false);
+    }
+  );
+
+  it("validates the complete V1 result before returning host composition", () => {
+    expect(() => compose({
+      ...draft, entities: [{ name: "Example", aliases: [], repository: "http://example.com/repo" }]
+    })).toThrow(ExtractionCompositionError);
+    expect(() => composeExtractionResultV2({
+      captureId: CAPTURE_ID, preprocessArtifactId: "invalid-host-artifact", preprocess, draft
+    })).toThrow(ExtractionCompositionError);
+  });
 });

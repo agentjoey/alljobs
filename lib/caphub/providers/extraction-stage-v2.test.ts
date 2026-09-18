@@ -24,6 +24,7 @@ const roots: string[] = [];
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true });
 });
 
@@ -106,7 +107,9 @@ async function workflow(fixture: ReturnType<typeof setup>, crashTerminal?: "mini
     }
   } : audits;
   const stages: AnalysisStage[] = ["preprocess", "extraction", "research", "assessment", "critic", "review_packet"];
+  const executedStages: AnalysisStage[] = [];
   const handlers: AnalysisStageHandler[] = stages.map((stage) => ({ stage, async run(context) {
+    executedStages.push(stage);
     if (stage === "preprocess") return { kind: "success", inputDigest: "f".repeat(64), payload: preprocess };
     if (stage !== "extraction") return { kind: "human_review", reason: "TEST_AFTER_EXTRACTION" };
     const result = await runExtractionStageV2({
@@ -116,7 +119,7 @@ async function workflow(fixture: ReturnType<typeof setup>, crashTerminal?: "mini
     return result.kind === "success" ? { kind: "success", inputDigest: "f".repeat(64), payload: result.value } : result;
   } }));
   const runner = new AnalysisWorkflowRunner({ jobs, artifacts, audits, handlers, clock: () => NOW });
-  return { jobs, artifacts, audits, runner };
+  return { jobs, artifacts, audits, runner, executedStages };
 }
 
 describe("atomic extraction v2 through real provider adapters", () => {
@@ -196,6 +199,16 @@ describe("atomic extraction v2 through real provider adapters", () => {
     expect(f.deepSeekFetch).toHaveBeenCalledTimes(1);
     expect(f.events).toHaveLength(4);
     expect(f.events[3]).toMatchObject({ type: "failed", error_code: "HOST_EXTRACTION_LINKAGE_FAILED", input_tokens: 30, output_tokens: 10 });
+    assertRedacted(f.events);
+  });
+
+  it("closes invalid composed V1 linkage inside extraction before success", async () => {
+    const f = setup();
+    expect(await runExtractionStageV2({ ...f.request, preprocessArtifactId: "invalid-host-artifact" }))
+      .toEqual({ kind: "human_review", reason: "HOST_EXTRACTION_LINKAGE_FAILED" });
+    expect(f.miniMaxRequests).toHaveLength(1);
+    expect(f.deepSeekFetch).toHaveBeenCalledTimes(1);
+    expect(f.events.at(-1)).toMatchObject({ type: "failed", error_code: "HOST_EXTRACTION_LINKAGE_FAILED" });
     assertRedacted(f.events);
   });
 
@@ -315,7 +328,9 @@ describe("atomic extraction v2 through real provider adapters", () => {
   );
 
   it("persists only host-composed extraction through the real workflow store boundary", async () => {
-    const f = setup();
+    const f = setup({ payload: envelope({ ...draft,
+      entities: [{ name: "Example", aliases: [], repository: "https://example.com/repo" }]
+    }) });
     const stores = await workflow(f);
     expect(await stores.runner.runAnalysisJob(JOB_ID, new AbortController().signal)).toMatchObject({ status: "HUMAN_REVIEW_REQUIRED", reason: "TEST_AFTER_EXTRACTION" });
     const artifact = await stores.artifacts.findByJobStage(JOB_ID, "extraction");
@@ -323,6 +338,7 @@ describe("atomic extraction v2 through real provider adapters", () => {
     const payload = extractionResultSchema.parse(await stores.artifacts.readPayload(artifact!.id));
     expect(payload.preprocess_artifact_id).toBe((await stores.artifacts.findByJobStage(JOB_ID, "preprocess"))!.id);
     expect(payload.claims[0].statement).toBe("Example is visible.");
+    expect(payload.entities[0].repository).toBe("https://example.com/repo");
     expect(JSON.stringify(payload)).not.toContain(OBSERVATION);
     assertRedacted(await stores.audits.list(JOB_ID));
     expect(f.miniMaxRequests).toHaveLength(1);
@@ -332,18 +348,54 @@ describe("atomic extraction v2 through real provider adapters", () => {
   it.each([
     ["observation", { miniResult: { text: "" } }, "MINIMAX_INVALID_OBSERVATION", 0],
     ["structure", { payload: envelope({}) }, "DEEPSEEK_STRUCTURE_FAILED", 1],
+    ["non-HTTPS repository", { payload: envelope({ ...draft, entities: [{ name: "Example", aliases: [], repository: "http://example.com/repo" }] }) }, "DEEPSEEK_STRUCTURE_FAILED", 1],
     ["locator", { payload: envelope({ ...draft, claims: [{ ...draft.claims[0], source_refs: [{ kind: "image", image_index: 9 }] }] }) }, "HOST_EXTRACTION_LINKAGE_FAILED", 1]
   ] as const)("persists Human Review for %s failure without an extraction artifact or replay", async (_name, options, reason, deepCalls) => {
     const f = setup(options);
     const stores = await workflow(f);
     const result = await stores.runner.runAnalysisJob(JOB_ID, new AbortController().signal);
     expect(result).toMatchObject({ status: "HUMAN_REVIEW_REQUIRED", reason, stage: "extraction" });
+    expect(stores.executedStages).toEqual(["preprocess", "extraction"]);
     await expect(stores.artifacts.findByJobStage(JOB_ID, "extraction")).resolves.toBeNull();
     await expect(stores.runner.runAnalysisJob(JOB_ID, new AbortController().signal)).resolves.toEqual(result);
     expect(f.miniMaxRequests).toHaveLength(1);
     expect(f.deepSeekFetch).toHaveBeenCalledTimes(deepCalls);
-    assertRedacted(await stores.audits.list(JOB_ID));
+    const events = await stores.audits.list(JOB_ID);
+    expect(events.find((event) => event.type === "failed")).toMatchObject({ error_code: reason });
+    if (_name === "non-HTTPS repository") {
+      expect(events.find((event) => event.type === "failed")).toMatchObject({
+        validation_issue_paths: ["entities.0.repository"]
+      });
+    }
+    assertRedacted(events);
   });
+
+  it.each([[401, "AUTHENTICATION", "AUTHENTICATION"], [402, "BILLING", "QUOTA"]] as const)(
+    "persists MiniMax SDK HTTP %i as %s without DeepSeek or research", async (status, reason, auditCode) => {
+      const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({
+        error: { message: "PRIVATE_RESPONSE TEST_SECRET", type: "invalid_request_error", code: "synthetic_failure" }
+      }, { status, headers: { "x-private": "PRIVATE_HEADER" } }));
+      vi.stubGlobal("fetch", fetch);
+      const f = setup();
+      f.request.miniMax = new MiniMaxProvider({ apiKey: "TEST_SECRET" });
+      const stores = await workflow(f);
+      const result = await stores.runner.runAnalysisJob(JOB_ID, new AbortController().signal);
+      expect(result).toMatchObject({ status: "HUMAN_REVIEW_REQUIRED", reason, stage: "extraction" });
+      expect(stores.executedStages).toEqual(["preprocess", "extraction"]);
+      await expect(stores.artifacts.findByJobStage(JOB_ID, "extraction")).resolves.toBeNull();
+      await expect(stores.runner.runAnalysisJob(JOB_ID, new AbortController().signal)).resolves.toEqual(result);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch.mock.calls[0][0]).toBe("https://api.minimax.io/v1/chat/completions");
+      expect(f.deepSeekFetch).not.toHaveBeenCalled();
+      const events = await stores.audits.list(JOB_ID);
+      expect(events).toHaveLength(2);
+      expect(events.find((event) => event.type === "failed")).toMatchObject({
+        provider: "minimax", operation: "visual_observation", error_code: auditCode
+      });
+      expect(JSON.stringify({ result, events })).not.toMatch(/PRIVATE_RESPONSE|PRIVATE_HEADER|TEST_SECRET|synthetic_failure/);
+      assertRedacted(events);
+    }
+  );
 
   it.each(["minimax", "deepseek"] as const)("retains an unmatched %s start after terminal persistence interruption and never replays", async (provider) => {
     const f = setup();
