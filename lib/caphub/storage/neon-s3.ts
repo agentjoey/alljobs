@@ -122,8 +122,11 @@ export function createNeonS3DeletionPort(environment: NeonS3Environment, options
   return { async deleteExactObject(rawRef) {
     const ref = objectRefSchema.parse(rawRef);
     if (ref.key !== `sha256/${ref.digest.slice(0,2)}/${ref.digest}`) throw new ImmutableObjectMismatchError();
-    try { await client.send(new DeleteObjectCommand({ Bucket: environment.bucket, Key: ref.key })); }
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 5000);
+    try { await client.send(new DeleteObjectCommand({ Bucket: environment.bucket, Key: ref.key }), { abortSignal: controller.signal }); }
     catch (error) { if (!isNotFound(error)) throw error; }
+    finally { clearTimeout(deadline); }
   } };
 }
 

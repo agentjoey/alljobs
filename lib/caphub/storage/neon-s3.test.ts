@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DeleteObjectCommand, type S3Client } from "@aws-sdk/client-s3";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CaptureMimeType } from "../domain/types";
 import { ImmutableObjectMismatchError } from "./local-objects";
 import {
@@ -60,6 +60,21 @@ function digest(bytes: Uint8Array): string {
 }
 
 describe("NeonS3CaptureObjectStore", () => {
+  it("actually aborts a hung delete before returning failure", async () => {
+    vi.useFakeTimers();
+    let aborted=false;
+    const port=createNeonS3DeletionPort({bucket:"caphub-objects",accessKeyId:"test",secretAccessKey:"test",endpoint:"https://storage.example.test",region:"aws-ap-southeast-1"},{
+      clientFactory:()=>({send:(_command:unknown,options?:{abortSignal?:AbortSignal})=>new Promise((_resolve,reject)=>{
+        options?.abortSignal?.addEventListener("abort",()=>{aborted=true;reject(new Error("aborted"));},{once:true});
+      })}) as unknown as S3Client
+    });
+    const result=port.deleteExactObject({algorithm:"sha256",digest:"a".repeat(64),key:`sha256/aa/${"a".repeat(64)}`,bytes:1}).catch(()=>"failed");
+    try {
+      await vi.advanceTimersByTimeAsync(5001);
+      expect(aborted).toBe(true);
+      expect(await result).toBe("failed");
+    } finally {vi.useRealTimers();}
+  });
   it("deletes only an exact digest key and treats an already absent object as success", async () => {
     const commands: DeleteObjectCommand[] = [];
     const port = createNeonS3DeletionPort({ bucket: "caphub-objects", accessKeyId: "test", secretAccessKey: "test", endpoint: "https://storage.example.test", region: "aws-ap-southeast-1" }, {

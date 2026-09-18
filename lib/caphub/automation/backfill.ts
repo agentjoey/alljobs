@@ -48,7 +48,8 @@ export async function inspectAutomationBackfill(db: Pool | PoolClient) {
     v.payload #>> '{source,original_filename}' AS filename, v.payload #>> '{object,digest}' AS digest,
     r.created_at::text AS "createdAt",
     CASE WHEN EXISTS (SELECT 1 FROM caphub.registry_lineage l JOIN caphub.registry_imports i
-      ON i.source_review_packet_id=l.to_node_id WHERE l.from_node_id=r.record_id AND l.relationship='derived_as') THEN 3
+      ON i.source_review_packet_id=l.to_node_id JOIN caphub.review_requests rr ON rr.request_id=i.review_request_id
+      WHERE l.from_node_id=r.record_id AND l.relationship='derived_as' AND rr.state NOT IN ('SUPERSEDED','REVOKED')) THEN 3
     WHEN EXISTS (SELECT 1 FROM caphub.registry_lineage l WHERE l.from_node_id=r.record_id AND l.relationship='derived_as') THEN 2
     WHEN EXISTS (SELECT 1 FROM caphub.registry_versions j WHERE j.kind='analysis_job' AND j.payload->>'capture_id'=r.record_id) THEN 1
     ELSE 0 END AS priority

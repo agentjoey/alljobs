@@ -213,14 +213,15 @@ function digest(seed: string): string {
 export async function seedReviewCandidate(
   pool: Pool,
   fixture: CaphubReviewFixture,
-  seed: string
+  seed: string,
+  input: { filename?: string; objectDigest?: string; createdAt?: string } = {}
 ): Promise<SeededReview> {
   assertOwned(fixture.rootDir, fixture.token, fixture.ownerPid);
   const value = digest(seed);
-  const now = new Date(1_789_558_400_000 + Number.parseInt(value.slice(0, 6), 16)).toISOString();
+  const now = input.createdAt ?? new Date(1_789_558_400_000 + Number.parseInt(value.slice(0, 6), 16)).toISOString();
   const captureId = `cap_${digest(`${seed}:capture`).slice(0, 32)}`;
   const jobId = `job_${digest(`${seed}:job`).slice(0, 32)}`;
-  const objectDigest = digest(`${seed}:image`);
+  const objectDigest = input.objectDigest ?? digest(`${seed}:image`);
   const object = {
     algorithm: "sha256" as const,
     digest: objectDigest,
@@ -230,7 +231,7 @@ export async function seedReviewCandidate(
   const capture: CaptureRecord = {
     schema_version: 1,
     id: captureId,
-    source: { kind: "web", original_filename: `${seed}.png`, source_url: `https://example.com/${encodeURIComponent(seed)}` },
+    source: { kind: "web", original_filename: input.filename ?? `${seed}.png`, source_url: `https://example.com/${encodeURIComponent(seed)}` },
     note: `Review fixture ${seed}`,
     mime_type: "image/png",
     object,

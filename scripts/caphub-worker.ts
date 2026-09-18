@@ -27,11 +27,14 @@ export async function main(args = process.argv.slice(2)) {
     const analysisEnabled = resolved.config.caphub?.enabled && resolved.config.caphub.analysis.enabled && resolved.config.caphub.analysis.autoStart;
     const workflow = analysisEnabled ? await (await import("../lib/caphub/service/production-workflow")).loadControlHostProductionWorkflow() : null;
     let nextRetentionAt = 0;
+    let retention: Promise<unknown> | undefined;
+    try {
     do {
-      if (resolved.config.caphub?.retention.enabled && Date.now() >= nextRetentionAt) {
+      if (!retention && resolved.config.caphub?.retention.enabled && Date.now() >= nextRetentionAt) {
         nextRetentionAt = Date.now() + 3600000;
-        try { await (await import("./caphub-retention")).runConfiguredRetention(resolved,runtime.pool,false); }
-        catch { process.stderr.write("CAPHUB_RETENTION_TICK_UNAVAILABLE\n"); }
+        retention = import("./caphub-retention").then(module => module.runConfiguredRetention(resolved,runtime.pool,false))
+          .catch(() => { process.stderr.write("CAPHUB_RETENTION_TICK_UNAVAILABLE\n"); })
+          .finally(() => { retention = undefined; });
       }
       try {
         const result = workflow ? await runAnalysisTick({ requests, workflow, clock: () => new Date(), ownerToken: randomUUID }, controller.signal) : "disabled";
@@ -43,6 +46,7 @@ export async function main(args = process.argv.slice(2)) {
       if (mode !== "daemon" || controller.signal.aborted) break;
       await delay(2000, undefined, { signal: controller.signal }).catch(() => {});
     } while (!controller.signal.aborted);
+    } finally { await retention; }
   } finally {
     process.removeListener("SIGTERM", stop); process.removeListener("SIGINT", stop);
     await runtime.pool.end();
