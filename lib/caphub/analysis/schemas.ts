@@ -351,7 +351,7 @@ export const reviewPacketSchema = z.object({
 const analysisJobBaseShape = {
   schema_version: z.literal(1),
   id: analysisJobIdSchema,
-  analysis_contract_version: z.enum(["caphub-analysis-v1", "caphub-analysis-v2"]).optional(),
+  analysis_contract_version: z.enum(["caphub-analysis-v1", "caphub-analysis-v2", "caphub-analysis-v3"]).optional(),
   supersedes_job_id: analysisJobIdSchema.optional(),
   capture_id: captureIdSchema,
   input_digest: sha256DigestSchema,
@@ -416,8 +416,9 @@ export const analysisJobSchema = z.discriminatedUnion("status", [
     failed_at: timestampSchema
   }).strict()
 ]).superRefine((job, context) => {
-  if (job.supersedes_job_id && (job.supersedes_job_id === job.id || job.analysis_contract_version !== "caphub-analysis-v2")) {
-    context.addIssue({ code: "custom", path: ["supersedes_job_id"], message: "Only v2 jobs may supersede a distinct predecessor" });
+  if (job.supersedes_job_id && (job.supersedes_job_id === job.id
+    || (job.analysis_contract_version !== "caphub-analysis-v2" && job.analysis_contract_version !== "caphub-analysis-v3"))) {
+    context.addIssue({ code: "custom", path: ["supersedes_job_id"], message: "Only v2/v3 jobs may supersede a distinct predecessor" });
   }
 });
 

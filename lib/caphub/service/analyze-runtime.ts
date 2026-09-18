@@ -5,9 +5,10 @@ import { createPackagedTesseractRecognizer, decodeBarcodesWithZxing } from "../p
 import { DeepSeekProvider } from "../providers/deepseek";
 import { DeepSeekResponsesAdapter } from "../providers/deepseek-responses";
 import { MiniMaxProvider } from "../providers/minimax";
+import { MiniMaxWebSearchProvider } from "../providers/minimax-web-search";
 import {
-  DisabledResearchSourceGateway,
   LiveResearchSourceGateway,
+  type ResearchSearchPort,
   type ResearchSourceGateway
 } from "../research/source-gateway";
 import { ExactHttpsSourcePolicy } from "../research/source-policy";
@@ -30,10 +31,13 @@ function requiredSecret(
   return value;
 }
 
-function createSourceGateway(allowedOrigins: readonly string[]): ResearchSourceGateway {
-  if (allowedOrigins.length === 0) return new DisabledResearchSourceGateway();
+function createSourceGateway(
+  allowedOrigins: readonly string[],
+  search: ResearchSearchPort
+): ResearchSourceGateway {
   return new LiveResearchSourceGateway({
-    policy: new ExactHttpsSourcePolicy({ allowedOrigins })
+    search,
+    ...(allowedOrigins.length > 0 ? { policy: new ExactHttpsSourcePolicy({ allowedOrigins }) } : {})
   });
 }
 
@@ -53,9 +57,9 @@ export async function loadControlHostAnalysisService(options: {
   const registry = options.registryRuntime ?? (caphub.registry.enabled
     ? await loadControlHostRegistryRuntime({ resolved, env })
     : null);
-  const miniMax = new MiniMaxProvider({
-    apiKey: requiredSecret(env, caphub.analysis.miniMaxSecretEnv)
-  });
+  const miniMaxApiKey = requiredSecret(env, caphub.analysis.miniMaxSecretEnv);
+  const miniMax = new MiniMaxProvider({ apiKey: miniMaxApiKey });
+  const webSearch = new MiniMaxWebSearchProvider({ apiKey: miniMaxApiKey });
   const deepSeek = new DeepSeekProvider({
     adapter: new DeepSeekResponsesAdapter({
       apiKey: requiredSecret(env, caphub.analysis.deepSeekApiSecretEnv)
@@ -74,10 +78,11 @@ export async function loadControlHostAnalysisService(options: {
     },
     extractionObserver: miniMax,
     extractionStructurer: deepSeek,
+    researchSearchProvider: webSearch,
     researchProvider: deepSeek,
     assessmentProvider: deepSeek,
     criticProvider: miniMax,
-    sourceGateway: () => createSourceGateway(caphub.analysis.sourceAllowedOrigins),
+    sourceGateway: (search) => createSourceGateway(caphub.analysis.sourceAllowedOrigins, search),
     jobs: registry?.jobs ?? new FilesystemAnalysisJobStore(root),
     artifacts: registry?.artifacts ?? new FilesystemStageArtifactStore(root),
     audits: registry?.modelAudits ?? new FilesystemModelCallAuditStore(root),

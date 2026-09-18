@@ -11,7 +11,7 @@ import { objectRefFor } from "../../preprocess/fixtures";
 import { createAnalysisService } from "../../service/analyze";
 import { MiniMaxProvider } from "../../providers/minimax";
 import { DeepSeekProvider } from "../../providers/deepseek";
-import { DisabledResearchSourceGateway } from "../../research/source-gateway";
+import { LiveResearchSourceGateway } from "../../research/source-gateway";
 
 describe("application-role Capture writes", () => {
   let postgres: CaphubTestPostgres;
@@ -55,7 +55,7 @@ describe("application-role Capture writes", () => {
     expect(await records.getCurrent(queued.id)).toMatchObject({ version: 3 });
   });
 
-  it("creates a separate v2 job without changing the terminal v1 Registry payload or version", async () => {
+  it("creates a separate v3 job without changing the terminal v1 Registry payload or version", async () => {
     const bytes = new Uint8Array([137, 80, 78, 71]);
     const capture: CaptureRecord = {
       schema_version: 1, id: `cap_${"e".repeat(32)}`, source: { kind: "web", original_filename: "fixture.png" },
@@ -67,7 +67,7 @@ describe("application-role Capture writes", () => {
     const jobs = new PostgresAnalysisJobStore(postgres.appPool);
     const records = new PostgresRegistryRecordStore(postgres.appPool, { analysis_job: analysisJobSchema });
     const legacyId = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}`).digest("hex").slice(0, 32)}`;
-    const v2Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v2`).digest("hex").slice(0, 32)}`;
+    const v3Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v3`).digest("hex").slice(0, 32)}`;
     const legacy = { schema_version: 1 as const, id: legacyId, capture_id: capture.id, input_digest: "f".repeat(64),
       completed_artifact_ids: [], created_at: capture.created_at, updated_at: capture.created_at };
     await jobs.put({ ...legacy, status: "queued" });
@@ -78,20 +78,22 @@ describe("application-role Capture writes", () => {
     const service = createAnalysisService({
       config: { caphubEnabled: true, analysisEnabled: true }, captures, readObject: async () => bytes,
       preprocessDependencies: { recognizeText: async () => [], decodeBarcodes: async () => [] },
-      extractionObserver: miniMax, extractionStructurer: deepSeek, researchProvider: deepSeek, assessmentProvider: deepSeek, criticProvider: miniMax,
-      sourceGateway: () => new DisabledResearchSourceGateway(), jobs,
+      extractionObserver: miniMax, extractionStructurer: deepSeek,
+      researchSearchProvider: { provider: "minimax", model: "MiniMax-M3", search: async () => { throw new Error("Unexpected provider call"); } },
+      researchProvider: deepSeek, assessmentProvider: deepSeek, criticProvider: miniMax,
+      sourceGateway: (search) => new LiveResearchSourceGateway({ search }), jobs,
       artifacts: new PostgresStageArtifactStore(postgres.appPool), audits: new PostgresModelCallAuditStore(postgres.appPool),
       clock: () => new Date(capture.created_at)
     });
     const controller = new AbortController();
     controller.abort();
     const first = await service.start(capture.id, controller.signal);
-    expect(first.jobId).toBe(v2Id);
+    expect(first.jobId).toBe(v3Id);
     expect(first.jobId).not.toBe(legacyId);
-    expect(await jobs.get(v2Id)).toMatchObject({ analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: legacyId });
-    const currentV2 = await records.getCurrent(v2Id);
+    expect(await jobs.get(v3Id)).toMatchObject({ analysis_contract_version: "caphub-analysis-v3", supersedes_job_id: legacyId });
+    const currentV3 = await records.getCurrent(v3Id);
     expect(await service.start(capture.id)).toEqual(first);
-    expect(await records.getCurrent(v2Id)).toEqual(currentV2);
+    expect(await records.getCurrent(v3Id)).toEqual(currentV3);
     expect(JSON.stringify(await records.getCurrent(legacyId))).toBe(before);
     expect(await records.getCurrent(legacyId)).toMatchObject({ version: 2 });
   });

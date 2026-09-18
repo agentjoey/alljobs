@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { createProductionAnalysisWorkflow } from "../../lib/caphub/service/production-workflow";
 import { createAnalysisService } from "../../lib/caphub/service/analyze";
 import type { StructuredProvider, StructuredProviderInput, StructuredProviderOutput } from "../../lib/caphub/providers/contracts";
-import type { ResearchSourceGateway } from "../../lib/caphub/research/source-gateway";
+import type { ResearchSearchPort, ResearchSourceGateway } from "../../lib/caphub/research/source-gateway";
 import { createReviewPacketImporter } from "../../lib/caphub/registry/import-review-packet";
 import {
   PostgresAnalysisJobStore,
@@ -30,6 +30,23 @@ class PilotMiniMax implements StructuredProvider {
   async invoke(): Promise<StructuredProviderOutput> {
     throw new Error("unexpected fixture MiniMax critic call");
   }
+
+  async search() {
+    this.calls += 1;
+    const content = "Pilot Capability is fixture documentation licensed under MIT.";
+    return {
+      candidates: [{
+        url: "https://docs.example.com/pilot-capability",
+        title: "Pilot Capability official documentation",
+        sourceKind: "official" as const,
+        claims: ["Documents the bounded capability metadata."],
+        content
+      }],
+      usage: { inputTokens: 10, outputTokens: 10 },
+      finishReason: "stop" as const,
+      outputBytes: Buffer.byteLength(content)
+    };
+  }
 }
 
 class PilotDeepSeek implements StructuredProvider {
@@ -50,7 +67,7 @@ class PilotDeepSeek implements StructuredProvider {
         }],
         entities: [{ name: "Pilot Capability", aliases: ["Pilot"] }],
         experience_fragments: [],
-        explicit_urls: ["https://docs.example.com/pilot-capability"],
+        explicit_urls: [],
         unresolved_questions: []
       },
       usage: { inputTokens: 10, outputTokens: 10 }
@@ -135,16 +152,9 @@ class PilotDeepSeek implements StructuredProvider {
   }
 }
 
-function pilotSourceGateway(): ResearchSourceGateway {
+function pilotSourceGateway(search: ResearchSearchPort): ResearchSourceGateway {
   return {
-    async search() {
-      return [{
-        url: "https://docs.example.com/pilot-capability",
-        title: "Pilot Capability official documentation",
-        sourceKind: "official" as const,
-        claims: ["Documents the bounded capability metadata."]
-      }];
-    },
+    search,
     async fetch(url) {
       const text = "Pilot Capability is fixture documentation licensed under MIT.";
       return {
@@ -195,6 +205,7 @@ async function main(): Promise<void> {
       },
       extractionObserver: miniMax,
       extractionStructurer: deepSeek,
+      researchSearchProvider: miniMax,
       researchProvider: deepSeek,
       assessmentProvider: deepSeek,
       criticProvider: miniMax,

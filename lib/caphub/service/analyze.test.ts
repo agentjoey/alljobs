@@ -18,6 +18,7 @@ function minimalDependencies(overrides: Record<string, unknown> = {}) {
     preprocessDependencies: { recognizeText: vi.fn(), decodeBarcodes: vi.fn() },
     extractionObserver: { provider: "minimax", model: "MiniMax-M3", observe: vi.fn() },
     extractionStructurer: { provider: "deepseek", model: "deepseek-flash", structureExtraction: vi.fn() },
+    researchSearchProvider: { provider: "minimax", model: "MiniMax-M3", search: vi.fn() },
     researchProvider: { provider: "deepseek", model: "deepseek-flash", invoke: vi.fn() },
     assessmentProvider: { provider: "deepseek", model: "deepseek-flash", invoke: vi.fn() },
     criticProvider: { provider: "minimax", model: "MiniMax-M3", invoke: vi.fn() },
@@ -31,7 +32,7 @@ function minimalDependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Caphub analysis service boundaries", () => {
-  it.each(["extractionObserver", "extractionStructurer", "researchProvider", "assessmentProvider", "criticProvider"])("rejects incorrect provider ownership for %s", (role) => {
+  it.each(["extractionObserver", "extractionStructurer", "researchSearchProvider", "researchProvider", "assessmentProvider", "criticProvider"])("rejects incorrect provider ownership for %s", (role) => {
     const dependencies = minimalDependencies();
     expect(() => createAnalysisService({ ...dependencies, [role]: { provider: "kimi", model: "wrong" } } as never))
       .toThrow("analysis providers do not match their fixed stage responsibilities");
@@ -68,7 +69,7 @@ afterEach(() => {
 });
 
 describe("analysis contract job identity", () => {
-  it.each([false, true])("starts one deterministic v2 job with immutable legacy lineage when predecessor exists=%s", async (hasPredecessor) => {
+  it.each([false, true])("starts one deterministic v3 job with immutable v2 lineage when predecessor exists=%s", async (hasPredecessor) => {
     const owned = realpathSync(mkdtempSync(join(realpathSync(tmpdir()), "alljobs-analysis-lineage-")));
     roots.push(owned);
     const root = join(owned, "home", "state", "caphub");
@@ -81,15 +82,15 @@ describe("analysis contract job identity", () => {
       note: "Fixture", mime_type: "image/png", object: objectRefFor(bytes), idempotency_key: "capture.lineage-0001",
       status: "received", human_review_required: true, created_at: "2026-09-16T06:00:00.000Z"
     };
-    // Independently reproduce the documented legacy and v2 identity contracts.
-    const legacyId = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}`).digest("hex").slice(0, 32)}`;
+    // Independently reproduce the documented v2 and v3 identity contracts.
     const v2Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v2`).digest("hex").slice(0, 32)}`;
+    const v3Id = `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}\0caphub-analysis-v3`).digest("hex").slice(0, 32)}`;
     if (hasPredecessor) await jobs.put({
-      schema_version: 1, id: legacyId, capture_id: CAPTURE_ID, input_digest: "a".repeat(64),
-      completed_artifact_ids: [], status: "HUMAN_REVIEW_REQUIRED", reason: "SCHEMA_INVALID_TWICE",
+      schema_version: 1, id: v2Id, analysis_contract_version: "caphub-analysis-v2", capture_id: CAPTURE_ID, input_digest: "a".repeat(64),
+      completed_artifact_ids: [], status: "HUMAN_REVIEW_REQUIRED", reason: "INVALID_OUTPUT",
       stopped_at: capture.created_at, created_at: capture.created_at, updated_at: capture.created_at
     });
-    const legacyBytes = hasPredecessor ? readFileSync(analysisJobRecordPath(root, legacyId)) : null;
+    const v2Bytes = hasPredecessor ? readFileSync(analysisJobRecordPath(root, v2Id)) : null;
     const writes: unknown[] = [];
     const dependencies = minimalDependencies({
       captures: { get: async () => capture }, readObject: async () => bytes,
@@ -100,17 +101,17 @@ describe("analysis contract job identity", () => {
     const controller = new AbortController();
     controller.abort();
     const first = await service.start(CAPTURE_ID, controller.signal);
-    expect(v2Id).not.toBe(legacyId);
-    expect(first).toMatchObject({ jobId: v2Id, status: "HUMAN_REVIEW_REQUIRED" });
-    expect(writes[0]).toMatchObject({ schema_version: 1, id: v2Id, status: "queued", analysis_contract_version: "caphub-analysis-v2" });
-    const versioned = await jobs.get(v2Id);
-    expect(versioned).toHaveProperty("analysis_contract_version", "caphub-analysis-v2");
-    if (hasPredecessor) expect(versioned).toHaveProperty("supersedes_job_id", legacyId);
+    expect(v3Id).not.toBe(v2Id);
+    expect(first).toMatchObject({ jobId: v3Id, status: "HUMAN_REVIEW_REQUIRED" });
+    expect(writes[0]).toMatchObject({ schema_version: 1, id: v3Id, status: "queued", analysis_contract_version: "caphub-analysis-v3" });
+    const versioned = await jobs.get(v3Id);
+    expect(versioned).toHaveProperty("analysis_contract_version", "caphub-analysis-v3");
+    if (hasPredecessor) expect(versioned).toHaveProperty("supersedes_job_id", v2Id);
     else expect(versioned).not.toHaveProperty("supersedes_job_id");
-    const snapshot = readFileSync(analysisJobRecordPath(root, v2Id));
+    const snapshot = readFileSync(analysisJobRecordPath(root, v3Id));
     expect(await service.start(CAPTURE_ID)).toEqual(first);
-    expect(readFileSync(analysisJobRecordPath(root, v2Id))).toEqual(snapshot);
-    if (legacyBytes) expect(readFileSync(analysisJobRecordPath(root, legacyId))).toEqual(legacyBytes);
+    expect(readFileSync(analysisJobRecordPath(root, v3Id))).toEqual(snapshot);
+    if (v2Bytes) expect(readFileSync(analysisJobRecordPath(root, v2Id))).toEqual(v2Bytes);
     expect(dependencies.extractionObserver.observe).not.toHaveBeenCalled();
     expect(dependencies.extractionStructurer.structureExtraction).not.toHaveBeenCalled();
   });

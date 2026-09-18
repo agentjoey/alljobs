@@ -384,7 +384,7 @@ describe("P2 workflow record schemas", () => {
     updated_at: NOW
   };
 
-  it("reads historical jobs unchanged and accepts distinct v2 predecessor lineage", () => {
+  it("reads historical jobs unchanged and accepts distinct v2/v3 predecessor lineage", () => {
     const historical = { ...jobBase, status: "queued" };
     expect(analysisJobSchema.parse(historical)).toEqual(historical);
     const versioned = {
@@ -393,13 +393,20 @@ describe("P2 workflow record schemas", () => {
       supersedes_job_id: `job_${"f".repeat(32)}`
     };
     expect(analysisJobSchema.parse(versioned)).toEqual(versioned);
+    const v3 = {
+      ...historical,
+      analysis_contract_version: "caphub-analysis-v3",
+      supersedes_job_id: `job_${"e".repeat(32)}`
+    };
+    expect(analysisJobSchema.parse(v3)).toEqual(v3);
     expect(analysisJobSchema.parse({ ...historical, analysis_contract_version: "caphub-analysis-v1" }))
       .toHaveProperty("analysis_contract_version", "caphub-analysis-v1");
   });
 
-  it("rejects self-supersession and predecessor lineage outside the v2 contract", () => {
+  it("rejects self-supersession and predecessor lineage outside versioned contracts", () => {
     for (const lineage of [
       { analysis_contract_version: "caphub-analysis-v2", supersedes_job_id: JOB_ID },
+      { analysis_contract_version: "caphub-analysis-v3", supersedes_job_id: JOB_ID },
       { supersedes_job_id: `job_${"f".repeat(32)}` },
       { analysis_contract_version: "caphub-analysis-v1", supersedes_job_id: `job_${"f".repeat(32)}` }
     ]) {

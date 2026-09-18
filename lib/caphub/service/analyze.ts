@@ -25,9 +25,11 @@ import { preprocessCapture } from "../preprocess/preprocessor";
 import type { ImagePreprocessorDependencies } from "../preprocess/image";
 import type { StructuredProvider } from "../providers/contracts";
 import { runExtractionStageV2, type RunExtractionStageV2Request } from "../providers/extraction-stage-v2";
+import type { MiniMaxWebSearchProvider } from "../providers/minimax-web-search";
 import { runStructuredStage } from "../providers/structured-stage";
+import { runWebSearchStage } from "../providers/web-search-stage";
 import { buildResearchDossier, ResearchDossierError } from "../research/research";
-import type { ResearchSourceGateway } from "../research/source-gateway";
+import type { ResearchSearchPort, ResearchSourceGateway } from "../research/source-gateway";
 import type { CaptureStore } from "../storage/contracts";
 import type {
   AnalysisJobStore,
@@ -68,10 +70,11 @@ export interface AnalysisServiceDependencies {
   preprocessDependencies: ImagePreprocessorDependencies;
   extractionObserver: RunExtractionStageV2Request["miniMax"];
   extractionStructurer: RunExtractionStageV2Request["deepSeek"];
+  researchSearchProvider: Pick<MiniMaxWebSearchProvider, "provider" | "model" | "search">;
   researchProvider: StructuredProvider;
   assessmentProvider: StructuredProvider;
   criticProvider: StructuredProvider;
-  sourceGateway: () => ResearchSourceGateway;
+  sourceGateway: (search: ResearchSearchPort) => ResearchSourceGateway;
   jobs: AnalysisJobStore;
   artifacts: StageArtifactStore;
   audits: ReadableModelCallAuditStore;
@@ -103,15 +106,18 @@ async function payloadFor<T>(
   return schema.parse(payload);
 }
 
-export const CAPHUB_ANALYSIS_CONTRACT_VERSION = "caphub-analysis-v2";
+export const CAPHUB_ANALYSIS_CONTRACT_VERSION = "caphub-analysis-v3";
 
 function legacyJobIdFor(capture: CaptureRecord): string {
   return `job_${createHash("sha256").update(`${capture.id}\0${capture.object.digest}`, "utf8").digest("hex").slice(0, 32)}`;
 }
 
-function v2JobIdFor(capture: CaptureRecord): string {
+function versionedJobIdFor(
+  capture: CaptureRecord,
+  version: "caphub-analysis-v2" | "caphub-analysis-v3"
+): string {
   return `job_${createHash("sha256")
-    .update(`${capture.id}\0${capture.object.digest}\0${CAPHUB_ANALYSIS_CONTRACT_VERSION}`, "utf8")
+    .update(`${capture.id}\0${capture.object.digest}\0${version}`, "utf8")
     .digest("hex").slice(0, 32)}`;
 }
 
@@ -144,6 +150,7 @@ async function normalizedModelImage(bytes: Uint8Array) {
 export function createAnalysisService(dependencies: AnalysisServiceDependencies): AnalysisService {
   const clockString = () => dependencies.clock().toISOString();
   if (dependencies.extractionObserver.provider !== "minimax"
+    || dependencies.researchSearchProvider.provider !== "minimax"
     || dependencies.extractionStructurer.provider !== "deepseek"
     || dependencies.criticProvider.provider !== "minimax"
     || dependencies.researchProvider.provider !== "deepseek"
@@ -168,10 +175,11 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
         throw new AnalysisServiceError("INVALID_CAPTURE_OBJECT");
       }
 
-      const jobId = v2JobIdFor(capture);
+      const jobId = versionedJobIdFor(capture, CAPHUB_ANALYSIS_CONTRACT_VERSION);
       let job = await dependencies.jobs.get(jobId);
       if (!job) {
-        const predecessor = await dependencies.jobs.get(legacyJobIdFor(capture));
+        const predecessor = await dependencies.jobs.get(versionedJobIdFor(capture, "caphub-analysis-v2"))
+          ?? await dependencies.jobs.get(legacyJobIdFor(capture));
         const now = clockString();
         job = {
           schema_version: 1,
@@ -196,7 +204,20 @@ export function createAnalysisService(dependencies: AnalysisServiceDependencies)
       }
 
       const budget = reconstructBudget(await dependencies.audits.list(jobId));
-      const sourceGateway = dependencies.sourceGateway();
+      const sourceGateway = dependencies.sourceGateway(async (request, searchSignal) => {
+        const outcome = await runWebSearchStage({
+          jobId,
+          captureId: capture.id,
+          input: request,
+          provider: dependencies.researchSearchProvider,
+          auditStore: dependencies.audits,
+          budget,
+          clock: clockString,
+          signal: searchSignal
+        });
+        if (outcome.kind === "human_review") throw new StageHumanReviewError(outcome.reason);
+        return outcome.value;
+      });
       const runProvider = async <T>(options: {
         stage: "research" | "assessment" | "critic";
         input: unknown;
