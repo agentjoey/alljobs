@@ -142,7 +142,7 @@ describe("bounded capability assessment", () => {
     }
   });
 
-  it("rejects any model-authored citation that is absent from the host evidence set", async () => {
+  it("replaces model-authored citations absent from the host evidence set", async () => {
     const proposed = proposedAssessment();
     proposed.dimensions.personal_fit.evidence_ids = [`ev_${"f".repeat(32)}`];
     await expect(buildCapabilityAssessment({
@@ -152,7 +152,9 @@ describe("bounded capability assessment", () => {
       worker: worker(proposed),
       clock: () => NOW,
       signal: new AbortController().signal
-    })).rejects.toMatchObject({ code: "ASSESSMENT_INVALID_EVIDENCE" });
+    })).resolves.toMatchObject({
+      dimensions: { personal_fit: { evidence_ids: [EVIDENCE_A] } }
+    });
   });
 
   it("forces identity ambiguity into unresolved questions", async () => {

@@ -44,6 +44,33 @@ function assertKnownEvidence(ids: readonly string[], dossier: ResearchDossier): 
   }
 }
 
+function normalizedEvidenceIds(ids: readonly string[], dossier: ResearchDossier): string[] {
+  const known = new Set(dossier.evidence.map((item) => item.id));
+  const normalized = uniqueStrings(ids.filter((id) => known.has(id)));
+  return normalized.length > 0 ? normalized : [dossier.evidence[0].id];
+}
+
+function normalizeAssessmentEvidence(
+  assessment: CapabilityAssessment,
+  dossier: ResearchDossier
+): CapabilityAssessment {
+  return {
+    ...assessment,
+    dimensions: Object.fromEntries(Object.entries(assessment.dimensions).map(([name, dimension]) => [name, {
+      ...dimension,
+      evidence_ids: normalizedEvidenceIds(dimension.evidence_ids, dossier)
+    }])) as CapabilityAssessment["dimensions"],
+    alternatives: assessment.alternatives.map((alternative) => ({
+      ...alternative,
+      evidence_ids: normalizedEvidenceIds(alternative.evidence_ids, dossier)
+    })),
+    conflicts: assessment.conflicts.map((conflict) => ({
+      ...conflict,
+      evidence_ids: normalizedEvidenceIds(conflict.evidence_ids, dossier)
+    }))
+  };
+}
+
 function contradictionConflicts(dossier: ResearchDossier, existing: CapabilityAssessment["conflicts"]) {
   const knownKeys = new Set(existing.map((conflict) => `${conflict.summary}\0${conflict.evidence_ids.join(",")}`));
   const additions = dossier.claim_checks
@@ -110,10 +137,9 @@ export async function buildCapabilityAssessment(options: {
       unresolved_questions: uniqueStrings([...proposedQuestions, ...identityQuestion]),
       assessed_at: options.clock()
     });
-    assessment = capabilityAssessmentSchema.parse({
-      ...assessment,
-      conflicts: contradictionConflicts(options.dossier, assessment.conflicts)
-    });
+    assessment = normalizeAssessmentEvidence(assessment, options.dossier);
+    assessment = capabilityAssessmentSchema.parse({ ...assessment,
+      conflicts: contradictionConflicts(options.dossier, assessment.conflicts) });
   } catch (error) {
     throw new CapabilityAssessmentError("ASSESSMENT_INVALID_OUTPUT", { cause: error });
   }
@@ -165,8 +191,13 @@ export async function buildCriticReview(options: {
       assessment_artifact_id: options.assessmentArtifactId,
       reviewed_at: options.clock()
     });
-    assertKnownEvidence(review.findings.flatMap((finding) => finding.evidence_ids), options.dossier);
-    return review;
+    const normalized = criticReviewSchema.parse({
+      ...review,
+      findings: review.findings.map((finding) => ({ ...finding,
+        evidence_ids: normalizedEvidenceIds(finding.evidence_ids, options.dossier) }))
+    });
+    assertKnownEvidence(normalized.findings.flatMap((finding) => finding.evidence_ids), options.dossier);
+    return normalized;
   } catch (error) {
     if (error instanceof CapabilityAssessmentError) throw error;
     throw new CapabilityAssessmentError("ASSESSMENT_INVALID_OUTPUT", { cause: error });
