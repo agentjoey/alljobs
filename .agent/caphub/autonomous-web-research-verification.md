@@ -129,3 +129,18 @@ ReviewPacket/Review Center. The immutable evidence and V4 correction follow.
   V4 changed only server-side composition; the browser surface was unavailable
   for a fresh render check, while Registry persistence and HTTP routes were
   verified directly.
+
+## Post-canary Review Center verification
+
+- The first SSR content check found that the bounded analysis-stop DTO rejected
+  V3/V4 contract labels. Commit `9b56961` adds current-version coverage without
+  changing provider execution or stored analysis evidence.
+- Focused unit tests passed 23/23, real PostgreSQL integration tests passed 4/4,
+  and typecheck, focused ESLint, deployment verification, and the production
+  build passed. After reload, `/reviews` renders the V4 Review Request,
+  candidate, and `WAITING_FOR_REVIEW`; Capture detail renders the V4 job and
+  Review Request. The final build ID is `4t9_GarllIl8ZFU7fIHuN`, SHA-256
+  `5d3e58e71a95a7e4fe8176837d37c7d1d341a5b917a1c0673c7db55d5a52e2e6`.
+- This repair made no additional model/provider call or analysis, and no
+  approval, export, target operation, publication, installation, push, merge,
+  tag, or release occurred.

@@ -91,6 +91,16 @@ V4 is now live on the Control Host. The single authorized canary created job
 `WAITING_FOR_REVIEW`; all six provider operations succeeded without correction
 or failure.
 
+The final Review Center SSR check exposed and repaired one read compatibility
+bug: its analysis-stop DTO still accepted only V1/V2 labels and rejected
+existing V3/V4 records. Commit `9b56961` adds V3/V4 coverage. Focused unit and
+PostgreSQL tests, typecheck, ESLint, deployment invariants, and the production
+build passed. The reloaded final build is `4t9_GarllIl8ZFU7fIHuN` (BUILD_ID
+SHA-256 `5d3e58e71a95a7e4fe8176837d37c7d1d341a5b917a1c0673c7db55d5a52e2e6`).
+Review Center now renders the V4 request, candidate, and waiting state; Capture
+detail renders the V4 job and request. No second analysis or provider request
+was performed.
+
 The next safe product action is Human review of that candidate in Review
 Center. Exports and targets remain disabled. Approval, export, publication,
 installation, push, merge, tag, and release remain separate actions and were

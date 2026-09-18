@@ -713,3 +713,21 @@ and one independent Verification occur only after the implementation tasks.
 - Successful provider usage totaled 158,674 tokens, under the job ceiling.
   Exports and targets remain disabled. No approval, publication, install,
   push, merge, tag, release, or main-checkout mutation occurred.
+
+## Analysis Contract V4 — Review Center read compatibility repaired (2026-09-18)
+
+- Final SSR content verification exposed a read-only UI compatibility bug:
+  the analysis-stop projection accepted only V1/V2 contract labels, so stored
+  V3/V4 stop records caused `/reviews` to render `REGISTRY_UNAVAILABLE` even
+  though the V4 Registry import was complete.
+- Read-only tracing confirmed that queue, detail, decision, and stop SQL all
+  succeeded. Commit `9b56961` extends the projection to V1–V4 and adds focused
+  regression coverage. Unit tests passed 23/23, PostgreSQL integration tests
+  passed 4/4, and typecheck, focused ESLint, deployment verification, and the
+  webpack build passed.
+- The reloaded build ID is `4t9_GarllIl8ZFU7fIHuN`, with SHA-256
+  `5d3e58e71a95a7e4fe8176837d37c7d1d341a5b917a1c0673c7db55d5a52e2e6`.
+  Launchd is running and Node listens only on `127.0.0.1:3456`. Review Center
+  SSR contains the V4 request, candidate, and `WAITING_FOR_REVIEW`, with no
+  unavailable state; Capture detail contains the V4 job and Review Request.
+  No provider request or analysis was repeated.
