@@ -132,6 +132,9 @@ or real analysis requires a new Human authorization.
 - Caphub automatically returned to S3. The service is healthy and loopback
   only; Registry remains enabled, while analysis and all export/target gates
   are disabled. MiniMax stays configured but has made no real request.
+- A newly authorized single Kimi retry after the Human restored account capacity
+  also did not return a schema-valid result. No further Provider request is
+  authorized; the failure cannot be attributed from the redacted canary record.
 
 ## P0 Backlog retirement (live)
 

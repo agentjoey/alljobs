@@ -479,3 +479,15 @@ and one independent Verification occur only after the implementation tasks.
   with loopback-only listening; Registry remains enabled and exports remain
   disabled. MiniMax is configured but no real MiniMax request or Capture
   analysis was made after the Kimi failure.
+
+## PA-C Kimi compatibility canary retry — 2026-09-18
+
+- The Human supplied fresh authorization to retry once after restoring Kimi
+  Code account capacity. The existing safe S3 configuration was retained:
+  analysis stayed disabled and no Capture or MiniMax request was made.
+- The one permitted synthetic direct-HTTP `k3-256k` structured-output request
+  again did not return the required schema-valid result. It used no tools and
+  no retry. No raw response, quota detail, credential, or Capture content was
+  retained, so this evidence cannot attribute the failure to account capacity.
+- No further Provider request was made. Caphub remains in S3 with Registry
+  enabled and analysis/exports/targets disabled.
