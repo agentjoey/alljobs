@@ -65,7 +65,7 @@ function terminalJson(value: unknown): DeepSeekStageResult {
 }
 
 function schemaName(stage: DeepSeekStageRequest["stage"]): string {
-  return `caphub_${stage}`;
+  return stage === "extraction" ? "caphub_extraction" : `caphub_${stage}`;
 }
 
 async function directDeepSeekFetch(request: DeepSeekStageRequest, apiKey: string, fetch: DeepSeekFetch): Promise<DeepSeekStageResult> {

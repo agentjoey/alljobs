@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
+import { extractionDraftV2Schema } from "../analysis/extraction-v2";
 import {
   DEEPSEEK_API_MODEL,
   DEEPSEEK_RESPONSES_URL,
@@ -30,6 +31,40 @@ function jsonResponse(value: unknown, status = 200): Response {
 }
 
 describe("DeepSeekResponsesAdapter", () => {
+  it("uses the fixed native extraction schema contract without tools, storage, or image fields", async () => {
+    const fetch = vi.fn<DeepSeekFetch>(async () => jsonResponse(completed('{"schema_version":2,"claims":[],"entities":[],"experience_fragments":[],"explicit_urls":[],"unresolved_questions":[]}')));
+    const adapter = new DeepSeekResponsesAdapter({ apiKey: "fixture-deepseek-key", fetch });
+
+    await adapter.generate({
+      stage: "extraction",
+      prompt: "fixture extraction input",
+      schema: extractionDraftV2Schema,
+      maxOutputTokens: 4_096,
+      signal
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]?.[0]).toBe(DEEPSEEK_RESPONSES_URL);
+    const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      model: DEEPSEEK_API_MODEL,
+      input: "fixture extraction input",
+      stream: false,
+      reasoning: { effort: "none" },
+      max_output_tokens: 4_096,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "caphub_extraction",
+          schema: z.toJSONSchema(extractionDraftV2Schema)
+        }
+      }
+    });
+    expect(body).not.toHaveProperty("tools");
+    expect(body).not.toHaveProperty("store");
+    expect(JSON.stringify(body)).not.toMatch(/dataBase64|image\/png/i);
+  });
+
   it("sends one fixed tool-free Responses API request and returns terminal JSON with usage", async () => {
     const fetch = vi.fn<DeepSeekFetch>(async () => jsonResponse(completed()));
     const adapter = new DeepSeekResponsesAdapter({ apiKey: "fixture-deepseek-key", fetch });
