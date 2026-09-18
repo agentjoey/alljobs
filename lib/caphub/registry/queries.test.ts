@@ -116,6 +116,20 @@ describe("Registry read DTOs", () => {
     expect(JSON.stringify(result)).not.toMatch(/prompt|output|private\/|postgres|credential|provider_response/i);
   });
 
+  it.each(["caphub-analysis-v3", "caphub-analysis-v4"] as const)(
+    "projects current %s analysis stops",
+    async (contractVersion) => {
+      const result = await createRegistryQueries(poolWith([
+        { ...stopRow, contract_version: contractVersion }
+      ])).getAnalysisStops({ limit: 1 });
+
+      expect(result[0]).toMatchObject({
+        jobId: stopRow.job_id,
+        contractVersion
+      });
+    }
+  );
+
   it.each([0, 26, 1.5, NaN])("rejects invalid stop limit %s before a database read", async (limit) => {
     const pool = poolWith([]);
     await expect(createRegistryQueries(pool).getAnalysisStops({ limit })).rejects.toMatchObject({ code: "INVALID_QUERY" });

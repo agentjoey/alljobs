@@ -46,7 +46,12 @@ const analysisStopRowSchema = z.object({
   stage: analysisStageSchema.nullable(),
   // Historical reasons were free-form; only closed codes may cross this boundary.
   reason: analysisStopReasonSchema.catch("HUMAN_REVIEW_REQUIRED"),
-  contract_version: z.enum(["caphub-analysis-v1", "caphub-analysis-v2"]).nullable(),
+  contract_version: z.enum([
+    "caphub-analysis-v1",
+    "caphub-analysis-v2",
+    "caphub-analysis-v3",
+    "caphub-analysis-v4"
+  ]).nullable(),
   supersedes_job_id: analysisJobIdSchema.nullable(),
   stopped_at: z.string().datetime({ offset: true })
 });
