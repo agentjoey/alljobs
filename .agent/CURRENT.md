@@ -66,17 +66,15 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 
 ## Next safe action
 
-The approved Neon activation sequence N1–N4, PA-D, and PA-C are complete.
-Caphub is running from `codex/caphub-release` on the Control Host and is bound
-only to `127.0.0.1:3456`; the local `/caphub` smoke check returned HTTP 200.
-MiniMax and Kimi `k3-256k` Provider compatibility is verified, and analysis is
-enabled while Registry remains enabled. No Capture analysis runs automatically.
-The first authorized trial Capture created
-`job_d21922e7bb363b4734573206709e70ab` but stopped closed during MiniMax
-extraction as `HUMAN_REVIEW_REQUIRED` / `INTERRUPTED_PROVIDER_CALL`; no
-extraction result, ReviewPacket, or Review Request exists, and it was not
-retried. Diagnose that interrupted-call path before any separately authorized
-new Capture analysis. All targets/exports remain disabled.
+The approved Neon activation sequence N1–N4, PA-D, and the earlier Kimi PA-C
+diagnosis are complete. The deployed loopback-only build at `127.0.0.1:3456`
+has not yet been rebuilt or reloaded with the local DeepSeek replacement
+commits. The new active code path fixes DeepSeek `deepseek-flash` for research
+and assessment, but installation of `DEEPSEEK_API_KEY`, a synthetic
+no-Capture diagnostic, and any service reload each remain separately authorized
+gates. The first Capture trial remains terminal at MiniMax extraction as
+`HUMAN_REVIEW_REQUIRED` / `INTERRUPTED_PROVIDER_CALL`; do not retry it. All
+targets and exports remain disabled.
 
 ## Caphub development status — 2026-09-16
 
@@ -171,3 +169,27 @@ successful 1024-token contract diagnosis below.
 | v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |
 | v1.0.0 | 2026-08-28 | Live in Production | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git bare mirrors, and digest protection |
 | P0 retirement | 2026-09-14 | Live in Production | Removed R1 Backlog management and proposal paths; retained repository Backlog solely as read-only evidence under Linear ownership |
+
+## DeepSeek provider replacement — local implementation verified (2026-09-18)
+
+- The approved provider-replacement design and plan are implemented locally on
+  `codex/caphub-release` in commits `f6d75b1`, `5e36c49`, and `71e6f1a`.
+  Research and assessment now use the fixed first-party DeepSeek Responses
+  endpoint `https://api.deepseek.com/responses` and API model
+  `deepseek-flash`; MiniMax remains fixed for extraction and critic.
+- The adapter uses one non-streaming, tool-free request with
+  `text.format.json_schema` and `reasoning.effort: "none"`. It does not persist
+  prompts, provider output, reasoning, headers, or credentials. Historic Kimi
+  records remain parseable, but active runtime/configuration and preflight no
+  longer route to Kimi.
+- Local verification passed: 14 affected Vitest files / 136 tests, typecheck,
+  lint with 0 errors (79 existing warnings), and webpack production build. The
+  final scoped review found no blocking or important issue: fixed origin/model,
+  error mapping, no tools/retries, stage assignment, audit compatibility, and
+  historical decoding were checked.
+- No `DEEPSEEK_API_KEY` was added, no DeepSeek request was issued, and no
+  LaunchAgent, deployed configuration, service, Capture, target/export, push,
+  merge, or release changed. The next gated actions are credential presence
+  only, one synthetic no-Capture Responses API diagnostic, then an explicitly
+  authorized rebuild/reload with analysis disabled until a separate Capture
+  action is approved.

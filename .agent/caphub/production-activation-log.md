@@ -539,3 +539,26 @@ and one independent Verification occur only after the implementation tasks.
   publication, installation, rollback, push, PR, `main` merge, tag, or release
   occurred. The next action is an implementation-level diagnosis before any
   separately authorized new Capture analysis.
+
+## DeepSeek provider replacement — local verification only (2026-09-18)
+
+- Commits `f6d75b1`, `5e36c49`, and `71e6f1a` implement the approved replacement
+  of active Kimi research/assessment wiring with first-party DeepSeek Responses
+  API wiring. The request contract fixes the URL to
+  `https://api.deepseek.com/responses`, the model to `deepseek-flash`, the
+  output protocol to `text.format.json_schema`, non-streaming mode, and
+  `reasoning.effort: "none"`; it has no tools or transport retry.
+- Runtime/preflight identity, model contracts, audit events, and current config
+  now identify DeepSeek. Legacy Kimi parsing remains for already-recorded
+  artifacts and is not a deletion target. MiniMax remains unchanged for
+  extraction and critic.
+- Focused final evidence: 14 affected Vitest files / 136 tests PASS; typecheck
+  PASS; lint PASS with 0 errors and 79 existing warnings; webpack build PASS.
+  The scoped code review checked fixed endpoint/model, no secret/raw-output
+  leakage, safe error classification, no hidden retries/tools, stage roles, and
+  Registry historical compatibility; no blocker or important issue remains.
+- This is not a production cutover. No DeepSeek credential was installed or
+  read, no live DeepSeek diagnostic/request was made, and no LaunchAgent,
+  service reload, Capture, export/target operation, push, merge, or release
+  occurred. A private credential-presence check, one no-Capture synthetic
+  diagnostic, and a separately authorized rebuild/reload remain required.
