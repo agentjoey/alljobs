@@ -80,7 +80,7 @@ describe("MiniMaxProvider", () => {
     expect(requests[0]).toMatchObject({
       model: MINIMAX_TOKEN_PLAN_MODEL,
       maxRetries: 0,
-      maxOutputTokens: 1_800,
+      maxOutputTokens: 4_096,
       abortSignal: signal
     });
     const content = requests[0]?.messages[0]?.content;

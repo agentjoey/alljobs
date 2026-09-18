@@ -131,7 +131,7 @@ describe("atomic extraction v2 through real provider adapters", () => {
     expect(extractionResultSchema.parse(result.value)).toMatchObject({ capture_id: CAPTURE_ID, preprocess_artifact_id: ARTIFACT_ID,
       claims: [{ statement: "Example is visible.", id: expect.stringMatching(/^clm_[a-f0-9]{32}$/), evidence_ids: [expect.stringMatching(/^ev_[a-f0-9]{32}$/)] }] });
     expect(f.miniMaxRequests).toHaveLength(1);
-    expect(f.miniMaxRequests[0]).toMatchObject({ maxRetries: 0, maxOutputTokens: 1800 });
+    expect(f.miniMaxRequests[0]).toMatchObject({ maxRetries: 0, maxOutputTokens: 4096 });
     expect(f.deepSeekFetch).toHaveBeenCalledTimes(1);
     const body = JSON.parse(String(f.deepSeekFetch.mock.calls[0][1].body));
     expect(body).toMatchObject({ model: "deepseek-flash", stream: false, reasoning: { effort: "none" }, text: { format: { type: "json_schema", name: "caphub_extraction" } } });

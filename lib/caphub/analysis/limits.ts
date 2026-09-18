@@ -6,7 +6,7 @@ export const CAPHUB_ANALYSIS_LIMITS = Object.freeze({
   maxPixelsPerImage: 40_000_000,
   preprocessingTimeoutMs: 60_000,
   ocrTimeoutMsPerImage: 15_000,
-  maxVisualObservationOutputTokens: 1_800,
+  maxVisualObservationOutputTokens: 4_096,
   maxVisualObservationBytes: 64 * 1024,
   providerTimeoutMs: Object.freeze({ minimax: 60_000, kimi: 120_000, deepseek: 120_000 }),
   maxSchemaCorrections: 1,

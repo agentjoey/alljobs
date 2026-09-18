@@ -11,7 +11,7 @@ describe("CAPHUB_ANALYSIS_LIMITS", () => {
       maxPixelsPerImage: 40_000_000,
       preprocessingTimeoutMs: 60_000,
       ocrTimeoutMsPerImage: 15_000,
-      maxVisualObservationOutputTokens: 1_800,
+      maxVisualObservationOutputTokens: 4_096,
       maxVisualObservationBytes: 64 * 1024,
       providerTimeoutMs: { minimax: 60_000, kimi: 120_000, deepseek: 120_000 },
       maxSchemaCorrections: 1,
