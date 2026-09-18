@@ -84,10 +84,17 @@ deployment invariants, and webpack build. Build ID is
 `fx9z2aq8zWKkWF5IIXKfM`, SHA-256
 `37a66478c3ef171e34196158c28f96905d828876db40bb294a1cf92ef8e35689`.
 
-The next action requires a new explicit authorization: reload
-`com.agentjoey.alljobs` from the V4 build and execute exactly one V4 canary for
-the same Capture. Preserve `127.0.0.1:3456`, disabled exports/targets, and all
-V1–V3 history. Do not push, merge, tag, or publish a release.
+V4 is now live on the Control Host. The single authorized canary created job
+`job_5b7b22850262f5e31d17755f54af639d`, six stage artifacts, ReviewPacket
+`rvp_915a132845c495dd5c2a20d14f70cb5b`, and Review Request
+`rev_5c95aa800c6562f7c6b14fb71dbb1454`. Both job and request are
+`WAITING_FOR_REVIEW`; all six provider operations succeeded without correction
+or failure.
+
+The next safe product action is Human review of that candidate in Review
+Center. Exports and targets remain disabled. Approval, export, publication,
+installation, push, merge, tag, and release remain separate actions and were
+not performed.
 
 ## Caphub Extraction V2 — local closeout (2026-09-18)
 

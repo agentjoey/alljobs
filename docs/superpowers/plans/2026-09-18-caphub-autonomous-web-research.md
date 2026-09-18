@@ -562,8 +562,8 @@ web search, then stopped at DeepSeek research with
   immutable predecessor.
 - [x] Verify with 20 focused files / 135 tests, typecheck, focused ESLint,
   deployment invariants, and a webpack production build.
-- [ ] Reload `com.agentjoey.alljobs` from the V4 final build under explicit
+- [x] Reload `com.agentjoey.alljobs` from the V4 final build under explicit
   authorization.
-- [ ] Run exactly one separately authorized V4 canary for
+- [x] Run exactly one separately authorized V4 canary for
   `cap_379e2508ead34c349fcb303bcd39eff2` and verify the Review Center item.
-- [ ] Record the final V4 runtime evidence and branch boundary.
+- [x] Record the final V4 runtime evidence and branch boundary.

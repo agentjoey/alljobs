@@ -1,7 +1,7 @@
 # Caphub Autonomous Web Research Design
 
 **Date:** 2026-09-18  
-**Status:** Approved; V3 canary completed and V4 corrective contract implemented locally
+**Status:** Approved; V4 deployed and production canary waiting for Human review
 **Scope:** Replace Caphub's source-URL-dependent research entry with one bounded MiniMax-M3 server-side web search, while keeping DeepSeek responsible for structured research and assessment.
 
 ## Decision

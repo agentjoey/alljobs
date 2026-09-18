@@ -98,3 +98,34 @@ ReviewPacket/Review Center. The immutable evidence and V4 correction follow.
   `37a66478c3ef171e34196158c28f96905d828876db40bb294a1cf92ef8e35689`.
 - No V4 production reload or provider request has occurred. Those actions need
   a new explicit authorization because the one approved V3 canary is complete.
+
+## V4 production canary — accepted
+
+- Under explicit authorization, `com.agentjoey.alljobs` was reloaded from the
+  V4 final build. The LaunchAgent remained mode `0600`, launchd reached
+  `running`, the only listener was `127.0.0.1:3456`, and `/caphub`, `/reviews`,
+  and the Capture detail route returned HTTP 200.
+- Exactly one V4 analysis ran for
+  `cap_379e2508ead34c349fcb303bcd39eff2`. It created job
+  `job_5b7b22850262f5e31d17755f54af639d`, superseding terminal V3 job
+  `job_4782630f05b514c1d795849da23cd508`.
+- Six immutable artifacts exist: preprocess, extraction, research, assessment,
+  critic, and ReviewPacket. ReviewPacket artifact
+  `art_7a79d0e7dd9297c517ea36c5fb2ca1c07d99fa1698b0f20044396c0e4f870e0b`
+  contains eight normalized evidence records and recommends `learn` with Human
+  review required.
+- All six provider operations have matched started/succeeded audits. There was
+  one MiniMax visual call, one DeepSeek extraction structuring call, one
+  MiniMax web search, one DeepSeek research call, one DeepSeek assessment call,
+  and one MiniMax critic call. No correction or failed provider audit exists.
+- Successful provider usage totals 158,674 tokens, below the 256,000-token job
+  ceiling. The search operation used 114,062 input / 1,011 output tokens.
+- ReviewPacket `rvp_915a132845c495dd5c2a20d14f70cb5b` was imported as
+  `imp_b4fdeadc8b4bfce54849b6d31195d525`; candidate Review Request
+  `rev_5c95aa800c6562f7c6b14fb71dbb1454` is `WAITING_FOR_REVIEW` at lock version
+  1. The final job is also `WAITING_FOR_REVIEW`.
+- No approval, export, target operation, publication, installation, push,
+  merge, tag, or release occurred. No new visual evidence was required because
+  V4 changed only server-side composition; the browser surface was unavailable
+  for a fresh render check, while Registry persistence and HTTP routes were
+  verified directly.

@@ -693,3 +693,23 @@ and one independent Verification occur only after the implementation tasks.
 - V4 has not been loaded and no V4 provider request has occurred. Exports and
   targets remain disabled; a new explicit reload/canary authorization is the
   next production gate.
+
+## Analysis Contract V4 — production canary accepted (2026-09-18)
+
+- With explicit authorization, `com.agentjoey.alljobs` reloaded from V4 build
+  `fx9z2aq8zWKkWF5IIXKfM`. Launchd is running, the listener remains limited to
+  `127.0.0.1:3456`, and `/caphub`, `/reviews`, and the Capture detail route are
+  HTTP 200.
+- The single V4 canary created
+  `job_5b7b22850262f5e31d17755f54af639d` with immutable lineage to V3 job
+  `job_4782630f05b514c1d795849da23cd508`. All six stages produced artifacts and
+  all six provider operations recorded matched succeeded audits without a
+  correction or failure.
+- ReviewPacket `rvp_915a132845c495dd5c2a20d14f70cb5b` contains eight evidence
+  records and recommends `learn`. Import
+  `imp_b4fdeadc8b4bfce54849b6d31195d525` created candidate Review Request
+  `rev_5c95aa800c6562f7c6b14fb71dbb1454`, now `WAITING_FOR_REVIEW` at lock
+  version 1. The analysis job is also `WAITING_FOR_REVIEW`.
+- Successful provider usage totaled 158,674 tokens, under the job ceiling.
+  Exports and targets remain disabled. No approval, publication, install,
+  push, merge, tag, release, or main-checkout mutation occurred.
