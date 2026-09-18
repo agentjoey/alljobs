@@ -577,3 +577,19 @@ and one independent Verification occur only after the implementation tasks.
   merge, or release occurred. The provider compatibility gate is satisfied;
   a separately authorized rebuild/reload is still required and must retain
   analysis disabled pending a new per-Capture authorization.
+
+## DeepSeek production cutover — reload verified (2026-09-18)
+
+- With explicit authorization, the Control Host config was changed only from
+  `analysis.enabled: true` to `false`. It has no literal credential fields;
+  parsed runtime settings use `https://api.deepseek.com`, `deepseek-flash`, and
+  the private `DEEPSEEK_API_KEY` reference. Registry remains enabled and
+  exports remain disabled.
+- The `codex/caphub-release` worktree was rebuilt with webpack and
+  `verify:deploy` passed. The existing `com.agentjoey.alljobs` LaunchAgent was
+  reloaded. launchd reported `running` and `GET /caphub` succeeded over the
+  mandatory `127.0.0.1:3456` listener.
+- No provider request, Capture read/write, Registry write, target/export
+  operation, push, merge, tag, or public release occurred as part of cutover.
+  Analysis remains disabled; a new Capture analysis still requires separate
+  authorization after the MiniMax interruption is diagnosed.

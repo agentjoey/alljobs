@@ -67,14 +67,12 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 ## Next safe action
 
 The approved Neon activation sequence N1–N4, PA-D, and the earlier Kimi PA-C
-diagnosis are complete. The deployed loopback-only build at `127.0.0.1:3456`
-has not yet been rebuilt or reloaded with the local DeepSeek replacement
-commits. The new active code path fixes DeepSeek `deepseek-flash` for research
-and assessment, but installation of `DEEPSEEK_API_KEY`, a synthetic
-no-Capture diagnostic, and any service reload each remain separately authorized
-gates. The first Capture trial remains terminal at MiniMax extraction as
-`HUMAN_REVIEW_REQUIRED` / `INTERRUPTED_PROVIDER_CALL`; do not retry it. All
-targets and exports remain disabled.
+diagnosis are complete. Caphub was rebuilt and reloaded from
+`codex/caphub-release` on the loopback-only listener at `127.0.0.1:3456` with
+the fixed DeepSeek `deepseek-flash` research/assessment path. Registry remains
+enabled; analysis and all exports/targets are disabled. The first Capture trial
+remains terminal at MiniMax extraction as `HUMAN_REVIEW_REQUIRED` /
+`INTERRUPTED_PROVIDER_CALL`; do not retry it until that path is diagnosed.
 
 ## Caphub development status — 2026-09-16
 
@@ -204,3 +202,16 @@ successful 1024-token contract diagnosis below.
 - The required live provider compatibility gate is now evidenced. A separate
   rebuild/reload authorization is still required; it must retain analysis
   disabled until a new, separately authorized Capture action.
+
+## DeepSeek production cutover — reload verified (2026-09-18)
+
+- Under explicit authorization, the Control Host config was changed only to
+  disable analysis. Parsed runtime settings use the fixed DeepSeek endpoint,
+  `deepseek-flash` model, and `DEEPSEEK_API_KEY` reference; Registry remains
+  enabled and exports remain disabled.
+- The exact release worktree was rebuilt with webpack, deployment invariants
+  passed, and `com.agentjoey.alljobs` was reloaded. launchd reports `running`,
+  and loopback `GET /caphub` succeeded on `127.0.0.1:3456`.
+- No Capture, provider request, Registry write, export/target operation, push,
+  merge, tag, or public release occurred during cutover. Analysis stays
+  disabled pending a new specific Capture authorization.
