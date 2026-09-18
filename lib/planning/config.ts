@@ -205,6 +205,7 @@ export const controlHostCaphubConfigSchema = z.object({
   allowedOrigins: z.array(assistantAllowedOriginSchema).max(8).default([]),
   maxUploadBytes: z.number().int().min(1_048_576).max(20_971_520).default(10_485_760),
   analysis: controlHostCaphubAnalysisConfigSchema.default(DEFAULT_CAPHUB_ANALYSIS_CONFIG),
+  retention: z.object({ enabled: z.boolean().default(false) }).strict().default({ enabled: false }),
   registry: controlHostCaphubRegistryConfigSchema.default(DEFAULT_CAPHUB_REGISTRY_CONFIG),
   storage: controlHostCaphubStorageConfigSchema.default(DEFAULT_CAPHUB_STORAGE_CONFIG),
   exports: controlHostCaphubExportsConfigSchema.default(DEFAULT_CAPHUB_EXPORTS_CONFIG)

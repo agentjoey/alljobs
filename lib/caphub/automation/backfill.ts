@@ -53,7 +53,8 @@ export async function inspectAutomationBackfill(db: Pool | PoolClient) {
     WHEN EXISTS (SELECT 1 FROM caphub.registry_versions j WHERE j.kind='analysis_job' AND j.payload->>'capture_id'=r.record_id) THEN 1
     ELSE 0 END AS priority
     FROM caphub.registry_records r JOIN caphub.registry_versions v ON v.record_id=r.record_id AND v.version=r.current_version
-    WHERE r.kind='capture'`);
+    WHERE r.kind='capture' AND NOT EXISTS (
+      SELECT 1 FROM caphub.capture_filename_versions f WHERE f.capture_id=r.record_id)`);
   return selectCanonicalCaptures(result.rows as LegacyCapture[]);
 }
 

@@ -60,6 +60,18 @@ it("recovers an object-write failure without a partial Capture or consumed reque
   expect((await receive(attempt)).kind).toBe("created");
 });
 
+it("does not restore a purged duplicate but accepts a fresh reference under another filename", async () => {
+  const first = await receive(input("expired.png", "expired-first"));
+  await fixture.pool.query(`UPDATE caphub.capture_object_retention SET imported_at='2026-08-01',eligible_at='2026-08-31',purged_at='2026-09-01' WHERE capture_id=$1`, [first.capture.id]);
+  const writes = putImmutable.mock.calls.length;
+  expect((await receive(input("EXPIRED.PNG", "expired-duplicate"))).capture.id).toBe(first.capture.id);
+  expect(putImmutable.mock.calls.length).toBe(writes);
+  const fresh = await receive(input("fresh-name.png", "fresh-name"));
+  expect(fresh.capture.id).not.toBe(first.capture.id);
+  expect(putImmutable.mock.calls.length).toBe(writes + 1);
+  expect((await fixture.pool.query("SELECT purged_at,eligible_at FROM caphub.capture_object_retention WHERE capture_id=$1", [fresh.capture.id])).rows[0]).toEqual({ purged_at: null, eligible_at: null });
+});
+
 it("serializes concurrent same-name/content uploads into one Capture/object while binding both request keys", async () => {
   const start = putImmutable.mock.calls.length;
   const [a, b] = await Promise.all([receive(input("A.PNG", "a")), receive(input(" a.png ", "b"))]);

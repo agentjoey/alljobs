@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import type { S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, type S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it } from "vitest";
 import type { CaptureMimeType } from "../domain/types";
 import { ImmutableObjectMismatchError } from "./local-objects";
 import {
   NeonS3CaptureObjectStore,
   createNeonS3CommandPort,
+  createNeonS3DeletionPort,
   parseNeonS3Environment,
   type S3ImmutableCommandPort
 } from "./neon-s3";
@@ -59,6 +60,18 @@ function digest(bytes: Uint8Array): string {
 }
 
 describe("NeonS3CaptureObjectStore", () => {
+  it("deletes only an exact digest key and treats an already absent object as success", async () => {
+    const commands: DeleteObjectCommand[] = [];
+    const port = createNeonS3DeletionPort({ bucket: "caphub-objects", accessKeyId: "test", secretAccessKey: "test", endpoint: "https://storage.example.test", region: "aws-ap-southeast-1" }, {
+      clientFactory: () => ({ send: async (command: DeleteObjectCommand) => { commands.push(command); throw Object.assign(new Error("missing"), { name: "NoSuchKey" }); } }) as unknown as S3Client
+    });
+    const ref = { algorithm: "sha256" as const, digest: "a".repeat(64), key: `sha256/aa/${"a".repeat(64)}`, bytes: 1 };
+    await port.deleteExactObject(ref);
+    expect(commands[0]).toBeInstanceOf(DeleteObjectCommand);
+    expect(commands[0].input).toEqual({ Bucket: "caphub-objects", Key: ref.key });
+    await expect(port.deleteExactObject({ ...ref, key: "sha256/" })).rejects.toThrow();
+    expect(commands).toHaveLength(1);
+  });
   it("accepts only an exact configured Object Storage hostname before credentials reach the client", () => {
     const refs = {
       accessKeyIdEnv: "CAPHUB_S3_ACCESS_KEY_ID",

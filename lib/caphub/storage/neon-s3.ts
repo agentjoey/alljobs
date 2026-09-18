@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   GetObjectCommand,
+  DeleteObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -11,6 +12,7 @@ import { captureMimeTypeSchema, objectRefSchema } from "../domain/schemas";
 import type { CaptureMimeType, ObjectRef } from "../domain/types";
 import { ImmutableObjectMismatchError } from "./local-objects";
 import type { ReadableCaptureObjectStore } from "./contracts";
+import type { ExactObjectDeletion } from "../automation/retention";
 
 export interface S3ImmutableCommandPort {
   head(key: string): Promise<{ bytes: number; metadata: Record<string, string> } | null>;
@@ -110,6 +112,19 @@ export function parseNeonS3Environment(input: {
     throw new Error("Object Storage region is invalid");
   }
   return { bucket: input.bucket, accessKeyId, secretAccessKey, endpoint, region };
+}
+
+export function createNeonS3DeletionPort(environment: NeonS3Environment, options: NeonS3CommandPortOptions = {}): ExactObjectDeletion {
+  const client = (options.clientFactory ?? (input => new S3Client(input)))({
+    endpoint: environment.endpoint, region: environment.region, forcePathStyle: true,
+    credentials: { accessKeyId: environment.accessKeyId, secretAccessKey: environment.secretAccessKey }
+  });
+  return { async deleteExactObject(rawRef) {
+    const ref = objectRefSchema.parse(rawRef);
+    if (ref.key !== `sha256/${ref.digest.slice(0,2)}/${ref.digest}`) throw new ImmutableObjectMismatchError();
+    try { await client.send(new DeleteObjectCommand({ Bucket: environment.bucket, Key: ref.key })); }
+    catch (error) { if (!isNotFound(error)) throw error; }
+  } };
 }
 
 export function createNeonS3CommandPort(

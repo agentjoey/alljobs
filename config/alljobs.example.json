@@ -16,6 +16,7 @@
     "enabled": false,
     "allowedOrigins": ["https://alljobs.agentjoey.ai"],
     "maxUploadBytes": 10485760,
+    "retention": { "enabled": false },
     "analysis": {
       "enabled": false,
       "autoStart": false,

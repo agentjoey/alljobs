@@ -24,15 +24,17 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write(`${JSON.stringify({ autoStart: resolved.config.caphub?.analysis.autoStart ?? false, requests: await requests.summary() })}\n`);
       return;
     }
-    if (!resolved.config.caphub?.enabled || !resolved.config.caphub.analysis.enabled || !resolved.config.caphub.analysis.autoStart) {
-      process.stdout.write(' {"state":"disabled"}\n'.trimStart());
-      return;
-    }
-    const { loadControlHostProductionWorkflow } = await import("../lib/caphub/service/production-workflow");
-    const workflow = await loadControlHostProductionWorkflow();
+    const analysisEnabled = resolved.config.caphub?.enabled && resolved.config.caphub.analysis.enabled && resolved.config.caphub.analysis.autoStart;
+    const workflow = analysisEnabled ? await (await import("../lib/caphub/service/production-workflow")).loadControlHostProductionWorkflow() : null;
+    let nextRetentionAt = 0;
     do {
+      if (resolved.config.caphub?.retention.enabled && Date.now() >= nextRetentionAt) {
+        nextRetentionAt = Date.now() + 3600000;
+        try { await (await import("./caphub-retention")).runConfiguredRetention(resolved,runtime.pool,false); }
+        catch { process.stderr.write("CAPHUB_RETENTION_TICK_UNAVAILABLE\n"); }
+      }
       try {
-        const result = await runAnalysisTick({ requests, workflow, clock: () => new Date(), ownerToken: randomUUID }, controller.signal);
+        const result = workflow ? await runAnalysisTick({ requests, workflow, clock: () => new Date(), ownerToken: randomUUID }, controller.signal) : "disabled";
         if (mode === "once") process.stdout.write(`${JSON.stringify({ state: result })}\n`);
       } catch {
         process.stderr.write("CAPHUB_WORKER_TICK_UNAVAILABLE\n");

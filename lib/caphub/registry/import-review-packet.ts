@@ -1,4 +1,5 @@
 import type { Pool, PoolClient } from "pg";
+import { markImportedRetention } from "../automation/retention";
 import { analysisJobSchema, reviewPacketSchema } from "../analysis/schemas";
 import { canonicalJson, digestCanonicalJson } from "../analysis/digest";
 import type { AnalysisJob, ReviewPacket, StageArtifact } from "../analysis/types";
@@ -347,6 +348,7 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
             throw new ReviewPacketImportError("IMPORT_DIGEST_CONFLICT");
           }
           const repaired = waitingJob(job, requestId, manifest.imported_at);
+          await markImportedRetention(dependencies.pool, capture.id, new Date(manifest.imported_at));
           await ensureRegistryWaitingJob(dependencies.pool, repaired);
           if (canonicalJson(repaired) !== canonicalJson(job)) await dependencies.jobs.put(repaired);
           return { requestId, job: repaired };
@@ -416,6 +418,7 @@ export function createReviewPacketImporter(dependencies: ReviewPacketImporterDep
             VALUES ($1,$2,$3,$4::jsonb,$5,$6)
           `, [manifest.id, manifest.source_review_packet_id, manifest.source_review_packet_digest,
             canonicalJson(manifest), manifest.review_request_id, manifest.imported_at]);
+          await markImportedRetention(client, capture.id, new Date(importedAt));
           const auditId = derivedId("rae_", { import_id: manifest.id, type: "registry.imported" });
           await client.query(`
             INSERT INTO caphub.audit_events

@@ -1,4 +1,5 @@
 import "server-only";
+import { withObjectLock } from "../automation/retention";
 
 import { loadControlHostConfig } from "../../planning/config";
 import { createPackagedTesseractRecognizer, decodeBarcodesWithZxing } from "../preprocess/image";
@@ -71,7 +72,9 @@ export async function loadControlHostAnalysisService(options: {
   return createAnalysisService({
     config: { caphubEnabled: caphub.enabled, analysisEnabled: caphub.analysis.enabled },
     captures,
-    readObject: (capture) => objects.readImmutable(capture.object),
+    readObject: (capture) => registry
+      ? withObjectLock(registry.pool, capture.object.digest, () => objects.readImmutable(capture.object))
+      : objects.readImmutable(capture.object),
     preprocessDependencies: {
       recognizeText: createPackagedTesseractRecognizer("eng"),
       decodeBarcodes: decodeBarcodesWithZxing
