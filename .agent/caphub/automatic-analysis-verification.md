@@ -30,6 +30,18 @@ Final screenshots: `automatic-analysis-screenshots/production-v6-review-1440.png
 
 The earlier full-suite result at `1adfabf` was 196 files / 1653 tests PASS. Canary-driven fixes through `766f850` were each covered with focused RED→GREEN regression tests plus typecheck, lint and a fresh production build; the full suite was not rerun after those focused fixes. A later temporary-PostgreSQL fixture attempt was blocked by the host's exhausted SysV shared-memory slots, so it is not reported as a pass. The real production boundary and affected non-PostgreSQL regressions passed.
 
+## Post-release read-only attestation — 2026-09-19
+
+Recorded during the documentation reconciliation, using read-only inspection only (no service, configuration or data change):
+
+- Deployed `.next/BUILD_ID` in `.worktrees/caphub-release`: `2SphQwG3WEBcTQVhB4U7I` (built 2026-09-19 00:55 +08). The earlier IDs in this file belong to local candidates.
+- Control Host flags (booleans only): `caphub.enabled`, `registry.enabled`, `analysis.enabled`, `analysis.autoStart`, `retention.enabled`, `exports.enabled` and `exports.obsidian.enabled` are true. Codex/Claude/Hermes targets are absent, so they default to false.
+- The Human Owner stated that export and Obsidian have not been verified. Gate P4-A is not passed. No dry-run diff, publish or rollback has been approved or performed.
+- Installed `com.agentjoey.alljobs` and `com.agentjoey.alljobs-caphub` plists are mode 0600, `KeepAlive=true`, `RunAtLoad=true`, with `WorkingDirectory` `.worktrees/caphub-release`. All environment keys are non-empty.
+  - Worker environment keys: `ALLJOBS_HOME`, `CAPHUB_DATABASE_URL`, four `CAPHUB_S3_*` keys, `DEEPSEEK_API_KEY`, `MINIMAX_API_KEY`, `NODE_ENV`, `PATH`. No migrator credential.
+  - App environment keys: the same set plus `CAPHUB_MIGRATION_DATABASE_URL`, without `ALLJOBS_HOME` or `NODE_ENV`. The migrator credential is therefore present in the web process; this is recorded as an optimisation item, not changed.
+- Test evidence boundary: the full suite (196 files / 1653 tests) is recorded at `1adfabf` only. No full run is recorded at `766f850` or later.
+
 ## Checks
 
 ## Final local acceptance — supersedes intermediate pending notes below

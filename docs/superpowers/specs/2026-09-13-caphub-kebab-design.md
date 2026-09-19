@@ -11,6 +11,8 @@
 - 开发位置：Y-MMN `/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
 - Git 约束：沿用 AllJobs 当前 GitHub 远程，不迁移或替换远程仓库
 
+> 2026-09-19 校准：本文是原始总体设计。已实现并上线的部分以 Web 上传为唯一入口（Telegram 未实现，见 Notion AJ-002），模型为 MiniMax M3 + DeepSeek `deepseek-flash`（Kimi 已退出运行时）。Caphub 产品方向正在重新设计（Notion AJ-001），重新设计结论产生前本文不作为新开发的依据。当前状态见 `.agent/CURRENT.md` 顶部 “Current state”。
+
 ## 1. 摘要
 
 Caphub 是一个面向个人 Agent 工作流的能力采集、分析、筛选、注册、发布和持续运营系统。`kebab` 是其开发与内部追踪代号，不作为面向用户的模块名称。

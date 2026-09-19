@@ -1,6 +1,6 @@
 # Caphub（kebab）实施主路线图
 
-- 状态：P1 已验收；P2-C fixture 实现已完成；P2-A live structured output 仍未证明；P3 已合并并以 safe-off 配置部署，Capture-only 试用已获单独授权；P4 本地 implementation 已通过 Codex 验收；P1–P4 Neon activation implementation 与 scoped independent Review/Verification 已通过，等待 N1/PA-B-N 的逐项 Production 授权；P4-A/P4-B/P4-C 未动
+- 状态（2026-09-19 校准）：P0–P4 与 P1–P4 Production activation 已上线；自动分析工作台已上线（代码 `766f850`）。P4-A/P4-B/P4-C 未通过：导出与 Obsidian 目标在生产配置中为开启，但尚未验证，不得视为已批准。P5.1 spec 已批准但开发计划与实现暂缓；P5.2、P6 暂缓；Caphub 产品方向正在重新设计（Notion AJ-001）。当前状态唯一权威为 `.agent/CURRENT.md` 顶部 “Current state” 小节；以下各阶段的日期化 evidence 段落为历史记录。
 - 日期：2026-09-14
 - Canonical spec：`docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
 - 开发 checkout：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
@@ -11,6 +11,8 @@
 已批准设计包含七个可独立拒绝或批准的子系统：现有 Backlog 产品退役、Capture foundation、模型/provider 与分析流水线、审批/Registry、Obsidian/导出、自研移交、Runtime/eval/update。它们不能放进一个执行计划。每个阶段必须拥有独立详细计划、测试闭环、review/verification 证据、Human Gate 和回滚点；P0 与 P1 的详细计划随本路线图提供，P2–P6 只能在各自前置条件满足后另写计划。
 
 ## 全局不可变约束
+
+> 2026-09-19 校准：以下关于 Kimi（Research、Kimi Code、双认证模式）的约束记录的是原始设计。当前运行时已由 DeepSeek `deepseek-flash` 取代 Kimi 承担研究/评估（见 `docs/superpowers/specs/2026-09-18-caphub-deepseek-provider-replacement-design.md`），Kimi provider 代码未被生产路径引用；是否保留 Kimi 实现角色留待 Caphub 重新设计决定。
 
 - 第一期所有发布、更新和自研投入均须人工审批。
 - MiniMax 在 Worker 与工具注册层 hard deny 代码实现、文件写入、Shell、Git、安装、部署和发布。
@@ -279,6 +281,8 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - P5/P6、自研能力、真实 Obsidian/Agent root、Deployment plan、publish/install/rollback 均不进入本轮。
 - Tasks 0–8 已在隔离分支完成并通过 PA-A：Next.js `16.3.3`、Unix-socket PostgreSQL contracts、checksum migrations、filesystem Capture import、备份/隔离恢复、Registry-native analysis import、Release compose/finalize、单条 P1–P4 fixture pilot、最终 build 截图、metadata-only preflight、threat model 与 runbook。最终门禁为 167 files / 1430 tests、typecheck PASS、lint 0 errors / 79 warnings、webpack Production build PASS、deployment invariants PASS、pilot E2E 1/1；三项 scoped Review finding 已在 `5b434f4` 修复，fix-only Review 与独立 Verification 均 PASS。Linear 因 workspace free-plan issue limit 未能更新，不声明 Linear 完成。
 
+> 2026-09-19 校准：本节 N1–N4、PA-B、PA-C、PA-D 均已完成并上线；下方 “PA-C 和 PA-D 未执行”、Kimi canary 与 “exports master 只用于 read-only” 等表述为激活当时的历史状态。
+
 **执行边界**
 
 - implementation 先补齐 Next.js `16.3.3` 安全基线、本地 Unix-socket Registry、filesystem Capture migration、备份/恢复、analysis→ReviewPacket import 和 Release compose/finalize operator bridge。
@@ -370,6 +374,6 @@ P5.1 实现 `BuildProposal -> Human approval -> ImplementationHandoff -> externa
 
 自动分析工作台已上线：Neon migration/backfill、单并发 worker、同名冲突人工确认、Caphub 内 Review、快速读取和成功导入后 30 天原图清理均已启用。真实 MiniMax + DeepSeek canary 完成并生成 `waiting_for_review` 请求；相同文件名/相同内容重复上传复用 canonical Capture 且没有新增模型调用。生产 Review/queue 性能预算、最终截图、Linear AGE-252 和证据记录均完成。应用代码 SHA 为 `766f8504b703dea86d0bd487aa607941a917aa79`；详见 `.agent/caphub/automatic-analysis-verification.md`。
 
-P5.1 已批准设计并进入下一开发阶段，canonical spec 为 `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`。下一步先写独立 executable development plan，再按 disabled-by-default、无代码执行、只读 Git 复核边界实现。P5.2 builder 与 P6 状态不变。
+P5.1 设计已批准并保留，canonical spec 为 `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`；其 development plan 与实现已被 Human Owner 明确暂缓（2026-09-19），不得据此启动 P5 开发。P5.2 builder 与 P6 同样暂缓。当前优先级是整理已上线能力并重新设计 Caphub 产品方向。
 
 Caphub MVP 只有在 P0–P5 均通过各自 Human release gate，且设计文档第 22 节验收条件全部具备运行证据时才可宣称完成。P6 是持续运营能力；其首个受控 release 通过后进入持续迭代，但任何 UpdateProposal 仍保留人工审批。阶段文档、代码、测试、build、截图、review 和 production smoke 必须绑定同一 exact commit/build。

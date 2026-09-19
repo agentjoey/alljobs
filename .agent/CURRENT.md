@@ -1,15 +1,92 @@
 # Current Status — alljobs
 
+## Current state — authoritative (reconciled 2026-09-19)
+
+This section is the only current-state authority. Every other section in this
+file is dated chronology; when it conflicts with this section, this section wins.
+
+**Production (Control Host, single machine)**
+
+- Services: `com.agentjoey.alljobs` (Next.js on `127.0.0.1:3456`),
+  `com.agentjoey.alljobs-caphub` (Caphub worker, `tsx` from source, `--daemon`),
+  `com.agentjoey.alljobs-refresh`, `com.agentjoey.cloudflared` (Tunnel + Access OTP).
+- `com.agentjoey.alljobs` and `com.agentjoey.alljobs-caphub` use
+  `WorkingDirectory` `.worktrees/caphub-release`; `com.agentjoey.alljobs-refresh`
+  runs from the main checkout, so edits or pulls there reach the refresh worker.
+  `.worktrees/caphub-release` **is production**: never pull,
+  checkout, install, build or edit there outside an authorized release. The
+  worker executes its TypeScript source directly, so any change to that tree is
+  picked up on the next worker restart (`KeepAlive=true`) even without an app
+  rebuild. Use a separate worktree for inspection and development.
+- Application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`; deployed
+  `.next/BUILD_ID` `2SphQwG3WEBcTQVhB4U7I` (built 2026-09-19 00:55 +08).
+  The production checkout HEAD later moved to `a6a3c62` (docs and
+  `lib/planning/config.test.ts` only beyond `766f850`), so running code is
+  still the `766f850` release.
+- Data: Neon PostgreSQL Registry (`caphub` database, migrations 001–004) and
+  private Neon Object Storage bucket `caphub-objects`. Planning Core still uses
+  native Markdown plus read-only Git mirrors.
+- Models: MiniMax `MiniMax-M3` (visual observation, web search, critic) and
+  DeepSeek `deepseek-flash` (structuring, research, assessment), Analysis
+  Contract V4. Kimi is retired from runtime; its provider code is unused.
+
+**Caphub control-host flags (read-only attestation 2026-09-19, values only)**
+
+| Flag | Value | Status |
+|---|---|---|
+| `caphub.enabled`, `registry.enabled` | true | live |
+| `analysis.enabled`, `analysis.autoStart` | true | live, one worker, concurrency 1 |
+| `retention.enabled` | true | live; first real deletion due on or after 2026-10-18T17:00:50Z |
+| `exports.enabled`, `exports.obsidian.enabled` | true | **configured but NOT verified** — Gate P4-A has not passed |
+| `exports.targets.{codex,claude,hermes}` | absent (default false) | off |
+
+Obsidian Vault `Caphub` (alias `3b0bc2e2318652e8`) is configured only. The
+Human Owner confirmed on 2026-09-19 that export and Obsidian have not been
+verified: no dry-run diff, publish or rollback has been approved or performed.
+Consequence of the current flags: rendering `/capabilities/[id]` reads the
+configured Vault root for a projection plan (read-only). Any Vault write
+still requires `caphub:publish` with an exact plan and confirmation phrase,
+which remains behind P4-A/P4-B/P4-C.
+
+**Product path that is live:** `/caphub` upload → filename-aware dedup/conflict
+confirmation → durable queue → worker V4 analysis → ReviewPacket import →
+`/caphub/reviews` queue and `/caphub/reviews/[id]` decision → Registry.
+Legacy `/reviews` and `/captures/:id` only redirect. Two Review Requests
+await Human review: `rev_3425a9e3af96c3452aa6a4236691ff8a` (automation canary)
+and `rev_5c95aa800c6562f7c6b14fb71dbb1454` (earlier V4 canary).
+
+**Evidence:** full Vitest 196 files / 1653 tests PASS was recorded at
+`1adfabf`. Fixes through `766f850` were verified with focused regressions,
+typecheck, lint (0 errors / 79 existing warnings) and a production build; the
+full suite has not been re-recorded on `766f850` or later.
+
+**Deferred / not started:** P5.1 spec approved but its development plan and
+implementation are deferred; P5.2 builder and P6 are deferred. The Caphub
+product direction is being re-designed (Notion `alljobs backlog` AJ-001) before
+any further phase work.
+
+**Work tracking:** the Human Owner's alljobs product backlog is the Notion
+database `alljobs backlog` (AJ-001 Caphub re-design, AJ-002 Telegram front end,
+AJ-003 header consolidation, AJ-004 post-analysis image deletion — already
+live as 30-day retention, AJ-005 cloud deployment).
+
+**Current authorities:** this section;
+`docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md` (phase map);
+`docs/superpowers/specs/2026-09-18-caphub-automatic-analysis-workbench-design.md`
+(live product flow); `.agent/caphub/automatic-analysis-verification.md`
+(release evidence); `docs/deployment.md` and `docs/operations.md` (operations).
+
 ## Latest follow-up — 2026-09-19 automatic analysis production release
 
 Caphub automatic analysis is live on the Control Host at application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`. Neon migration 004 and the unambiguous filename backfill are applied; `com.agentjoey.alljobs-caphub` is running with automatic analysis and bounded 30-day retention enabled. The private Obsidian target is Vault `Caphub`, alias `3b0bc2e2318652e8`. Real MiniMax + DeepSeek canary `cap_c347f87046c2409580633201ec5d6ba6` completed as Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`; identical re-upload reused the canonical Capture without another model call. The first retention sweep had zero eligible objects. See `.agent/caphub/automatic-analysis-handoff.md` and `automatic-analysis-verification.md` for exact evidence and limitations.
 
-Current integration is fully green at 196 Vitest files / 1653 tests after aligning the visual-observation config regression test with the production 4096-token ceiling. The immediate priority is not P5 development: first consolidate and optimize the capabilities already built, reconcile current versus historical documentation, and identify focused product, performance, operations, and maintainability improvements. The approved P5.1 Manual Implementation Handoff spec remains recorded at `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`, but its development plan and implementation are explicitly deferred. P5.2 automatic builder and P6 runtime/evals/update watcher also remain deferred. Historical sections below are chronology, not current instructions.
+The last recorded full run is 196 Vitest files / 1653 tests at `1adfabf`; the later visual-observation config test alignment was verified as a focused check, not a recorded full run. The immediate priority is not P5 development: first consolidate and optimize the capabilities already built, reconcile current versus historical documentation, and identify focused product, performance, operations, and maintainability improvements. The approved P5.1 Manual Implementation Handoff spec remains recorded at `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`, but its development plan and implementation are explicitly deferred. P5.2 automatic builder and P6 runtime/evals/update watcher also remain deferred. Historical sections below are chronology, not current instructions.
 
-Version:        v1.0.0 (Planning Core V1 live and healthy)
-Phase:          Planning Core V1 — Live Production
-Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
-Last Updated:   2026-09-19 by Codex during Caphub automatic-analysis production rollout
+## History — everything below is dated chronology, not current instructions
+
+Historical header (2026-08-28 release): Version v1.0.0, Planning Core V1 Tasks
+0–14 complete. For live services, flags and evidence use the current-state
+section above.
 
 ## Current decision
 
@@ -37,7 +114,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - Verification record: `.agent/frontend-design/planning-core-v1/verification.md`
 - Independent review packet: `.agent/frontend-design/planning-core-v1/review-packet.md`
 
-## Live Services on Control Host
+## Live Services on Control Host (Planning Core V1 release record, 2026-08-28)
 
 - **App Listener (`com.agentjoey.alljobs`)**: Running on `127.0.0.1:3456`
 - **Refresh Worker (`com.agentjoey.alljobs-refresh`)**: Running bare mirror sync every 300s
@@ -221,6 +298,8 @@ successful 1024-token contract diagnosis below.
 | v0.1.0 | 2026-08-12 | Retired and offline | Legacy multi-project activity ledger; removed from the current tree and retained only by Git history plus `archive/v0.1.0-retired` |
 | v1.0.0 | 2026-08-28 | Live in Production | Greenfield rebuild of AllJobs Federated Planning Core with Paper Workbench UI, zero DB, safe Git bare mirrors, and digest protection |
 | P0 retirement | 2026-09-14 | Live in Production | Removed R1 Backlog management and proposal paths; retained repository Backlog solely as read-only evidence under Linear ownership |
+| Caphub P1–P4 activation | 2026-09-17/18 | Live in Production | Neon Registry + Object Storage, Capture, Review Center, read-only P4 surfaces; V4 analysis with MiniMax + DeepSeek |
+| Caphub automatic analysis | 2026-09-19 | Live in Production | Code `766f850`, BUILD_ID `2SphQwG3WEBcTQVhB4U7I`; worker, filename dedup, Caphub Review routes, 30-day raw-image retention |
 
 ## DeepSeek provider replacement — local implementation verified (2026-09-18)
 

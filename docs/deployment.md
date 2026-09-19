@@ -1,6 +1,9 @@
-# Deployment — AllJobs Planning Core V1
+# Deployment — AllJobs Control Host (Planning Core V1 + Caphub)
 
-Single Control Host deployment with local Next.js + background planning refresh worker + Cloudflare Tunnel & Zero Trust Access.
+Single Control Host deployment: local Next.js, the planning refresh worker, the
+Caphub analysis/retention worker, Neon-managed Caphub data, and Cloudflare
+Tunnel & Zero Trust Access. Current flags and versions are recorded only in the
+"Current state" section of `.agent/CURRENT.md`.
 
 ## 1. Single Control Host Architecture
 
@@ -9,20 +12,26 @@ Internet → Cloudflare Access (Email OTP) → Cloudflare Tunnel (cloudflared)
                                                  ↓
                                          127.0.0.1:3456
                                                  ↓
-                                      Next.js 16 (App Router)
-                                        ├── Read Projections (Local Markdown & Mirrors)
-                                        └── Native Task Writes (Atomic sha256 lock)
-                                                 ↑
-                                      com.agentjoey.alljobs-refresh (launchd worker)
-                                        └── Git fetch & mirror refresh (no shell / -c core.hooksPath=/dev/null)
+                              com.agentjoey.alljobs — Next.js 16 (next start)
+                                ├── Planning Core: native Markdown + read-only Git mirrors
+                                └── Caphub routes ──TLS──> Neon PostgreSQL (caphub Registry)
+                                                  ──S3───> Neon Object Storage (caphub-objects)
+     com.agentjoey.alljobs-refresh — Git fetch & mirror refresh
+     com.agentjoey.alljobs-caphub  — Caphub worker (tsx from source, no listener)
+        ├── durable analysis queue → MiniMax (MiniMax-M3) + DeepSeek (deepseek-flash)
+        └── hourly 30-day raw-image retention → exact-key S3 delete
+     Obsidian Vault (optional export target) — written only by the confirmation-gated
+        `caphub:publish` CLI; never by the app or worker
 ```
 
 ## 2. Invariants & Security Boundaries
 
 1. **Mandatory Loopback Binding (`-H 127.0.0.1`)**: Next.js binds `127.0.0.1:3456` exclusively. The service is never directly exposed to the local network.
-2. **Zero Database**: Pure AllJobs-native Markdown (`data/`) + read-only Git bare mirrors (`~/.alljobs/mirrors/`).
+2. **Planning Core has no database**: native Markdown (`data/`) + read-only Git bare mirrors (`~/.alljobs/mirrors/`). Caphub is the only module with a database (Neon PostgreSQL) and object storage.
 3. **No Shell Git Boundary**: Git operations use `execFile` with `-c core.hooksPath=/dev/null`.
 4. **Digest-Protected Writes**: Native writes require matching Expected Digest (`STALE_WRITE` guard).
+5. **Secrets only in installed LaunchAgents**: Registry, object-storage and provider credentials live only in the mode-`600` installed plists' `EnvironmentVariables`; `config.json` holds environment-variable names, never values.
+6. **Production working directory**: `com.agentjoey.alljobs` and `com.agentjoey.alljobs-caphub` run from `.worktrees/caphub-release`; `com.agentjoey.alljobs-refresh` runs from the main checkout. It is a release artifact, not a workspace — see §4.
 
 ## 3. Services Management (launchd)
 
@@ -73,39 +82,38 @@ Internet → Cloudflare Access (Email OTP) → Cloudflare Tunnel (cloudflared)
 - Ingress: `alljobs.agentjoey.ai` → `http://localhost:3456`
 - Catch-all: `http_status:404`
 
-### Caphub local Registry (`com.agentjoey.alljobs-caphub-postgres`)
+### Caphub worker (`com.agentjoey.alljobs-caphub`)
+- Template: `deploy/com.agentjoey.alljobs-caphub.plist` (committed `Disabled=true`, `RunAtLoad=false`; the installed copy is enabled).
+- Command: `node --conditions=react-server --import tsx scripts/caphub-worker.ts --daemon`, working directory `.worktrees/caphub-release`.
+- Logs: `~/.alljobs/logs/caphub-worker{,-error}.log`.
+- Runs analysis only when `caphub.enabled`, `analysis.enabled` and `analysis.autoStart` are all true; runs the retention sweep hourly only when `caphub.enabled`, `caphub.registry.enabled` and `caphub.retention.enabled` are true (otherwise it logs `CAPHUB_RETENTION_TICK_UNAVAILABLE`). It opens no listener and does not need the migrator credential.
+- `npm run verify:deploy` checks the committed templates only. It does not inspect the installed plists; compare their key structure separately without printing values.
 
-The committed plist is a reviewed template, not an installed service. The
-initial P1–P4 activation uses PostgreSQL 17 with a private Control Host Unix
-socket, `listen_addresses = ''`, `0700` socket permissions, peer mapping, and
-separate application/migration roles. PA-B is required before resolving the
-template, creating or starting the real cluster, installing/reloading the
-LaunchAgent, changing the installed config, or placing database/provider secret
-references into the application environment.
-
-Run `npm run verify:deploy` and `npm run caphub:preflight` from the exact
-accepted build before requesting PA-B. Stopping the Production listener for S1
-also needs an explicit safe-off maintenance action. PA-D is separately required
-before rebuilding/reloading the application into S3/S4. The Caphub rollout must not
-restart or modify the refresh worker, Tunnel, Access policy, domain, or the
-mandatory `127.0.0.1:3456` listener. Full commands and rollback behavior are in
-the [Production activation runbook](../.agent/caphub/production-activation-runbook.md).
+### Caphub data services (Neon)
+- Registry: Neon PostgreSQL `caphub` database over `tls_verify_full`; migrations `001`–`004` applied. The accepted privilege boundary is `neon_project_admin_accepted` (see `docs/superpowers/specs/2026-09-18-caphub-neon-privilege-boundary-revision.md`).
+- Objects: private bucket `caphub-objects`, path-style S3, content-addressed keys.
+- The local PostgreSQL 17 template `deploy/com.agentjoey.alljobs-caphub-postgres.plist` belongs to the superseded local-Registry plan (scheme A). It is not installed and is not part of the current deployment.
 
 ## 4. Operational Recovery & Rollback
 
-- **Non-destructive Update**:
+- **Release rule for `.worktrees/caphub-release`**: it is the production working directory for both the app build and the worker source. Develop, inspect and test in a separate worktree. Only an authorized release may move this worktree to the exact reviewed commit, run `npm ci` and `npm run build`, and then reload the services. Because the worker runs source directly, any change there reaches the worker on its next restart (`KeepAlive=true`), even without an app rebuild.
+- **Non-destructive Update** (authorized release only):
   ```bash
-  git checkout feature/planning-core-v1
+  cd .worktrees/caphub-release
+  git checkout --detach <reviewed-commit>
   npm ci
   npm run build
   launchctl unload ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
   launchctl load ~/Library/LaunchAgents/com.agentjoey.alljobs.plist
+  launchctl unload ~/Library/LaunchAgents/com.agentjoey.alljobs-caphub.plist
+  launchctl load ~/Library/LaunchAgents/com.agentjoey.alljobs-caphub.plist
   ```
+  Record the new code SHA and `.next/BUILD_ID` in `.agent/CURRENT.md`.
 
-### Caphub automatic analysis workbench (pending production authorization)
+### Caphub automatic analysis workbench (released 2026-09-19 — rollout record and rollback)
 
-Use the separately reviewed automation build; never build inside the currently
-running `.worktrees/caphub-release`. Migration `004_capture_automation` is additive.
+The rollout below was completed on 2026-09-19 (code `766f850`). It is kept as the
+reference procedure and rollback path. Migration `004_capture_automation` is additive.
 Before mutation run `npm run caphub:preflight -- --automation` and
 `npm run caphub:automation-backfill` in the private host environment. Neither
 command invokes providers or removes objects. Apply migrations using the existing
@@ -149,9 +157,10 @@ domain. To roll back application behavior, restore the previously approved
 application commit/build and reload only that same listener; repository Roadmap,
 Backlog, and native Task files are not R2 rollback targets.
 
-- **Emergency Rollback**:
-  The retired v0.1 release is tagged at `archive/v0.1.0-retired`. In the event of an unrecoverable failure:
+- **Emergency Rollback (Planning Core only, last resort)**:
+  The retired v0.1 release is tagged at `archive/v0.1.0-retired`. It predates Caphub entirely: it has no Caphub routes, worker, Registry or retention. Before using it, stop the Caphub worker and set Caphub safe-off; never treat it as a Caphub rollback. For Caphub, roll back to the previously approved Caphub build using the automatic-analysis rollback above. In the event of an unrecoverable Planning Core failure, run from the checkout that `com.agentjoey.alljobs` uses:
   ```bash
+  launchctl unload ~/Library/LaunchAgents/com.agentjoey.alljobs-caphub.plist
   git checkout archive/v0.1.0-retired
   npm ci
   npm run build

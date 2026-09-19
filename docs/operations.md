@@ -21,91 +21,59 @@ npm run planning:refresh -- --once
 - Native data files live under `./data/` (Markdown and JSON). Back up directory using standard Time Machine / filesystem backups.
 - Mirrors live under `~/.alljobs/mirrors/` and can be reconstructed at any time by refreshing from remotes.
 
-## Caphub P1 Quick Operations
+## Caphub Operations (current)
 
-The detailed [Caphub P1 custody and operations guide](caphub-foundation.md) is
-the authority for the resolved state tree, request limits, idempotency, audit
-repair, backup/recovery checks, and code-versus-data rollback boundary.
+Current flags, versions and gate status: the "Current state" section of
+`.agent/CURRENT.md`. Day-to-day upload, analysis and retention commands:
+"Caphub upload, analysis and image retention" below.
 
-### Safe-off
-
-Caphub is disabled unless the strict Control Host block explicitly sets
-`caphub.enabled: true`. For an incident or planned backup, stop capture writes
-first by returning the module to disabled state through a separately approved
-configuration procedure and obtain read-only operational confirmation that no
-Caphub writer is accepting requests. The default safe-off/backup procedure does
-not send a live capture POST. Do not change the Tunnel, Access policy, loopback
-binding, or another AllJobs module as part of Caphub safe-off.
-
-This section does not authorize a production configuration change, service
-restart/reload, re-enable action, deployment, or live smoke test. Those remain
-under their applicable Human Gate.
-
-### Backup and recovery
-
-- Resolve the one exact absolute `<ALLJOBS_HOME>/state/caphub` path from the
-  active Control Host configuration. Reject unresolved, symlinked, broadened,
-  or guessed paths.
-- With writes stopped, back up the entire resolved Caphub root as one
-  consistency unit. Preserve ownership, permissions, byte content, and
-  symlink safety; never copy only objects, records, or events.
-- Restore only while Caphub remains disabled, only into that exact resolved
-  root, and only as a complete backup unit. Do not combine files from different
-  backup times.
-- Before any separately approved re-enable decision, validate owner-controlled
-  non-symlink directories, file modes, strict Capture/index schemas,
-  idempotency target/key pairs, object digests and sizes, and every monthly
-  NDJSON event. Preserve and escalate any unindexed Capture, unreferenced
-  object, missing deterministic event, duplicate event ID, or partial tail;
-  do not hand-edit or remove it.
-- A code rollback preserves Caphub data. Data migration, retention, or disposal
-  is a separate destructive operation requiring its own plan and explicit
-  Human authorization.
-
-Never operate on `~`, `$HOME`, `/`, a glob, an unresolved environment variable,
-or an operator-guessed directory. Caphub P1 has no delete API and no operational
-cleanup step.
-
-### Incident triage
-
-1. Return Caphub to safe-off and preserve the complete state root and relevant
-   metadata-only logs as evidence.
-2. Classify the bounded public error: configuration/disabled, origin, request
-   validation, idempotency conflict, storage unavailable, or audit failure.
-3. For an uncertain POST or audit failure, keep the original image, filename,
-   MIME type, note, source URL, and idempotency key unchanged. Same-key retry
-   is a stable duplicate/audit-healing operation only after the matching index
-   is known durable under the single active writer process. A failure before
-   index finalization can leave an object or unindexed Capture; multiple writer
-   processes are unsupported and can leave orphan/duplicate evidence.
-4. If index durability or custody validation is uncertain, remain safe-off and
-   escalate before any separately approved retry. Do not hand-edit
-   Capture JSON, idempotency indexes, object bytes, or audit lines, and do not
-   expose secrets, raw bytes, idempotency keys, or host paths in reports.
-
-### P1–P4 Production activation
-
-The canonical operator checklist is
-[`.agent/caphub/production-activation-runbook.md`](../.agent/caphub/production-activation-runbook.md).
-Before PA-B, only the metadata-only inventory is permitted:
+### Health checks (read-only)
 
 ```bash
-npm run verify:deploy
-npm run caphub:preflight
+launchctl list | rg "com\.agentjoey\.alljobs-caphub"      # worker running
+tail -n 20 ~/.alljobs/logs/caphub-worker-error.log          # metadata-only errors
+npm run caphub:preflight -- --automation                     # migration, queue, flags, due targets
+npm run caphub:retention                                     # dry run: due digests, no deletion
 ```
 
-`caphub:preflight` accepts no flags and prints only allowlisted metadata. For
-the current pilot it must report `enabledTargets: []`. It does not mutate the
-configuration, filesystem Capture source, database, backup, provider, service,
-or target roots, and it does not replace the isolated backup restore drill.
+Run these from a non-production worktree pointed at the same `ALLJOBS_HOME`
+only when the private environment is available; never run `git pull`,
+`npm ci` or a build inside `.worktrees/caphub-release` to perform a check.
 
-PA-B controls the real local PostgreSQL cluster, LaunchAgent, configuration,
-secret environment, migrations, Capture import, and backup; stopping the app
-for S1 needs an explicit safe-off maintenance action as well. PA-D controls the
-application rebuild/reload and S3/S4 cutover. PA-C controls the one real Kimi
-canary and first real analysis; it permits no retry. P4 target gates remain
-closed. On failure, return/keep Caphub safe-off and preserve all database,
-filesystem, backup, and provider evidence without deletion.
+### Safe-off and rollback order
+
+1. Set `caphub.analysis.autoStart=false` and `caphub.retention.enabled=false`
+   in the Control Host config, then stop only `com.agentjoey.alljobs-caphub`.
+2. If export targets must be disabled, set `caphub.exports.enabled=false`;
+   this has no effect on Capture, analysis or Review.
+3. If application behavior must be reverted, restore the previously approved
+   Caphub build (see `docs/deployment.md`) and reload only
+   `com.agentjoey.alljobs`.
+4. Keep migration 004, queue rows, Registry records and audit events. Never
+   clear an audit event to force a provider replay. Raw images already deleted
+   by retention cannot be restored from Registry metadata.
+
+Each of these is a production configuration or service change and needs
+explicit Human authorization naming it. The Tunnel, Access policy, refresh
+worker, domain and loopback listener are not part of Caphub safe-off.
+
+### Data custody
+
+- Registry: Neon PostgreSQL. Recovery uses Neon point-in-time or branch
+  restore; the recovery-branch proof is recorded in
+  `.agent/caphub/production-activation-log.md`.
+- Objects: Neon bucket `caphub-objects`, content-addressed. Retention deletes
+  only an exact eligible key, 30 days after successful Registry import.
+- The pre-Neon local Capture tree under `<ALLJOBS_HOME>/state/caphub` is a
+  read-only historical rollback source. It is not written by production.
+
+### Historical procedures
+
+The P1 filesystem custody guide (`docs/caphub-foundation.md`) and the P1–P4
+activation runbook (`.agent/caphub/production-activation-runbook.md`) describe
+the pre-Neon filesystem stage and the completed PA-B/PA-C/PA-D activation. They
+are historical. In particular, "Caphub has no delete API" and "PA-C controls
+the one real Kimi canary" are no longer true.
 
 ## Backlog Retirement Operations
 
@@ -287,7 +255,7 @@ is a separate, explicitly confirmed operation.
   useful-content timings; a loading shell is not success. Private routes must not
   be publicly cached.
 
-### Pending Human gates
+### R5 pending Human gates (recorded at R5 implementation)
 
 The following remain Human-owned and are NOT performed by the implementation:
 selecting the pilot binding, creating/scoping production credentials, live

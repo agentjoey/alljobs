@@ -7,6 +7,8 @@
 - **Roadmap phase:** P3 — Review Center and PostgreSQL Registry
 - **Linear:** AGE-252
 
+> 2026-09-19 note: the routes in §6 were superseded by `docs/superpowers/specs/2026-09-18-caphub-automatic-analysis-workbench-design.md` §4. The live Review routes are `/caphub/reviews` and `/caphub/reviews/[id]`, and Capture detail lives at `/caphub/captures/[id]`. `/reviews` and `/captures/[id]` now only redirect. The Registry model, decision semantics and migration rules here remain current.
+
 ## 1. Decision and scope
 
 P3 makes PostgreSQL the authoritative metadata, workflow, decision, audit, and lineage store for Caphub while preserving content-addressed screenshot bytes behind the existing object-store port. It adds a unified Human Review Center for Candidate, Build, Implementation, Release, and Update review requests. Only Candidate review requests are produced by the P2-to-P3 bridge in this phase; the other request kinds are schema and UI states for later producers.

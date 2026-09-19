@@ -1,5 +1,7 @@
 # Claude handoff — Caphub current-state orientation
 
+> 2026-09-19: this orientation was completed. Its findings produced the documentation reconciliation on branch `codex/caphub-doc-truth`. The next step is the Caphub re-design (Notion AJ-001), not P5.
+
 Copy the prompt below into a new Claude Code session.
 
 ---
@@ -8,14 +10,14 @@ Copy the prompt below into a new Claude Code session.
 
 仓库：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
 
-使用现有干净工作树进行只读检查：
+`.worktrees/caphub-release` 是生产工作目录（app build 与 worker 源码都从这里运行），**不得**在其中 pull、checkout、安装依赖或 build。只读检查请使用独立的只读视图，例如：
 
-`/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-release`
+`git -C /Users/xtation/AgentWorks/GPT_Workspace/alljobs fetch origin main` 后，用 `git show origin/main:<path>` 读取文件；或由 Human 授权后新建一个 detached 只读 worktree。
 
 开始时：
 
 1. 读取并遵守仓库 `AGENTS.md`。
-2. 在上述干净工作树执行 `git pull --ff-only origin main` 和 `cat .agent/CURRENT.md`。
+2. 读取 `origin/main` 上的 `.agent/CURRENT.md`，以顶部 “Current state” 小节为唯一当前状态权威。
 3. 不要修改主 checkout；其中存在 Human-owned dirty/untracked 文件。
 4. 不创建 branch/worktree，不提交或推送，不修改 Linear，不调用真实 provider，不修改生产配置或服务。
 
