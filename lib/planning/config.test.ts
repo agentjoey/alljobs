@@ -390,7 +390,10 @@ describe("control host Caphub analysis config", () => {
 
     for (const limits of [
       { ...CAPHUB_ANALYSIS_LIMITS, maxImages: CAPHUB_ANALYSIS_LIMITS.maxImages + 1 },
-      { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationOutputTokens: 1_801 },
+      {
+        ...CAPHUB_ANALYSIS_LIMITS,
+        maxVisualObservationOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens + 1
+      },
       { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationBytes: 65_537 },
       { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationOutputTokens: 0 },
       { ...CAPHUB_ANALYSIS_LIMITS, maxVisualObservationBytes: 1.5 },
@@ -428,7 +431,7 @@ describe("control host Caphub analysis config", () => {
       ...legacyLimits
     } = CAPHUB_ANALYSIS_LIMITS;
     expect(controlHostCaphubAnalysisConfigSchema.parse({ limits: legacyLimits }).limits).toMatchObject({
-      maxVisualObservationOutputTokens: 1_800,
+      maxVisualObservationOutputTokens: CAPHUB_ANALYSIS_LIMITS.maxVisualObservationOutputTokens,
       maxVisualObservationBytes: 65_536
     });
   });
