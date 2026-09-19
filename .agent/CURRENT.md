@@ -77,6 +77,14 @@ live as 30-day retention, AJ-005 cloud deployment).
 (live product flow); `.agent/caphub/automatic-analysis-verification.md`
 (release evidence); `docs/deployment.md` and `docs/operations.md` (operations).
 
+### Caphub v2 (AJ-001 / AJ-005) — 2026-09-19
+
+- Separate repo `~/AgentWorks/CodeSpace/Caphub` · GitHub `agentjoey/caphub` (main). Spec and plans live in that repo under `docs/superpowers/`.
+- Railway project `Caphub` (Singapore): `web` at `https://caphub.agentjoey.ai` (Cloudflare Access email OTP + app-side JWT check) and `worker` (queue, retention, later Telegram). Deploys on push to main.
+- Neon project `caphub`: new schema `caphub_v2` (migrations 001–002), app role `caphub_v2_app`; v1 schema `caphub` is read-only and stays until M4.
+- Pipeline decided by A/B/C spike: **B = `mixed`** (MiniMax vision + Tavily search + DeepSeek reason). See `docs/spike-2026-09.md` and `docs/spike-web.md` in the Caphub repo.
+- The v1 Caphub in this repo (routes, `com.agentjoey.alljobs-caphub` worker) is still live until M4 retires it. Linear project: Caphub (M1–M4).
+
 ## Latest follow-up — 2026-09-19 automatic analysis production release
 
 Caphub automatic analysis is live on the Control Host at application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`. Neon migration 004 and the unambiguous filename backfill are applied; `com.agentjoey.alljobs-caphub` is running with automatic analysis and bounded 30-day retention enabled. The private Obsidian target is Vault `Caphub`, alias `3b0bc2e2318652e8`. Real MiniMax + DeepSeek canary `cap_c347f87046c2409580633201ec5d6ba6` completed as Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`; identical re-upload reused the canonical Capture without another model call. The first retention sweep had zero eligible objects. See `.agent/caphub/automatic-analysis-handoff.md` and `automatic-analysis-verification.md` for exact evidence and limitations.
