@@ -18,11 +18,12 @@ file is dated chronology; when it conflicts with this section, this section wins
   worker executes its TypeScript source directly, so any change to that tree is
   picked up on the next worker restart (`KeepAlive=true`) even without an app
   rebuild. Use a separate worktree for inspection and development.
-- Application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`; deployed
-  `.next/BUILD_ID` `2SphQwG3WEBcTQVhB4U7I` (built 2026-09-19 00:55 +08).
-  The production checkout HEAD later moved to `a6a3c62` (docs and
-  `lib/planning/config.test.ts` only beyond `766f850`), so running code is
-  still the `766f850` release.
+- Deployed 2026-09-19 (AJ-003 header consolidation): production checkout
+  detached at `a6c1918`, `.next/BUILD_ID` `RhVEsnyByoj-HnofHebnd`; only
+  `com.agentjoey.alljobs` was reloaded. Caphub runtime code is unchanged since
+  the `766f850` automatic-analysis release (previous BUILD_ID
+  `2SphQwG3WEBcTQVhB4U7I`; app rollback = checkout `a6a3c62`, rebuild, reload).
+  The worker process was not restarted.
 - Data: Neon PostgreSQL Registry (`caphub` database, migrations 001–004) and
   private Neon Object Storage bucket `caphub-objects`. Planning Core still uses
   native Markdown plus read-only Git mirrors.
@@ -300,6 +301,7 @@ successful 1024-token contract diagnosis below.
 | P0 retirement | 2026-09-14 | Live in Production | Removed R1 Backlog management and proposal paths; retained repository Backlog solely as read-only evidence under Linear ownership |
 | Caphub P1–P4 activation | 2026-09-17/18 | Live in Production | Neon Registry + Object Storage, Capture, Review Center, read-only P4 surfaces; V4 analysis with MiniMax + DeepSeek |
 | Caphub automatic analysis | 2026-09-19 | Live in Production | Code `766f850`, BUILD_ID `2SphQwG3WEBcTQVhB4U7I`; worker, filename dedup, Caphub Review routes, 30-day raw-image retention |
+| AJ-003 header | 2026-09-19 | Live in Production | Code `a6c1918`, BUILD_ID `RhVEsnyByoj-HnofHebnd`; header keeps Portfolio / Monitoring / Caphub, Portfolio section nav |
 
 ## DeepSeek provider replacement — local implementation verified (2026-09-18)
 
