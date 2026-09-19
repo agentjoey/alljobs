@@ -1,4 +1,6 @@
-import Link from "next/link";
+import { CAPHUB_SECTION } from "@/components/planning/navigation";
+import { SectionNav } from "@/components/planning/section-nav";
+
 export default function CaphubLayout({children}:{children:React.ReactNode}) {
-  return <><nav className="caphub-subnav" aria-label="Caphub"><Link href="/caphub">Capture</Link><Link href="/caphub/reviews">Reviews</Link></nav>{children}</>;
+  return <><SectionNav label="Caphub" items={CAPHUB_SECTION} />{children}</>;
 }

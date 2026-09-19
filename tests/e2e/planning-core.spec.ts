@@ -12,13 +12,13 @@ test.describe("Planning Core UI Journeys", () => {
   test("navigates to Projects and Register pages", async ({ page }) => {
     await page.goto("/");
 
-    // Navigate to Projects via primary navigation
-    await page.locator("nav.primary-nav").getByRole("link", { name: "Projects" }).click();
+    // Navigate to Projects via the Portfolio section navigation
+    await page.getByRole("navigation", { name: "Portfolio" }).getByRole("link", { name: "Projects" }).click();
     await expect(page).toHaveURL(/.*\/projects/);
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
 
-    // Navigate to Register via primary navigation
-    await page.locator("nav.primary-nav").getByRole("link", { name: "Register" }).click();
+    // Navigate to Register via the Portfolio section navigation
+    await page.getByRole("navigation", { name: "Portfolio" }).getByRole("link", { name: "Register" }).click();
     await expect(page).toHaveURL(/.*\/register/);
     await expect(page.getByRole("heading", { name: "Add Project" })).toBeVisible();
   });

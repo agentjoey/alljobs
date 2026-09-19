@@ -20,11 +20,44 @@ it("identifies Registry custody and keeps reviews under Caphub rather than globa
   expect(screen.getByText("NATIVE: CAPHUB REGISTRY")).toBeVisible();
   const navigation = screen.getByRole("navigation", { name: "Main Navigation" });
   const links = [...navigation.querySelectorAll("a")];
-  expect(links.map((link) => link.textContent?.trim())).toEqual([
-    "Portfolio", "Projects", "Tasks", "Monitoring", "Caphub", "Register", "Archived"
-  ]);
-  expect(screen.getByRole("link", { name: "Caphub" })).toHaveAttribute("aria-current", "page");
+  expect(links.map((link) => link.textContent?.trim())).toEqual(["Portfolio", "Monitoring", "Caphub"]);
+  expect(within(navigation).getByRole("link", { name: "Caphub" })).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByRole("navigation", { name: "Portfolio" })).not.toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Search planning records" })).toBeVisible();
+});
+
+it.each([
+  ["/", "Overview"],
+  ["/projects", "Projects"],
+  ["/projects/alljobs", "Projects"],
+  ["/tasks", "Tasks"],
+  ["/register", "Register"],
+  ["/archived", "Archived"]
+])("groups %s under the Portfolio section", (pathname, currentSection) => {
+  route.pathname = pathname;
+  render(<AppShell><h1>Page</h1></AppShell>);
+  const main = screen.getByRole("navigation", { name: "Main Navigation" });
+  expect(within(main).getByRole("link", { name: "Portfolio" })).toHaveAttribute("aria-current", "page");
+  expect(within(main).getByRole("link", { name: "Monitoring" })).not.toHaveAttribute("aria-current");
+  const section = screen.getByRole("navigation", { name: "Portfolio" });
+  const sectionLinks = [...section.querySelectorAll("a")];
+  expect(sectionLinks.map((link) => [link.textContent?.trim(), link.getAttribute("href")])).toEqual([
+    ["Overview", "/"], ["Projects", "/projects"], ["Tasks", "/tasks"], ["Register", "/register"], ["Archived", "/archived"]
+  ]);
+  expect(sectionLinks.filter((link) => link.getAttribute("aria-current") === "page").map((link) => link.textContent?.trim()))
+    .toEqual([currentSection]);
+});
+
+it.each([
+  ["/monitoring", "Monitoring"],
+  ["/capabilities/cap_x", "Caphub"]
+])("keeps %s outside the Portfolio section", (pathname, current) => {
+  route.pathname = pathname;
+  render(<AppShell><h1>Page</h1></AppShell>);
+  const main = screen.getByRole("navigation", { name: "Main Navigation" });
+  expect(within(main).getByRole("link", { name: current })).toHaveAttribute("aria-current", "page");
+  expect(within(main).getByRole("link", { name: "Portfolio" })).not.toHaveAttribute("aria-current");
+  expect(screen.queryByRole("navigation", { name: "Portfolio" })).not.toBeInTheDocument();
 });
 
 it("isolates Caphub state to each mounted shell and preserves other routes' provenance", () => {

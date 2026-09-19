@@ -2,8 +2,12 @@
 
 /* Caphub — the approved Paper Workbench accession lane. */
 .caphub-page { min-width: 0; }
-.caphub-subnav { display:flex; gap:24px; margin-bottom:24px; border-bottom:1px solid var(--hairline-strong); padding-bottom:12px; }
-.caphub-subnav a { min-height:44px; display:inline-flex; align-items:center; font-weight:600; }
+.section-nav { display:flex; gap:24px; margin-bottom:24px; border-bottom:1px solid var(--hairline-strong); overflow-x:auto; white-space:nowrap; }
+.section-nav a { position:relative; min-height:44px; display:inline-flex; align-items:center; font-weight:600; color:var(--ink-muted); text-decoration:none; }
+.section-nav a:hover { color:var(--ink); }
+.section-nav a[aria-current="page"] { color:var(--ink); }
+.section-nav a[aria-current="page"]::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--amber); }
+@media (max-width: 600px) { .section-nav { gap:12px; } }
 .caphub-review-page { min-width:0; max-width:1200px; margin-inline:auto; }
 .caphub-review-page h1 { font-size:28px; line-height:1.2; margin:0 0 20px; overflow-wrap:anywhere; }
 .caphub-review-page h2 { font-size:19px; margin:28px 0 12px; }

@@ -7,7 +7,9 @@ import {
   searchPlanningAction,
   type SearchResults
 } from "@/app/actions/search";
+import { isPortfolioPath, PORTFOLIO_SECTION } from "./navigation";
 import { PrimaryNav } from "./primary-nav";
+import { SectionNav } from "./section-nav";
 import { CaphubStatusProvider, SourceStatus, type SourceStatusProps } from "./source-status";
 
 export interface AppShellProps {
@@ -238,6 +240,7 @@ export function AppShell({ children, statusProps }: AppShellProps) {
       <CaphubStatusProvider>
         <SourceStatus routePath={pathname} custody={custodyForPath(pathname)} {...statusProps} />
         <main id="main" className="main-content">
+          {isPortfolioPath(pathname) && <SectionNav label="Portfolio" items={PORTFOLIO_SECTION} />}
           {children}
         </main>
       </CaphubStatusProvider>
