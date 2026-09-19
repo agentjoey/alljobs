@@ -1,52 +1,64 @@
-# Claude handoff — Caphub P5.1
+# Claude handoff — Caphub current-state orientation
 
 Copy the prompt below into a new Claude Code session.
 
 ---
 
-继续 AllJobs / Caphub 开发。
+请先完整理解 AllJobs / Caphub 的现状。本次不是开发任务，不启动 P5，也不直接修改代码或文档。
 
 仓库：`/Users/xtation/AgentWorks/GPT_Workspace/alljobs`
 
-开始前必须：
+使用现有干净工作树进行只读检查：
 
-1. 读取并遵守仓库 `AGENTS.md`，执行 session startup。
-2. 不修改主 checkout 的任何 Human-owned dirty/untracked 文件；从最新 `origin/main` 创建新的隔离 worktree 和 `claude/` 前缀分支。
-3. 读取：
-   - `.agent/CURRENT.md`
-   - `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`
-   - `docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md`
-   - `.agent/caphub/automatic-analysis-verification.md`
-   - `.agent/caphub/automatic-analysis-handoff.md`
+`/Users/xtation/AgentWorks/GPT_Workspace/alljobs/.worktrees/caphub-release`
 
-当前事实：
+开始时：
 
-- P1–P4、Neon Registry/Object Storage、自动分析 worker、MiniMax + DeepSeek V4、Caphub Review、同名去重/冲突确认和 30 天原图清理已在 production 运行。
-- 生产应用代码 SHA：`766f8504b703dea86d0bd487aa607941a917aa79`。
-- 最近完整门禁：196 Vitest files / 1653 tests PASS。
-- P5.1 spec 已批准并进入 main，但尚无 executable development plan，也未开始实现。
+1. 读取并遵守仓库 `AGENTS.md`。
+2. 在上述干净工作树执行 `git pull --ff-only origin main` 和 `cat .agent/CURRENT.md`。
+3. 不要修改主 checkout；其中存在 Human-owned dirty/untracked 文件。
+4. 不创建 branch/worktree，不提交或推送，不修改 Linear，不调用真实 provider，不修改生产配置或服务。
 
-本次目标：先为 P5.1 编写独立、可执行的 development plan，再按计划连续实现 P5.1。不要重新设计已批准的 spec；只有发现实质冲突时才暂停。
+重点阅读：
 
-P5.1 边界必须保持：
+- `.agent/CURRENT.md`
+- `.agent/caphub/automatic-analysis-handoff.md`
+- `.agent/caphub/automatic-analysis-verification.md`
+- `docs/superpowers/specs/2026-09-13-caphub-kebab-design.md`
+- `docs/superpowers/plans/2026-09-14-caphub-kebab-roadmap.md`
+- `docs/superpowers/specs/2026-09-16-caphub-review-registry-design.md`
+- `docs/superpowers/specs/2026-09-16-caphub-obsidian-package-export-design.md`
+- `docs/superpowers/specs/2026-09-18-caphub-automatic-analysis-workbench-design.md`
+- `docs/superpowers/plans/2026-09-18-caphub-automatic-analysis-workbench.md`
+- `docs/operations.md`
+- `docs/deployment.md`
 
-- 目标覆盖所有已在 AllJobs 注册、`work_modes` 包含 `implementation` 的本地 Git code project。
-- Caphub 只创建/管理 BuildProposal、ImplementationHandoff、ImplementationEvidenceBundle、ImplementationAsset 和 implementation review lineage。
-- 外部 evidence 一律不可信；commit、base ancestry、changed paths、diff/blob digests 必须由服务端从已注册仓库的 Git object 只读重算。
-- Caphub 不创建或切换目标仓库 branch/worktree，不运行 Shell/测试命令，不修改目标仓库，不 fetch/clone/checkout/merge/rebase/push/tag，不 deploy/publish/install/enable。
-- `caphub.implementation.enabled=false` 为默认值；生产迁移、配置启用、真实目标仓库 evidence 导入、push/merge/deploy 均是单独 hard stop。
-- P5.2 builder、自动 Agent 执行与 P6 Runtime Router/evals/update watcher 不在本次范围。
+当前已知事实：
 
-执行要求：
+- Planning Core V1 和 Caphub P1–P4 已进入生产。
+- Neon PostgreSQL Registry 和 private Object Storage 已启用。
+- Capture 上传、同名/同内容去重、同名/不同内容人工确认、持久化单并发分析 worker、MiniMax + DeepSeek V4、Caphub Review 和成功导入后 30 天原图清理已运行。
+- Obsidian Vault `Caphub` 已配置，但不要读取或写入 Vault 内容。
+- 生产应用代码 SHA 为 `766f8504b703dea86d0bd487aa607941a917aa79`；后续 main 包含测试和文档整理提交。
+- 最近完整验证为 196 Vitest files / 1653 tests PASS；typecheck PASS；lint 0 errors、79 个既有 warnings。
+- P5.1 spec 已批准并保留，但当前明确暂缓 development plan 和 implementation。P5.2 与 P6 同样暂缓。
 
-- development plan 放在 `docs/superpowers/plans/`，明确任务顺序、文件范围、RED→GREEN、真实 Git 边界 BDD、migration、rollback、UI/API/CLI、性能与验收证据。
-- 功能与缺陷使用 TDD；跨 PostgreSQL、Git object、Next route 和目标仓库只读边界使用 BDD。
-- 前端不使用已退役的 frontend-design-workflow；遵循现有 Paper Workbench，完成最终 build 的 1440/390 浏览器验证与截图。
-- 控制 review 范围：在完整 P5.1 changeset 上做一次独立 Review/Verification；修复后只复核 findings 和受影响边界，不重复全局审查。
-- 每个可验证批次运行 focused checks；最终只运行一次完整 typecheck、lint、test、build、deploy invariant 和必要 E2E。
-- 更新 `.agent/CURRENT.md`、Caphub roadmap、证据/handoff 和 Linear。创建范围清晰的本地 commits。
-- 不要因为普通 task 边界停下来；只在需要凭证/生产副作用、破坏性操作、push/PR/main merge、scope 扩张、实质 spec 冲突或无法解决的阻塞失败时暂停。
+你的任务只是形成清晰、基于证据的项目理解。请进行只读代码与文档检查，并在对话中输出一份简洁报告，包含：
 
-完成时报告：worktree/branch、base/final SHA、任务结果、测试/Review/Verification、截图、Linear 状态、未执行的生产动作、剩余 hard gates 和下一安全动作。
+1. 当前产品能力地图：用户从 Capture 到 Analysis、Review、Registry、Package preview、retention 的真实路径。
+2. 当前运行架构：Next.js、LaunchAgents、Neon Registry/Object Storage、模型 provider、Obsidian 边界及主要数据流。
+3. 当前状态矩阵：已上线、已实现但默认关闭、仅有设计、已废弃/历史记录、尚未开始。
+4. 证据与风险：测试、生产 canary、性能、已知限制、配置依赖、运维恢复点。
+5. 文档一致性审计：指出 CURRENT、roadmap、spec、plan、handoff 中重复、过期或互相矛盾的内容；引用具体文件和段落，不立即修改。
+6. 已有系统优化清单：只针对当前已搭建内容，按 P0/P1/P2 排序，并区分产品体验、性能、可靠性、运维、文档和可维护性。
+7. 推荐下一步：选择一个最小、可验证的整理或优化批次，说明理由、范围、验收方式和需要的授权；不要开始实施。
+
+要求：
+
+- 区分事实、推断和建议；不要把历史状态当成当前状态。
+- 优先使用当前代码、配置 schema、最新 evidence 和运行文档，不能只依赖 `.agent/CURRENT.md` 的历史段落。
+- 控制检查范围，不运行全量测试、build、浏览器 E2E 或真实外部调用；只有在确认事实所必需时运行 focused read-only checks。
+- 不重新规划 P5/P6，不提出自动 builder、Runtime Router 或新 capability 开发。
+- 不执行任何修复。最终等待 Human 选择优化批次后，再进入后续设计或开发。
 
 ---
