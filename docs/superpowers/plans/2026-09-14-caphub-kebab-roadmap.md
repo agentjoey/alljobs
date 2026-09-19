@@ -288,22 +288,23 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 - P4 exports master 只用于 read-only package/adapter preview；所有 target switches 保持 false 且无 root/alias，因此 P4-A/P4-B/P4-C 继续关闭。
 - PA-B 与单独明确的 S1 listener-stop 已获授权并执行停机；应用 listener 已停止。原 Time Machine/off-host source-backup 前置条件已由批准的 Neon N2 immutable-object transfer + N4 recovery-branch proof 取代。Neon implementation 提供 strict TLS host policy、private path-style S3 adapter、manifest-bound object transfer、redacted preflight/attestations 和 opt-in non-Production BDD；当前 BDD 因没有显式 temporary validation references 而 1 skipped，未发起网络请求。经 `2026-09-18-caphub-neon-privilege-boundary-revision.md` 批准，Neon inherited project-admin role risk 被诚实标记为 accepted boundary，而非 PostgreSQL least-privilege claim。N1–N4 已完成，redacted preflight 已到 `PA_D`；PA-C 和 PA-D 未执行。未发生 provider/target/push/merge/deploy/release 变更。
 
-## P5：自研能力人工移交闭环
+## P5：自研能力交付闭环
 
 **目标**
 
-实现 `BuildProposal -> Human approval -> ImplementationHandoff -> isolated worktree -> verification -> ImplementationAsset -> Human release approval`，支持批准后的 Kimi Code 与 Human 手工 Claude/Codex 两条路径。
+P5.1 实现 `BuildProposal -> Human approval -> ImplementationHandoff -> external implementation -> read-only Git verification -> ImplementationAsset -> Human implementation review`。外部 Human、Claude Code、Codex 或其他 executor 完成实现；Caphub 本身不执行代码。P5.2 受控 builder 另行设计，不由 P5.1 自动开启。
 
 **依赖**
 
 - P3 Registry approval/audit、P4 package/release contract 稳定。
-- Human 批准 builder sandbox、仓库 allowlist、命令 policy、资源预算和交付边界。
+- P5.1 只接受 AllJobs 已注册且具备 `implementation` work mode 的本地 Git code project。
+- P5.2 只有在 Human 另行批准 builder sandbox、仓库 allowlist、命令 policy、资源预算和交付边界后才能设计或实施。
 
 **产物**
 
 - BuildProposal scope/digest/status contract。
-- Kimi Code builder profile 与 manual handoff packet。
-- 隔离 worktree/branch runner、exact-file diff/test evidence、ImplementationAsset registration。
+- neutral/Human/Claude Code/Codex deterministic manual handoff packet。
+- 不可信 ImplementationEvidenceBundle 导入、服务端只读 Git 复核和 ImplementationAsset registration。
 - merge/deploy/publish 三个独立 Human gates。
 
 **人工门禁**
@@ -315,14 +316,15 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 **验收条件**
 
-- 未批准 BuildProposal 无法启动 builder。
-- Builder 不能自动合并默认分支、部署或发布。
+- 未批准 BuildProposal 无法生成 handoff。
+- P5.1 不创建 worktree、不运行 Shell、不修改目标仓库，也不自动合并默认分支、部署或发布。
 - 每个 ImplementationAsset 绑定 exact commit/diff、测试、review 和审批记录。
 - manual handoff 不依赖浏览器自动化。
 
 **明确非目标**
 
-- 不实现自由 Agent swarm，不让 MiniMax 写代码，不自动 merge/deploy/publish。
+- P5.1 不实现 builder、自由 Agent swarm、代码执行、Git 写操作或自动 merge/deploy/publish。
+- P5.2 与 P6 保持独立设计、审批和 release gate。
 
 ## P6：Runtime Router、Evals 与 Update Watcher
 
@@ -364,8 +366,10 @@ P3-C 只表示本地 implementation/fixture 通过，不表示 Gate P3-D 或生�
 
 ## 路线图完成定义
 
-### 2026-09-18 Automatic analysis follow-up
+### 2026-09-19 Automatic analysis production closeout
 
-自动分析工作台本地实现及定点验收完成（`codex/caphub-automatic-analysis-impl` / `104c24d`），包含 Caphub 内审查、持久队列、同名冲突人工确认、精简快速读取、成功导入后 30 天原图清理。最终 build 浏览器链路使用临时 PostgreSQL 与假 provider 验证通过，独立风险审查通过。生产开关仍关闭；Task 11 的迁移、worker 激活、上线与真实 canary 待授权，不能视为已上线。证据及交接见 `.agent/caphub/automatic-analysis-handoff.md`。Linear AGE-252 已追加事实进展，原 P3 Done 状态不代表本次 follow-up 已发布；P5/P6 状态不变。
+自动分析工作台已上线：Neon migration/backfill、单并发 worker、同名冲突人工确认、Caphub 内 Review、快速读取和成功导入后 30 天原图清理均已启用。真实 MiniMax + DeepSeek canary 完成并生成 `waiting_for_review` 请求；相同文件名/相同内容重复上传复用 canonical Capture 且没有新增模型调用。生产 Review/queue 性能预算、最终截图、Linear AGE-252 和证据记录均完成。应用代码 SHA 为 `766f8504b703dea86d0bd487aa607941a917aa79`；详见 `.agent/caphub/automatic-analysis-verification.md`。
+
+P5.1 已批准设计并进入下一开发阶段，canonical spec 为 `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`。下一步先写独立 executable development plan，再按 disabled-by-default、无代码执行、只读 Git 复核边界实现。P5.2 builder 与 P6 状态不变。
 
 Caphub MVP 只有在 P0–P5 均通过各自 Human release gate，且设计文档第 22 节验收条件全部具备运行证据时才可宣称完成。P6 是持续运营能力；其首个受控 release 通过后进入持续迭代，但任何 UpdateProposal 仍保留人工审批。阶段文档、代码、测试、build、截图、review 和 production smoke 必须绑定同一 exact commit/build。

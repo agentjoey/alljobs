@@ -4,6 +4,8 @@
 
 Caphub automatic analysis is live on the Control Host at application code SHA `766f8504b703dea86d0bd487aa607941a917aa79`. Neon migration 004 and the unambiguous filename backfill are applied; `com.agentjoey.alljobs-caphub` is running with automatic analysis and bounded 30-day retention enabled. The private Obsidian target is Vault `Caphub`, alias `3b0bc2e2318652e8`. Real MiniMax + DeepSeek canary `cap_c347f87046c2409580633201ec5d6ba6` completed as Review Request `rev_3425a9e3af96c3452aa6a4236691ff8a`; identical re-upload reused the canonical Capture without another model call. The first retention sweep had zero eligible objects. See `.agent/caphub/automatic-analysis-handoff.md` and `automatic-analysis-verification.md` for exact evidence and limitations.
 
+Current integration is fully green at 196 Vitest files / 1653 tests after aligning the visual-observation config regression test with the production 4096-token ceiling. The approved P5.1 Manual Implementation Handoff spec is now in `docs/superpowers/specs/2026-09-17-caphub-manual-implementation-handoff-design.md`; implementation has not started. The next development step is to write its executable plan, then implement the disabled-by-default, read-only Git evidence and ImplementationAsset control plane. P5.2 automatic builder and P6 runtime/evals/update watcher remain out of scope. Historical sections below are chronology, not current instructions.
+
 Version:        v1.0.0 (Planning Core V1 live and healthy)
 Phase:          Planning Core V1 — Live Production
 Phase Status:   Tasks 0 through 14 COMPLETE; Live on Control Host (127.0.0.1:3456) & Cloudflare Tunnel
@@ -68,7 +70,7 @@ The legacy release remains recoverable only through Git history and `archive/v0.
 - **Boundary:** no real Vault/Agent root, production database, provider call, push, merge, deploy, or release occurred. Gates P4-A/P4-B/P4-C remain open Human gates; local implementation acceptance does not authorize them.
 - **Evidence:** `.agent/caphub/p4-implementation-log.md` · `p4-threat-model.md` · `p4-verification.md` · `p4-screenshots/`
 
-## Next safe action
+## Historical V4 rollout record
 
 Caphub V3 autonomous web research was deployed and its single authorized
 canary ran for `cap_379e2508ead34c349fcb303bcd39eff2`. Extraction and the
